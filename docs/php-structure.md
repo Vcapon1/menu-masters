@@ -53,12 +53,17 @@ CREATE TABLE restaurants (
     name VARCHAR(255) NOT NULL,
     slug VARCHAR(255) UNIQUE NOT NULL,
     address TEXT,
+    internal_notes TEXT,                    -- Observações internas do admin
     template VARCHAR(50) DEFAULT 'classic',
     logo VARCHAR(255),
     banner VARCHAR(255),
+    background_image VARCHAR(255),          -- Imagem de fundo
     background_video VARCHAR(255),
     primary_color VARCHAR(7) DEFAULT '#dc2626',
     secondary_color VARCHAR(7) DEFAULT '#fbbf24',
+    accent_color VARCHAR(7) DEFAULT '#ff6b00',      -- Cor de destaque
+    button_color VARCHAR(7) DEFAULT '#dc2626',      -- Cor dos botões
+    button_text_color VARCHAR(7) DEFAULT '#ffffff', -- Cor do texto dos botões
     font_color VARCHAR(7) DEFAULT '#ffffff',
     plan_id INT,
     status ENUM('active', 'inactive', 'pending') DEFAULT 'pending',
@@ -222,14 +227,30 @@ function getProducts($restaurantId) {
 }
 
 function generateCssVariables($restaurant) {
+    $bgImage = !empty($restaurant['background_image']) 
+        ? "url('{$restaurant['background_image']}')" 
+        : 'none';
+    
     return "
         <style>
             :root {
+                /* Cores principais */
                 --primary-color: {$restaurant['primary_color']};
                 --secondary-color: {$restaurant['secondary_color']};
+                --accent-color: {$restaurant['accent_color']};
                 --font-color: {$restaurant['font_color']};
+                
+                /* Cores dos botões */
+                --button-color: {$restaurant['button_color']};
+                --button-text-color: {$restaurant['button_text_color']};
+                
+                /* Fundo */
+                --bg-image: {$bgImage};
+                
+                /* RGB para transparências */
                 --primary-rgb: " . hexToRgb($restaurant['primary_color']) . ";
                 --secondary-rgb: " . hexToRgb($restaurant['secondary_color']) . ";
+                --accent-rgb: " . hexToRgb($restaurant['accent_color']) . ";
             }
         </style>
     ";
