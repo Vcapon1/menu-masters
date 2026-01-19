@@ -930,15 +930,19 @@ const MasterRestaurants = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-slate-400 hover:text-white"
-                          onClick={() => window.open(`/menu-bold?id=${restaurant.slug}`, "_blank")}
-                          title="Visualizar cardápio"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-purple-400 hover:text-purple-300"
+                              onClick={() => navigate(`/master/preview?id=${restaurant.id}`)}
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Preview com cores</TooltipContent>
+                        </Tooltip>
                         <Button
                           variant="ghost"
                           size="icon"
