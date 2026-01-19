@@ -17,6 +17,7 @@ import MasterRestaurants from "./pages/master/MasterRestaurants";
 import MasterPlans from "./pages/master/MasterPlans";
 import MasterReports from "./pages/master/MasterReports";
 import MasterTemplates from "./pages/master/MasterTemplates";
+import TemplatePreview from "./pages/master/TemplatePreview";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,7 @@ const App = () => (
           <Route path="/master/plans" element={<MasterPlans />} />
           <Route path="/master/reports" element={<MasterReports />} />
           <Route path="/master/templates" element={<MasterTemplates />} />
+          <Route path="/master/preview" element={<TemplatePreview />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
