@@ -9,7 +9,8 @@ import {
   QrCode, 
   LogOut,
   Plus,
-  Eye
+  Eye,
+  BarChart3
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -135,7 +136,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/admin/categories")}>
             <CardHeader>
               <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4">
@@ -159,15 +160,33 @@ export default function AdminDashboard() {
               <div className="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center mb-4">
                 <Package className="w-6 h-6 text-accent" />
               </div>
-              <CardTitle>Produtos</CardTitle>
+              <CardTitle>Pratos</CardTitle>
               <CardDescription>
-                Adicione e edite seus pratos, bebidas e sobremesas com fotos e descrições.
+                Adicione e edite seus pratos, bebidas e sobremesas com fotos e vídeos.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Button className="w-full" variant="outline">
                 <Plus className="w-4 h-4 mr-2" />
-                Gerenciar Produtos
+                Gerenciar Pratos
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/admin/stats")}>
+            <CardHeader>
+              <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center mb-4">
+                <BarChart3 className="w-6 h-6 text-green-600" />
+              </div>
+              <CardTitle>Estatísticas</CardTitle>
+              <CardDescription>
+                Acompanhe os acessos ao seu cardápio e veja quais pratos são mais populares.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button className="w-full" variant="outline">
+                <BarChart3 className="w-4 h-4 mr-2" />
+                Ver Estatísticas
               </Button>
             </CardContent>
           </Card>

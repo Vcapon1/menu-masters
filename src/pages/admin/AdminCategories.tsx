@@ -28,7 +28,8 @@ import {
   Pencil, 
   Trash2,
   LayoutGrid,
-  GripVertical
+  ChevronUp,
+  ChevronDown
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -63,8 +64,27 @@ export default function AdminCategories() {
   }, [navigate]);
 
   const saveCategories = (newCategories: Category[]) => {
-    localStorage.setItem("categories", JSON.stringify(newCategories));
-    setCategories(newCategories);
+    // Reorder to ensure order values are sequential
+    const ordered = newCategories.sort((a, b) => a.order - b.order).map((cat, index) => ({
+      ...cat,
+      order: index
+    }));
+    localStorage.setItem("categories", JSON.stringify(ordered));
+    setCategories(ordered);
+  };
+
+  const moveCategory = (index: number, direction: 'up' | 'down') => {
+    const sortedCategories = [...categories].sort((a, b) => a.order - b.order);
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    
+    if (newIndex < 0 || newIndex >= sortedCategories.length) return;
+    
+    // Swap orders
+    const temp = sortedCategories[index].order;
+    sortedCategories[index].order = sortedCategories[newIndex].order;
+    sortedCategories[newIndex].order = temp;
+    
+    saveCategories(sortedCategories);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -210,13 +230,30 @@ export default function AdminCategories() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-3">
-            {categories.map((category, index) => (
+          <div className="space-y-2">
+            {[...categories].sort((a, b) => a.order - b.order).map((category, index) => (
               <Card key={category.id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="text-muted-foreground cursor-grab">
-                      <GripVertical className="w-5 h-5" />
+                    <div className="flex flex-col gap-0.5">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => moveCategory(index, 'up')}
+                        disabled={index === 0}
+                      >
+                        <ChevronUp className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => moveCategory(index, 'down')}
+                        disabled={index === categories.length - 1}
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </Button>
                     </div>
                     <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
                       <span className="font-bold text-primary">{index + 1}</span>
