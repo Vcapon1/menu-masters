@@ -2,8 +2,6 @@ import { useState, useRef, useEffect } from "react";
 import { AppetiteHeader } from "@/components/menu/AppetiteHeader";
 import { AppetiteCategoryNav } from "@/components/menu/AppetiteCategoryNav";
 import { ProductCardAppetite } from "@/components/menu/ProductCardAppetite";
-import { WhatsAppFloat } from "@/components/WhatsAppFloat";
-import { useRef as useReactRef } from "react";
 import { Grid3X3, List, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -16,10 +14,8 @@ import saladImg from "@/assets/food-salad.jpg";
 const mockRestaurant = {
   name: "Sabor & Arte",
   logo: "",
-  address: "Rua das Flores, 123 - Centro",
   isOpen: true,
   closingTime: "23:00",
-  whatsapp: "5511999999999",
 };
 
 const mockCategories = [
@@ -196,7 +192,6 @@ export default function MenuAppetitePage() {
       <AppetiteHeader
         restaurantName={mockRestaurant.name}
         logo={mockRestaurant.logo}
-        address={mockRestaurant.address}
         isOpen={mockRestaurant.isOpen}
         closingTime={mockRestaurant.closingTime}
       />
@@ -321,10 +316,6 @@ export default function MenuAppetitePage() {
                         badges={[...product.badges]}
                         isAvailable={product.isAvailable}
                         viewMode={viewMode}
-                        onAdd={() => {
-                          // TODO: Add to cart
-                          console.log("Add to cart:", product.name);
-                        }}
                       />
                     </div>
                   ))}
@@ -355,18 +346,12 @@ export default function MenuAppetitePage() {
                   badges={[...product.badges]}
                   isAvailable={product.isAvailable}
                   viewMode={viewMode}
-                  onAdd={() => {
-                    console.log("Add to cart:", product.name);
-                  }}
                 />
               </div>
             ))}
           </div>
         )}
       </main>
-
-      {/* WhatsApp Float */}
-      <WhatsAppFloat phoneNumber={mockRestaurant.whatsapp} />
     </div>
   );
 }
