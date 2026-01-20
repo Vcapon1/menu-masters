@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ProductBadge } from "./ProductBadge";
 import { cn } from "@/lib/utils";
-import { Play, X, Plus } from "lucide-react";
+import { Play, X } from "lucide-react";
 
 interface ProductCardAppetiteProps {
   id: string;
@@ -14,7 +14,6 @@ interface ProductCardAppetiteProps {
   badges?: Array<"promo" | "vegan" | "vegetarian" | "highlight" | "popular" | "out">;
   isAvailable?: boolean;
   viewMode?: "list" | "grid";
-  onAdd?: () => void;
 }
 
 export function ProductCardAppetite({
@@ -27,7 +26,6 @@ export function ProductCardAppetite({
   badges = [],
   isAvailable = true,
   viewMode = "list",
-  onAdd,
 }: ProductCardAppetiteProps) {
   const [isImageExpanded, setIsImageExpanded] = useState(false);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
@@ -122,14 +120,6 @@ export function ProductCardAppetite({
                 </span>
               </div>
 
-              {!isOutOfStock && (
-                <button
-                  onClick={onAdd}
-                  className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:scale-110 transition-transform shadow-md"
-                >
-                  <Plus className="w-5 h-5" />
-                </button>
-              )}
             </div>
           </div>
         </div>
@@ -273,15 +263,6 @@ export function ProductCardAppetite({
               )}
             </div>
 
-            {/* Add Button */}
-            {!isOutOfStock && (
-              <button
-                onClick={onAdd}
-                className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:scale-110 transition-transform shadow-md"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
-            )}
           </div>
         </div>
       </div>

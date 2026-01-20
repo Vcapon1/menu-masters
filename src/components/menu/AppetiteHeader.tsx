@@ -1,10 +1,9 @@
-import { MapPin, Clock, ChevronDown } from "lucide-react";
+import { Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AppetiteHeaderProps {
   restaurantName: string;
   logo?: string;
-  address?: string;
   isOpen?: boolean;
   closingTime?: string;
   className?: string;
@@ -13,7 +12,6 @@ interface AppetiteHeaderProps {
 export function AppetiteHeader({
   restaurantName,
   logo,
-  address,
   isOpen = true,
   closingTime,
   className,
@@ -27,35 +25,26 @@ export function AppetiteHeader({
     >
       <div className="px-4 py-3">
         <div className="flex items-center gap-3">
-          {/* Logo */}
+          {/* Logo - Full image without circle crop */}
           {logo ? (
-            <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-primary/20 shadow-md flex-shrink-0">
-              <img
-                src={logo}
-                alt={restaurantName}
-                className="w-full h-full object-cover"
-              />
-            </div>
+            <img
+              src={logo}
+              alt={restaurantName}
+              className="h-10 max-w-[120px] object-contain rounded-lg"
+            />
           ) : (
-            <div className="w-11 h-11 rounded-full bg-gradient-primary flex items-center justify-center text-primary-foreground font-bold text-lg shadow-md flex-shrink-0">
-              {restaurantName.charAt(0)}
+            <div className="h-10 px-3 rounded-lg bg-gradient-primary flex items-center justify-center">
+              <span className="text-primary-foreground font-bold text-lg">
+                {restaurantName.charAt(0)}
+              </span>
             </div>
           )}
 
-          {/* Info */}
+          {/* Restaurant Name */}
           <div className="flex-1 min-w-0">
             <h1 className="font-semibold text-foreground text-lg truncate">
               {restaurantName}
             </h1>
-            
-            <div className="flex items-center gap-2 text-muted-foreground text-sm">
-              {address && (
-                <div className="flex items-center gap-1 truncate">
-                  <MapPin className="w-3 h-3 flex-shrink-0" />
-                  <span className="truncate">{address}</span>
-                </div>
-              )}
-            </div>
           </div>
 
           {/* Status Badge */}

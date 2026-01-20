@@ -7,33 +7,27 @@ interface ProductBadgeProps {
 
 const badgeConfig = {
   promo: {
-    label: "%",
-    title: "Promoção",
+    label: "Promoção",
     className: "bg-promo text-promo-foreground",
   },
   vegan: {
-    label: "V",
-    title: "Vegano",
+    label: "Vegano",
     className: "bg-vegan text-vegan-foreground",
   },
   vegetarian: {
-    label: "VG",
-    title: "Vegetariano",
+    label: "Vegetariano",
     className: "bg-success text-success-foreground",
   },
   highlight: {
-    label: "★",
-    title: "Destaque",
+    label: "Destaque",
     className: "bg-accent text-accent-foreground",
   },
   popular: {
-    label: "🔥",
-    title: "Mais Pedido",
+    label: "Mais Pedido",
     className: "bg-primary text-primary-foreground",
   },
   out: {
-    label: "X",
-    title: "Indisponível",
+    label: "Indisponível",
     className: "bg-muted text-muted-foreground",
   },
 };
@@ -44,11 +38,10 @@ export function ProductBadge({ type, size = "md" }: ProductBadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center justify-center rounded-full font-bold",
+        "inline-flex items-center justify-center rounded-full font-medium",
         config.className,
-        size === "sm" ? "w-5 h-5 text-[10px]" : "w-7 h-7 text-xs"
+        size === "sm" ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-xs"
       )}
-      title={config.title}
     >
       {config.label}
     </span>
