@@ -74,17 +74,26 @@ interface Restaurant {
 }
 
 const templates = [
-  { id: "visual", name: "Visual - Imagens Grandes" },
-  { id: "classic", name: "Clássico - Equilibrado" },
-  { id: "modern", name: "Moderno - Clean" },
-  { id: "bold", name: "Bold - Alto Contraste" },
+  { id: "classic", name: "Clássico - Equilibrado", minPlan: "basic" },
+  { id: "visual", name: "Visual - Imagens Grandes", minPlan: "premium" },
+  { id: "modern", name: "Moderno - Clean", minPlan: "premium" },
+  { id: "bold", name: "Bold - Alto Contraste", minPlan: "premium" },
+  { id: "elegant", name: "Elegante - Sofisticado", minPlan: "personalite" },
+  { id: "minimal", name: "Minimalista - Ultra Clean", minPlan: "personalite" },
 ];
 
 const plans = [
-  { id: "basic", name: "Básico" },
-  { id: "premium", name: "Premium" },
-  { id: "personalite", name: "Personalité" },
+  { id: "basic", name: "Básico", order: 1 },
+  { id: "premium", name: "Premium", order: 2 },
+  { id: "personalite", name: "Personalité", order: 3 },
 ];
+
+const getPlanOrder = (planId: string) => plans.find(p => p.id === planId)?.order || 0;
+
+const getTemplatesForPlan = (planId: string) => {
+  const planOrder = getPlanOrder(planId);
+  return templates.filter(t => getPlanOrder(t.minPlan) <= planOrder);
+};
 
 const getExpirationStatus = (expiresAt: string) => {
   if (!expiresAt) return { status: "unknown", days: 0, label: "Não definida" };
@@ -114,6 +123,8 @@ const MasterRestaurants = () => {
   const [search, setSearch] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRestaurant, setEditingRestaurant] = useState<Restaurant | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
+  const [deletePassword, setDeletePassword] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
@@ -276,12 +287,24 @@ const MasterRestaurants = () => {
     resetForm();
   };
 
-  const handleDelete = (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir este restaurante?")) return;
-    const updated = restaurants.filter((r) => r.id !== id);
+  const handleDeleteRequest = (id: string, name: string) => {
+    setDeleteConfirm({ id, name });
+    setDeletePassword("");
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deletePassword !== "admin123") {
+      toast({ title: "Erro", description: "Senha incorreta", variant: "destructive" });
+      return;
+    }
+    if (!deleteConfirm) return;
+    
+    const updated = restaurants.filter((r) => r.id !== deleteConfirm.id);
     setRestaurants(updated);
     localStorage.setItem("masterRestaurants", JSON.stringify(updated));
     toast({ title: "Sucesso", description: "Restaurante removido" });
+    setDeleteConfirm(null);
+    setDeletePassword("");
   };
 
   const handleEdit = (restaurant: Restaurant) => {
@@ -757,28 +780,13 @@ const MasterRestaurants = () => {
                   </div>
                 </div>
 
-                {/* Template e Plano */}
+                {/* Plano e Template */}
                 <div className="space-y-4 border-t border-slate-700 pt-4">
-                  <h3 className="text-sm font-semibold text-purple-400 uppercase tracking-wide">Template e Plano</h3>
+                  <h3 className="text-sm font-semibold text-purple-400 uppercase tracking-wide">Plano e Template</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Template do Cardápio</Label>
-                      <Select value={formData.template} onValueChange={(v) => setFormData({ ...formData, template: v })}>
-                        <SelectTrigger className="bg-slate-700 border-slate-600">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-slate-700 border-slate-600">
-                          {templates.map((t) => (
-                            <SelectItem key={t.id} value={t.id}>
-                              {t.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Plano</Label>
-                      <Select value={formData.plan} onValueChange={(v) => setFormData({ ...formData, plan: v })}>
+                      <Label>Plano *</Label>
+                      <Select value={formData.plan} onValueChange={(v) => setFormData({ ...formData, plan: v, template: getTemplatesForPlan(v)[0]?.id || "classic" })}>
                         <SelectTrigger className="bg-slate-700 border-slate-600">
                           <SelectValue />
                         </SelectTrigger>
@@ -786,6 +794,21 @@ const MasterRestaurants = () => {
                           {plans.map((p) => (
                             <SelectItem key={p.id} value={p.id}>
                               {p.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Template do Cardápio</Label>
+                      <Select value={formData.template} onValueChange={(v) => setFormData({ ...formData, template: v })}>
+                        <SelectTrigger className="bg-slate-700 border-slate-600">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-slate-700 border-slate-600">
+                          {getTemplatesForPlan(formData.plan).map((t) => (
+                            <SelectItem key={t.id} value={t.id}>
+                              {t.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -955,7 +978,7 @@ const MasterRestaurants = () => {
                           variant="ghost"
                           size="icon"
                           className="text-slate-400 hover:text-red-400"
-                          onClick={() => handleDelete(restaurant.id)}
+                          onClick={() => handleDeleteRequest(restaurant.id, restaurant.name)}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -968,6 +991,49 @@ const MasterRestaurants = () => {
           </CardContent>
         </Card>
       </main>
+
+      {/* Modal de Confirmação de Exclusão com Senha */}
+      <Dialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
+        <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-400 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5" />
+              Confirmar Exclusão
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-slate-300">
+              Você está prestes a excluir o restaurante <strong className="text-white">{deleteConfirm?.name}</strong>. 
+              Esta ação é irreversível.
+            </p>
+            <div className="space-y-2">
+              <Label>Digite sua senha para confirmar:</Label>
+              <Input
+                type="password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                className="bg-slate-700 border-slate-600"
+                placeholder="Senha do Admin Master"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleDeleteConfirm} 
+                className="flex-1 bg-red-600 hover:bg-red-700"
+              >
+                Confirmar Exclusão
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setDeleteConfirm(null)}
+                className="border-slate-600"
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
