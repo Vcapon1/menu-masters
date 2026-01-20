@@ -1,0 +1,100 @@
+# =====================================================
+# PREMIUM MENU - Configuração Apache
+# =====================================================
+
+# Habilitar mod_rewrite
+RewriteEngine On
+
+# Base URL
+RewriteBase /
+
+# Redirecionar para HTTPS (descomente em produção)
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Não processar arquivos e diretórios existentes
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Ignorar diretórios específicos
+RewriteCond %{REQUEST_URI} !^/admin/
+RewriteCond %{REQUEST_URI} !^/master/
+RewriteCond %{REQUEST_URI} !^/uploads/
+RewriteCond %{REQUEST_URI} !^/templates/
+RewriteCond %{REQUEST_URI} !^/assets/
+
+# Redirecionar URLs amigáveis para index.php
+# Exemplo: /pizzaria-bella -> index.php?slug=pizzaria-bella
+RewriteRule ^([a-zA-Z0-9-]+)/?$ index.php?slug=$1 [L,QSA]
+
+# =====================================================
+# SEGURANÇA
+# =====================================================
+
+# Bloquear acesso a arquivos sensíveis
+<FilesMatch "\.(env|log|sql|bak|config)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Bloquear acesso a diretórios de configuração
+<IfModule mod_alias.c>
+    RedirectMatch 403 ^/config/
+    RedirectMatch 403 ^/includes/
+</IfModule>
+
+# Prevenir listagem de diretórios
+Options -Indexes
+
+# Prevenir acesso a arquivos .htaccess
+<Files .htaccess>
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+# =====================================================
+# PERFORMANCE
+# =====================================================
+
+# Habilitar compressão
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css
+    AddOutputFilterByType DEFLATE application/javascript application/json
+</IfModule>
+
+# Cache de arquivos estáticos
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/webp "access plus 1 month"
+    ExpiresByType image/gif "access plus 1 month"
+    ExpiresByType video/mp4 "access plus 1 month"
+    ExpiresByType video/webm "access plus 1 month"
+    ExpiresByType text/css "access plus 1 week"
+    ExpiresByType application/javascript "access plus 1 week"
+</IfModule>
+
+# =====================================================
+# CORS (se necessário para API)
+# =====================================================
+
+<IfModule mod_headers.c>
+    # Remover informações do servidor
+    Header unset Server
+    Header unset X-Powered-By
+    
+    # Segurança adicional
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# Charset UTF-8
+AddDefaultCharset UTF-8
+
+# Limite de upload (ajustar conforme necessário)
+php_value upload_max_filesize 50M
+php_value post_max_size 55M
+php_value max_execution_time 300
+php_value max_input_time 300
