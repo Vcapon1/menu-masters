@@ -1,10 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const navLinks = [
     { href: "#vantagens", label: "Vantagens" },
@@ -14,12 +23,19 @@ export function Header() {
   ];
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
+    <header
+      className={cn(
+        "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
+        isScrolled
+          ? "bg-background/90 backdrop-blur-xl border-b border-border/50 py-3"
+          : "bg-transparent py-6"
+      )}
+    >
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16 md:h-20">
+        <div className="flex items-center justify-between">
           {/* Logo */}
-          <a href="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center">
+          <a href="/" className="flex items-center gap-3 group">
+            <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow group-hover:shadow-glow-lg transition-shadow duration-300">
               <span className="text-primary-foreground font-bold text-xl">P</span>
             </div>
             <span className="font-display text-xl font-bold text-foreground">
@@ -33,30 +49,31 @@ export function Header() {
               <a
                 key={link.href}
                 href={link.href}
-                className="text-muted-foreground hover:text-foreground font-medium transition-colors"
+                className="text-muted-foreground hover:text-foreground font-medium transition-colors relative group"
               >
                 {link.label}
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300" />
               </a>
             ))}
           </nav>
 
           {/* CTA Button */}
           <div className="hidden md:block">
-            <Button variant="hero" size="lg">
+            <Button variant="hero" size="lg" className="shadow-glow">
               Começar Grátis
             </Button>
           </div>
 
           {/* Mobile Menu Button */}
           <button
-            className="md:hidden p-2"
+            className="md:hidden p-2 text-foreground"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             aria-label="Toggle menu"
           >
             {isMenuOpen ? (
-              <X className="w-6 h-6 text-foreground" />
+              <X className="w-6 h-6" />
             ) : (
-              <Menu className="w-6 h-6 text-foreground" />
+              <Menu className="w-6 h-6" />
             )}
           </button>
         </div>
@@ -65,10 +82,10 @@ export function Header() {
         <div
           className={cn(
             "md:hidden overflow-hidden transition-all duration-300",
-            isMenuOpen ? "max-h-80 pb-6" : "max-h-0"
+            isMenuOpen ? "max-h-80 pt-6" : "max-h-0"
           )}
         >
-          <nav className="flex flex-col gap-4">
+          <nav className="flex flex-col gap-4 pb-6">
             {navLinks.map((link) => (
               <a
                 key={link.href}
@@ -79,7 +96,7 @@ export function Header() {
                 {link.label}
               </a>
             ))}
-            <Button variant="hero" size="lg" className="mt-2">
+            <Button variant="hero" size="lg" className="mt-2 shadow-glow">
               Começar Grátis
             </Button>
           </nav>
