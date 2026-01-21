@@ -81,11 +81,11 @@ $buttonTextColor = $restaurant['button_text_color'] ?? '#ffffff';
         }
         
         .logo {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
+            height: 40px;
+            max-width: 140px;
+            border-radius: 8px;
             overflow: hidden;
-            border: 2px solid rgba(0,0,0,0.05);
+            border: 1px solid rgba(0,0,0,0.05);
             flex-shrink: 0;
             background: linear-gradient(135deg, var(--primary), var(--accent));
             display: flex;
@@ -94,12 +94,13 @@ $buttonTextColor = $restaurant['button_text_color'] ?? '#ffffff';
             color: white;
             font-weight: 700;
             font-size: 18px;
+            padding: 4px 8px;
         }
         
         .logo img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
         }
         
         .restaurant-info {
@@ -606,12 +607,6 @@ $buttonTextColor = $restaurant['button_text_color'] ?? '#ffffff';
             
             <div class="restaurant-info">
                 <h1 class="restaurant-name"><?= htmlspecialchars($restaurant['name']) ?></h1>
-                <?php if (!empty($restaurant['address'])): ?>
-                    <div class="restaurant-address">
-                        <i class="lucide-map-pin" style="font-size: 12px;"></i>
-                        <?= htmlspecialchars($restaurant['address']) ?>
-                    </div>
-                <?php endif; ?>
             </div>
             
             <div class="status-badge status-open">

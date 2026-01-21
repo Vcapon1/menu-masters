@@ -59,8 +59,8 @@ export function Header() {
 
           {/* CTA Button */}
           <div className="hidden md:block">
-            <Button variant="hero" size="lg" className="shadow-glow">
-              Começar Grátis
+          <Button variant="hero" size="lg" className="shadow-glow">
+              Comece Agora
             </Button>
           </div>
 
@@ -97,7 +97,7 @@ export function Header() {
               </a>
             ))}
             <Button variant="hero" size="lg" className="mt-2 shadow-glow">
-              Começar Grátis
+              Comece Agora
             </Button>
           </nav>
         </div>
