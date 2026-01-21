@@ -47,6 +47,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getDefaultColors } from "@/lib/templatePresets";
 
 interface Restaurant {
   id: string;
@@ -74,6 +75,7 @@ interface Restaurant {
 }
 
 const templates = [
+  { id: "appetite", name: "Appetite - Mobile-First (iFood)", minPlan: "basic" },
   { id: "classic", name: "Clássico - Equilibrado", minPlan: "basic" },
   { id: "visual", name: "Visual - Imagens Grandes", minPlan: "premium" },
   { id: "modern", name: "Moderno - Clean", minPlan: "premium" },
@@ -257,6 +259,20 @@ const MasterRestaurants = () => {
       name,
       slug: editingRestaurant ? formData.slug : generateSlug(name),
     });
+  };
+
+  const handleTemplateChange = (templateId: string) => {
+    const colors = getDefaultColors(templateId);
+    if (colors && !editingRestaurant) {
+      // Apply preset colors for new restaurants
+      setFormData({
+        ...formData,
+        template: templateId,
+        ...colors,
+      });
+    } else {
+      setFormData({ ...formData, template: templateId });
+    }
   };
 
   const handleSave = () => {
@@ -801,7 +817,7 @@ const MasterRestaurants = () => {
                     </div>
                     <div className="space-y-2">
                       <Label>Template do Cardápio</Label>
-                      <Select value={formData.template} onValueChange={(v) => setFormData({ ...formData, template: v })}>
+                      <Select value={formData.template} onValueChange={handleTemplateChange}>
                         <SelectTrigger className="bg-slate-700 border-slate-600">
                           <SelectValue />
                         </SelectTrigger>

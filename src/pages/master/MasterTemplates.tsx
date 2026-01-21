@@ -63,6 +63,18 @@ const MasterTemplates = () => {
       const mockData: Template[] = [
         {
           id: "1",
+          name: "Appetite",
+          slug: "appetite",
+          description: "Mobile-first inspirado no iFood - moderno e visual",
+          previewImage: "/placeholder.svg",
+          primaryColor: "#f97316",
+          secondaryColor: "#1f2937",
+          isActive: true,
+          isPremium: false,
+          usageCount: 58,
+        },
+        {
+          id: "2",
           name: "Classic",
           slug: "classic",
           description: "Layout clássico e elegante para restaurantes tradicionais",
@@ -74,7 +86,7 @@ const MasterTemplates = () => {
           usageCount: 45,
         },
         {
-          id: "2",
+          id: "3",
           name: "Bold",
           slug: "bold",
           description: "Design vibrante e moderno com cores fortes",
@@ -86,19 +98,19 @@ const MasterTemplates = () => {
           usageCount: 32,
         },
         {
-          id: "3",
+          id: "4",
           name: "Minimal",
           slug: "minimal",
           description: "Estilo minimalista e clean para cafeterias e bistrôs",
           previewImage: "/placeholder.svg",
-          primaryColor: "#000000",
-          secondaryColor: "#ffffff",
+          primaryColor: "#18181b",
+          secondaryColor: "#71717a",
           isActive: true,
           isPremium: true,
           usageCount: 18,
         },
         {
-          id: "4",
+          id: "5",
           name: "Dark Mode",
           slug: "dark",
           description: "Tema escuro sofisticado para bares e lounges",
@@ -182,6 +194,7 @@ const MasterTemplates = () => {
   };
 
   const getPreviewUrl = (slug: string) => {
+    if (slug === "appetite") return "/menu-appetite?id=preview";
     if (slug === "bold") return "/menu-bold?id=preview";
     return `/menu?id=preview`;
   };
