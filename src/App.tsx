@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import MenuPage from "./pages/MenuPage";
 import MenuBoldPage from "./pages/MenuBoldPage";
 import MenuAppetitePage from "./pages/MenuAppetitePage";
+import DirectoryPage from "./pages/DirectoryPage";
 import NotFound from "./pages/NotFound";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -19,6 +20,7 @@ import MasterRestaurants from "./pages/master/MasterRestaurants";
 import MasterPlans from "./pages/master/MasterPlans";
 import MasterReports from "./pages/master/MasterReports";
 import MasterTemplates from "./pages/master/MasterTemplates";
+import MasterDirectory from "./pages/master/MasterDirectory";
 import TemplatePreview from "./pages/master/TemplatePreview";
 
 const queryClient = new QueryClient();
@@ -34,6 +36,7 @@ const App = () => (
           <Route path="/menu" element={<MenuPage />} />
           <Route path="/menu-bold" element={<MenuBoldPage />} />
           <Route path="/menu-appetite" element={<MenuAppetitePage />} />
+          <Route path="/guia" element={<DirectoryPage />} />
           <Route path="/admin" element={<AdminLogin />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/categories" element={<AdminCategories />} />
@@ -45,6 +48,7 @@ const App = () => (
           <Route path="/master/plans" element={<MasterPlans />} />
           <Route path="/master/reports" element={<MasterReports />} />
           <Route path="/master/templates" element={<MasterTemplates />} />
+          <Route path="/master/directory" element={<MasterDirectory />} />
           <Route path="/master/preview" element={<TemplatePreview />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

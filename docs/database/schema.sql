@@ -195,6 +195,39 @@ CREATE TABLE IF NOT EXISTS `master_admins` (
 INSERT INTO `master_admins` (`username`, `email`, `password_hash`) VALUES
 ('admin', 'admin@premiummenu.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi');
 
+-- =====================================================
+-- TABELA: directory_restaurants (Guia Gastronômico)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS `directory_restaurants` (
+  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(200) NOT NULL,
+  `slug` VARCHAR(200) NOT NULL UNIQUE,
+  `address` TEXT,
+  `neighborhood` VARCHAR(100),
+  `city` VARCHAR(100) DEFAULT 'São Paulo',
+  `cuisine_types` JSON COMMENT 'Array de tipos de comida',
+  `logo` VARCHAR(500),
+  `phone` VARCHAR(30),
+  `whatsapp` VARCHAR(30),
+  `instagram` VARCHAR(100),
+  `website` VARCHAR(255),
+  `opening_hours` JSON COMMENT 'Objeto com horários por dia da semana',
+  `price_range` ENUM('$', '$$', '$$$', '$$$$') DEFAULT '$$',
+  `is_client` TINYINT(1) DEFAULT 0 COMMENT 'É cliente Premium Menu?',
+  `linked_restaurant_id` INT UNSIGNED NULL COMMENT 'ID do restaurante cliente se aplicável',
+  `menu_url` VARCHAR(255) COMMENT 'URL do cardápio digital se for cliente',
+  `status` ENUM('active', 'pending', 'draft') DEFAULT 'draft',
+  `internal_notes` TEXT COMMENT 'Notas internas para prospecção',
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  
+  FOREIGN KEY (`linked_restaurant_id`) REFERENCES `restaurants`(`id`) ON DELETE SET NULL,
+  INDEX `idx_status` (`status`),
+  INDEX `idx_neighborhood` (`neighborhood`),
+  INDEX `idx_is_client` (`is_client`),
+  INDEX `idx_city` (`city`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- =====================================================
