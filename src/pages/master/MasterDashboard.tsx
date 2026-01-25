@@ -13,6 +13,7 @@ import {
   TrendingUp,
   DollarSign,
   Activity,
+  MapPin,
 } from "lucide-react";
 
 const MasterDashboard = () => {
@@ -54,6 +55,13 @@ const MasterDashboard = () => {
       icon: Store,
       href: "/master/restaurants",
       color: "bg-blue-600",
+    },
+    {
+      title: "Diretório",
+      description: "Guia gastronômico e prospecção",
+      icon: MapPin,
+      href: "/master/directory",
+      color: "bg-teal-600",
     },
     {
       title: "Planos",
