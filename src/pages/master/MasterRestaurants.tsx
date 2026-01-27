@@ -47,7 +47,8 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { getDefaultColors } from "@/lib/templatePresets";
+import { getDefaultColors, getTemplatePreset } from "@/lib/templatePresets";
+import { RotateCcw } from "lucide-react";
 
 interface Restaurant {
   id: string;
@@ -274,6 +275,22 @@ const MasterRestaurants = () => {
       setFormData({ ...formData, template: templateId });
     }
   };
+
+  const handleResetColors = () => {
+    const colors = getDefaultColors(formData.template);
+    if (colors) {
+      setFormData({
+        ...formData,
+        ...colors,
+      });
+      toast({ 
+        title: "Cores restauradas", 
+        description: `Aplicadas cores padrão do template ${getTemplatePreset(formData.template)?.name || formData.template}` 
+      });
+    }
+  };
+
+  const currentPreset = getTemplatePreset(formData.template);
 
   const handleSave = () => {
     if (!formData.name || !formData.email) {
@@ -655,7 +672,26 @@ const MasterRestaurants = () => {
 
                 {/* Cores do Tema */}
                 <div className="space-y-4 border-t border-slate-700 pt-4">
-                  <h3 className="text-sm font-semibold text-purple-400 uppercase tracking-wide">Cores do Tema</h3>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-semibold text-purple-400 uppercase tracking-wide">Cores do Tema</h3>
+                      {currentPreset && (
+                        <p className="text-xs text-slate-400 mt-1">
+                          <span className="text-purple-300">{currentPreset.name}</span> — {currentPreset.description}
+                        </p>
+                      )}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleResetColors}
+                      className="flex items-center gap-2 border-purple-500/50 text-purple-300 hover:bg-purple-500/20 hover:text-purple-200"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      Restaurar Padrão
+                    </Button>
+                  </div>
                   <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label>Cor Primária</Label>

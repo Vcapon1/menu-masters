@@ -47,20 +47,23 @@ CREATE TABLE IF NOT EXISTS `templates` (
   `has_list_view` TINYINT(1) NOT NULL DEFAULT 1,
   `supports_video` TINYINT(1) NOT NULL DEFAULT 0,
   `supports_promo_price` TINYINT(1) NOT NULL DEFAULT 0,
+  `default_colors` JSON COMMENT 'Cores padrão do template: {primary, secondary, accent, button, buttonText, font}',
   `is_active` TINYINT(1) NOT NULL DEFAULT 1,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (`min_plan_id`) REFERENCES `plans`(`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dados iniciais dos templates
-INSERT INTO `templates` (`name`, `slug`, `description`, `min_plan_id`, `has_grid_view`, `has_list_view`, `supports_video`, `supports_promo_price`) VALUES
-('Clássico', 'classic', 'Layout equilibrado e tradicional', 1, 1, 1, 0, 0),
-('Visual', 'visual', 'Foco em imagens grandes e impactantes', 2, 1, 0, 0, 1),
-('Moderno', 'modern', 'Design clean com categorias em destaque', 2, 1, 1, 1, 1),
-('Bold', 'bold', 'Alto contraste com vermelho e amarelo vibrantes', 2, 1, 1, 1, 1),
-('Elegante', 'elegant', 'Sofisticado para restaurantes finos', 3, 1, 1, 1, 1),
-('Minimalista', 'minimal', 'Ultra clean, foco no conteúdo', 3, 0, 1, 1, 1);
+-- Dados iniciais dos templates com cores padrão
+INSERT INTO `templates` (`name`, `slug`, `description`, `min_plan_id`, `has_grid_view`, `has_list_view`, `supports_video`, `supports_promo_price`, `default_colors`) VALUES
+('Appetite', 'appetite', 'Moderno estilo iFood - laranja vibrante com fundo claro', 1, 1, 1, 0, 1, '{"primary": "#f97316", "secondary": "#1f2937", "accent": "#f59e0b", "button": "#f97316", "buttonText": "#ffffff", "font": "#1f2937"}'),
+('Clássico', 'classic', 'Elegante e equilibrado - tons neutros com dourado', 1, 1, 1, 0, 0, '{"primary": "#1f2937", "secondary": "#f59e0b", "accent": "#d97706", "button": "#f59e0b", "buttonText": "#1f2937", "font": "#1f2937"}'),
+('Visual', 'visual', 'Focado em imagens grandes - verde fresco', 2, 1, 0, 0, 1, '{"primary": "#059669", "secondary": "#10b981", "accent": "#34d399", "button": "#059669", "buttonText": "#ffffff", "font": "#1f2937"}'),
+('Moderno', 'modern', 'Clean e moderno - azul tecnológico', 2, 1, 1, 1, 1, '{"primary": "#0ea5e9", "secondary": "#0284c7", "accent": "#38bdf8", "button": "#0ea5e9", "buttonText": "#ffffff", "font": "#0f172a"}'),
+('Bold', 'bold', 'Alto contraste vermelho e amarelo - impactante', 2, 1, 1, 1, 1, '{"primary": "#dc2626", "secondary": "#fbbf24", "accent": "#f59e0b", "button": "#dc2626", "buttonText": "#ffffff", "font": "#ffffff"}'),
+('Elegante', 'elegant', 'Sofisticado - tons amadeirados e dourados', 3, 1, 1, 1, 1, '{"primary": "#b45309", "secondary": "#78350f", "accent": "#d97706", "button": "#b45309", "buttonText": "#ffffff", "font": "#292524"}'),
+('Minimalista', 'minimal', 'Ultra clean - preto e branco sofisticado', 3, 0, 1, 1, 1, '{"primary": "#18181b", "secondary": "#71717a", "accent": "#3f3f46", "button": "#18181b", "buttonText": "#ffffff", "font": "#18181b"}'),
+('Dark Mode', 'dark', 'Tema escuro moderno - roxo sofisticado', 3, 1, 1, 1, 1, '{"primary": "#7c3aed", "secondary": "#a78bfa", "accent": "#8b5cf6", "button": "#7c3aed", "buttonText": "#ffffff", "font": "#f4f4f5"}');
 
 -- =====================================================
 -- TABELA: restaurants (Restaurantes/Clientes)
