@@ -1,6 +1,6 @@
 <?php
 /**
- * PREMIUM MENU - Template Bold
+ * CARDÁPIO FLORIPA - Template Bold
  * 
  * Template com alto contraste, cores vibrantes e visual impactante.
  * Suporta toggle entre visualização em lista e grid.
