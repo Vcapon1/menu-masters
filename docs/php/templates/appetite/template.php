@@ -11,7 +11,7 @@
 
 $primaryColor = $restaurant['primary_color'] ?? '#f97316';
 $secondaryColor = $restaurant['secondary_color'] ?? '#1f2937';
-$backgroundColor = $restaurant['bg_color'] ?? '#fafafa';
+$backgroundColor = $restaurant['background_color'] ?? '#fafafa';
 $accentColor = $restaurant['accent_color'] ?? '#f59e0b';
 $buttonColor = $restaurant['button_color'] ?? '#f97316';
 $buttonTextColor = $restaurant['button_text_color'] ?? '#ffffff';

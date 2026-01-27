@@ -18,8 +18,8 @@ define('DB_CHARSET', 'utf8mb4');
 // =====================================================
 // CONFIGURAÇÕES DA APLICAÇÃO
 // =====================================================
-define('APP_NAME', 'Premium Menu');
-define('APP_URL', 'https://seudominio.com');
+define('APP_NAME', 'Cardápio Floripa');
+define('APP_URL', 'https://cardapiofloripa.com.br');
 define('APP_DEBUG', false); // Mudar para false em produção!
 
 // Diretório de uploads
