@@ -196,7 +196,7 @@ CREATE TABLE IF NOT EXISTS `master_admins` (
 
 -- Admin master inicial (senha: admin123 - TROCAR EM PRODUÇÃO!)
 INSERT INTO `master_admins` (`username`, `email`, `password_hash`) VALUES
-('admin', 'admin@premiummenu.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi');
+('admin', 'admin@cardapiofloripa.com.br', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi');
 
 -- =====================================================
 -- TABELA: directory_restaurants (Guia Gastronômico)
@@ -207,7 +207,7 @@ CREATE TABLE IF NOT EXISTS `directory_restaurants` (
   `slug` VARCHAR(200) NOT NULL UNIQUE,
   `address` TEXT,
   `neighborhood` VARCHAR(100),
-  `city` VARCHAR(100) DEFAULT 'São Paulo',
+  `city` VARCHAR(100) DEFAULT 'Florianópolis',
   `cuisine_types` JSON COMMENT 'Array de tipos de comida',
   `logo` VARCHAR(500),
   `phone` VARCHAR(30),
@@ -216,7 +216,7 @@ CREATE TABLE IF NOT EXISTS `directory_restaurants` (
   `website` VARCHAR(255),
   `opening_hours` JSON COMMENT 'Objeto com horários por dia da semana',
   `price_range` ENUM('$', '$$', '$$$', '$$$$') DEFAULT '$$',
-  `is_client` TINYINT(1) DEFAULT 0 COMMENT 'É cliente Premium Menu?',
+  `is_client` TINYINT(1) DEFAULT 0 COMMENT 'É cliente Cardápio Floripa?',
   `linked_restaurant_id` INT UNSIGNED NULL COMMENT 'ID do restaurante cliente se aplicável',
   `menu_url` VARCHAR(255) COMMENT 'URL do cardápio digital se for cliente',
   `status` ENUM('active', 'pending', 'draft') DEFAULT 'draft',
