@@ -1,11 +1,11 @@
 <?php
 /**
- * PREMIUM MENU - Roteador Principal
+ * CARDÁPIO FLORIPA - Roteador Principal
  * 
  * Este é o ponto de entrada principal da aplicação.
  * Carrega o cardápio do restaurante baseado no slug da URL.
  * 
- * Uso: https://seudominio.com/pizzaria-bella
+ * Uso: https://cardapiofloripa.com.br/pizzaria-bella
  */
 
 require_once __DIR__ . '/includes/functions.php';
