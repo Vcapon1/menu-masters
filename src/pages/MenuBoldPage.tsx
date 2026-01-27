@@ -280,7 +280,7 @@ export default function MenuBoldPage() {
           </a>
         </div>
         <p className="text-center text-xs text-white/40 mt-4">
-          Cardápio digital por <span className="text-yellow-400 font-semibold">Premium Menu</span>
+          Cardápio digital por <span className="text-yellow-400 font-semibold">Cardápio Floripa</span>
         </p>
       </footer>
     </div>
