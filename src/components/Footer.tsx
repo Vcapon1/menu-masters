@@ -12,10 +12,10 @@ export function Footer() {
           <div className="md:col-span-2">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow">
-                <span className="text-primary-foreground font-bold text-xl">P</span>
+                <span className="text-primary-foreground font-bold text-xl">C</span>
               </div>
               <span className="font-display text-xl font-bold text-foreground">
-                Premium<span className="text-primary">Menu</span>
+                Cardápio<span className="text-primary">Floripa</span>
               </span>
             </div>
             <p className="text-muted-foreground text-sm max-w-sm mb-6">
@@ -23,9 +23,9 @@ export function Footer() {
               Aumente suas vendas e melhore a experiência dos seus clientes.
             </p>
             <div className="flex flex-col gap-3">
-              <a href="mailto:contato@premiummenu.com" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
+              <a href="mailto:contato@cardapiofloripa.com" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
                 <Mail className="w-4 h-4" />
-                contato@premiummenu.com
+                contato@cardapiofloripa.com
               </a>
               <a href="tel:+5511999999999" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
                 <Phone className="w-4 h-4" />
@@ -72,7 +72,7 @@ export function Footer() {
 
         <div className="border-t border-border/30 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Premium Menu. Todos os direitos reservados.
+            © {new Date().getFullYear()} Cardápio Floripa. Todos os direitos reservados.
           </p>
           <div className="flex items-center gap-6 text-sm text-muted-foreground">
             <a href="#" className="hover:text-primary transition-colors">Instagram</a>

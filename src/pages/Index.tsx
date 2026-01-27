@@ -133,8 +133,8 @@ export default function Index() {
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: `url(${heroImage})` }}
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/95 to-background/70" />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/50" />
+        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-background/40" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/30" />
         
         {/* Ambient glow */}
         <div className="absolute top-1/2 left-1/4 w-[600px] h-[600px] bg-primary/20 rounded-full blur-[120px] -translate-y-1/2" />
@@ -210,7 +210,7 @@ export default function Index() {
             </span>
             <h2 className="section-title mb-4">
               Por que escolher o{" "}
-              <span className="text-gradient">Premium Menu</span>?
+              <span className="text-gradient">Cardápio Floripa</span>?
             </h2>
             <p className="section-subtitle mx-auto">
               Tudo o que você precisa para ter um cardápio digital profissional
@@ -306,7 +306,7 @@ export default function Index() {
                   <span className="text-gradient">diferença</span>
                 </h2>
                 <p className="text-muted-foreground mb-8">
-                  O Premium Menu não é apenas um cardápio digital. É uma
+                  O Cardápio Floripa não é apenas um cardápio digital. É uma
                   ferramenta de vendas pensada para encantar seus clientes e
                   aumentar seu faturamento.
                 </p>

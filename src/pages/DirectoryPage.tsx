@@ -230,7 +230,7 @@ const DirectoryPage = () => {
               </div>
               <div>
                 <h1 className="font-bold text-lg">Guia Gastronômico</h1>
-                <p className="text-xs text-muted-foreground">by Premium Menu</p>
+                <p className="text-xs text-muted-foreground">by Cardápio Floripa</p>
               </div>
             </Link>
 

@@ -210,7 +210,7 @@ export default function MenuPage() {
       <footer className="px-4 py-8 text-center border-t border-border">
         <p className="text-xs text-muted-foreground">
           Cardápio digital por{" "}
-          <span className="font-semibold text-primary">Premium Menu</span>
+          <span className="font-semibold text-primary">Cardápio Floripa</span>
         </p>
       </footer>
     </div>

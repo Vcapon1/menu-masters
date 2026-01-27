@@ -5,7 +5,7 @@ interface WhatsAppFloatProps {
   message?: string;
 }
 
-export function WhatsAppFloat({ phoneNumber, message = "Olá! Gostaria de saber mais sobre o Premium Menu." }: WhatsAppFloatProps) {
+export function WhatsAppFloat({ phoneNumber, message = "Olá! Gostaria de saber mais sobre o Cardápio Floripa." }: WhatsAppFloatProps) {
   const handleClick = () => {
     const encodedMessage = encodeURIComponent(message);
     const url = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;

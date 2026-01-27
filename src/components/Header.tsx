@@ -36,10 +36,10 @@ export function Header() {
           {/* Logo */}
           <a href="/" className="flex items-center gap-3 group">
             <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow group-hover:shadow-glow-lg transition-shadow duration-300">
-              <span className="text-primary-foreground font-bold text-xl">P</span>
+              <span className="text-primary-foreground font-bold text-xl">C</span>
             </div>
             <span className="font-display text-xl font-bold text-foreground">
-              Premium<span className="text-primary">Menu</span>
+              Cardápio<span className="text-primary">Floripa</span>
             </span>
           </a>
 

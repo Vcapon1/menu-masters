@@ -487,7 +487,7 @@ const TemplatePreview = () => {
               >
                 Cardápio digital por{" "}
                 <span style={{ color: restaurant.secondaryColor }} className="font-semibold">
-                  Premium Menu
+                  Cardápio Floripa
                 </span>
               </p>
             </footer>
