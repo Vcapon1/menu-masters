@@ -1,6 +1,6 @@
 <?php
 /**
- * PREMIUM MENU - Admin do Restaurante
+ * CARDÁPIO FLORIPA - Admin do Restaurante
  * 
  * Dashboard principal do painel administrativo do restaurante.
  */

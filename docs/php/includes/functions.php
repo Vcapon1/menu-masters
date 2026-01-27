@@ -1,6 +1,6 @@
 <?php
 /**
- * PREMIUM MENU - Funções Utilitárias
+ * CARDÁPIO FLORIPA - Funções Utilitárias
  * 
  * Funções auxiliares para sanitização, formatação e operações comuns.
  */
