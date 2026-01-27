@@ -1,94 +1,138 @@
 
-## Correções de Coerência PHP/MySQL
 
-### Objetivo
-Alinhar todos os arquivos PHP e SQL com a nova marca "Cardápio Floripa" e corrigir pequenas inconsistências de nomenclatura.
+## Criar Arquivos PHP Faltantes
 
-### Arquivos a Modificar
+### Problema Identificado
 
-| Arquivo | Alterações |
-|---------|-----------|
-| `docs/php/config/database.php` | Trocar APP_NAME para "Cardápio Floripa" e APP_URL de exemplo |
-| `docs/database/schema.sql` | Corrigir email admin, cidade padrão do diretório, comentários |
-| `docs/php/templates/appetite/template.php` | Corrigir nome da variável `bg_color` → `background_color` |
+O arquivo `docs/php/index.php` referencia vários arquivos que não existem no projeto:
 
----
+| Arquivo Referenciado | Linha | Status |
+|---------------------|-------|--------|
+| `/landing.php` | 18 | Faltando |
+| `/templates/404.php` | 28 | Faltando |
+| `/templates/expired.php` | 35 | Faltando |
+| `/templates/classic/template.php` | 65 | Faltando |
 
-### Alterações Detalhadas
-
-#### 1. `docs/php/config/database.php`
-
-Trocar:
-- `APP_NAME`: "Premium Menu" → "Cardápio Floripa"
-- `APP_URL`: "https://seudominio.com" → "https://cardapiofloripa.com.br"
-
-#### 2. `docs/database/schema.sql`
-
-- **Linha 199**: Email do admin master: `admin@premiummenu.com` → `admin@cardapiofloripa.com.br`
-- **Linha 210**: Cidade padrão do diretório: `São Paulo` → `Florianópolis`
-- **Linha 219**: Comentário do is_client: `É cliente Premium Menu?` → `É cliente Cardápio Floripa?`
-
-#### 3. `docs/php/templates/appetite/template.php`
-
-- **Linha 14**: Variável incorreta `bg_color` → `background_color` (alinhado com coluna do banco)
+Além disso, o comentário no index.php ainda diz "PREMIUM MENU" e precisa ser atualizado.
 
 ---
 
-### Verificação de Consistência das Cores
+### Arquivos a Criar
 
-Confirmei que as cores nos templates PHP correspondem aos presets TypeScript:
+#### 1. `docs/php/landing.php`
+Página inicial do sistema quando acessado sem slug de restaurante.
 
-| Template | primary | secondary | accent | button | buttonText | font |
-|----------|---------|-----------|--------|--------|------------|------|
-| Appetite | #f97316 | #1f2937 | #f59e0b | #f97316 | #ffffff | #1f2937 |
-| Bold | #dc2626 | #fbbf24 | #f59e0b | #dc2626 | #ffffff | #ffffff |
-| Classic | #1f2937 | #f59e0b | #d97706 | #f59e0b | #1f2937 | #1f2937 |
+Conteúdo:
+- Logo e nome "Cardápio Floripa"
+- Breve descrição do serviço
+- Botão para contato/cadastro
+- Link para o diretório de restaurantes
+- Design responsivo seguindo identidade visual (cores primárias)
 
-Todos os valores estão sincronizados entre `src/lib/templatePresets.ts` e `docs/database/schema.sql`.
+#### 2. `docs/php/templates/404.php`
+Página de erro quando o restaurante não é encontrado.
 
----
+Conteúdo:
+- Mensagem amigável "Cardápio não encontrado"
+- Sugestão para verificar o link
+- Botão para voltar à página inicial
+- Link para o diretório
 
-### Campos do Banco Confirmados
+#### 3. `docs/php/templates/expired.php`
+Página exibida quando o plano do restaurante expirou.
 
-A tabela `restaurants` no schema SQL inclui todos os campos usados no React:
+Conteúdo:
+- Mensagem informando que o cardápio está temporariamente indisponível
+- Orientação para o restaurante renovar o plano
+- Contato do suporte
 
-| Campo SQL | Usado no React | Status |
-|-----------|----------------|--------|
-| primary_color | primaryColor | ✅ |
-| secondary_color | secondaryColor | ✅ |
-| accent_color | accentColor | ✅ |
-| button_color | buttonColor | ✅ |
-| button_text_color | buttonTextColor | ✅ |
-| font_color | fontColor | ✅ |
-| background_color | backgroundColor | ✅ |
-| background_image | backgroundImage | ✅ |
-| background_video | backgroundVideo | ✅ |
-| logo | logo | ✅ |
-| banner | banner | ✅ |
-| internal_notes | internalNotes | ✅ |
-| address | address | ✅ |
+#### 4. `docs/php/templates/classic/template.php`
+Template padrão/fallback com design clássico.
 
----
-
-### Verificação do Guia Gastronômico
-
-A tabela `directory_restaurants` está correta e inclui:
-- `cuisine_types` (JSON) ✅
-- `opening_hours` (JSON) ✅
-- `price_range` (ENUM) ✅
-- `is_client` + `linked_restaurant_id` ✅
-- `menu_url` ✅
-- `status` (ENUM) ✅
-
-Alinhada com `src/lib/directoryTypes.ts`.
+Conteúdo:
+- Layout simples e elegante
+- Header com logo e nome
+- Categorias e produtos
+- Seguindo estrutura similar ao template Bold mas com design mais clean
 
 ---
 
-### Resumo das Correções
+### Alteração no Arquivo Existente
 
-1. Trocar marca "Premium Menu" → "Cardápio Floripa" nos arquivos PHP
-2. Corrigir variável `bg_color` → `background_color` no template Appetite
-3. Atualizar cidade padrão "São Paulo" → "Florianópolis" no diretório
-4. Atualizar email do admin master
+#### `docs/php/index.php`
+- Atualizar comentário "PREMIUM MENU" para "CARDÁPIO FLORIPA"
+- Atualizar URL de exemplo para cardapiofloripa.com.br
 
-Após essas correções, o projeto estará 100% coerente para deploy.
+---
+
+### Estrutura Final de Pastas
+
+```text
+docs/php/
+├── admin/
+├── config/
+├── includes/
+├── master/
+├── templates/
+│   ├── appetite/
+│   │   ├── style.css
+│   │   └── template.php
+│   ├── bold/
+│   │   └── template.php
+│   ├── classic/          ← NOVO
+│   │   └── template.php
+│   ├── 404.php           ← NOVO
+│   └── expired.php       ← NOVO
+├── .htaccess
+├── index.php
+└── landing.php           ← NOVO
+```
+
+---
+
+### Seção Técnica
+
+**landing.php - Estrutura base:**
+```php
+<?php
+/**
+ * CARDÁPIO FLORIPA - Landing Page
+ * Página inicial do sistema
+ */
+require_once __DIR__ . '/config/database.php';
+?>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title><?= APP_NAME ?> - Cardápio Digital</title>
+    <!-- CSS inline com cores da marca -->
+</head>
+<body>
+    <!-- Hero com logo, título e CTA -->
+    <!-- Seção de benefícios -->
+    <!-- Link para diretório -->
+    <!-- Footer -->
+</body>
+</html>
+```
+
+**404.php - Estrutura base:**
+```php
+<?php
+/**
+ * Página 404 - Cardápio não encontrado
+ */
+require_once __DIR__ . '/../config/database.php';
+?>
+<!DOCTYPE html>
+<!-- Mensagem de erro amigável -->
+```
+
+**classic/template.php:**
+Similar ao Bold, mas com:
+- Cores mais neutras
+- Layout sem overlay escuro
+- Tipografia mais tradicional
+- Sem efeito de hover animado
+
