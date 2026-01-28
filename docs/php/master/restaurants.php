@@ -9,10 +9,12 @@ session_start();
 require_once __DIR__ . '/../includes/functions.php';
 
 // Verificar autenticação master
-if (!isset($_SESSION['master_auth'])) {
+if (!isset($_SESSION['master_admin'])) {
     header('Location: login.php');
     exit;
 }
+
+$admin = $_SESSION['master_admin'];
 
 $message = '';
 $error = '';
