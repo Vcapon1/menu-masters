@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import logoCardapioFloripa from "@/assets/logo-cardapio-floripa.png";
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -34,13 +35,12 @@ export function Header() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <a href="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow group-hover:shadow-glow-lg transition-shadow duration-300">
-              <span className="text-primary-foreground font-bold text-xl">C</span>
-            </div>
-            <span className="font-display text-xl font-bold text-foreground">
-              Cardápio<span className="text-primary">Floripa</span>
-            </span>
+          <a href="/" className="flex items-center group">
+            <img 
+              src={logoCardapioFloripa} 
+              alt="Cardápio Floripa" 
+              className="h-10 md:h-12 w-auto object-contain"
+            />
           </a>
 
           {/* Desktop Navigation */}
