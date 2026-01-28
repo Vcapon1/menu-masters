@@ -39,7 +39,7 @@ export function Header() {
             <img 
               src={logoCardapioFloripa} 
               alt="Cardápio Floripa" 
-              className="h-10 md:h-12 w-auto object-contain"
+              className="h-14 md:h-16 w-auto object-contain"
             />
           </a>
 
