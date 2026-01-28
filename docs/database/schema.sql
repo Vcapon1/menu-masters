@@ -198,7 +198,7 @@ CREATE TABLE IF NOT EXISTS `master_admins` (
 -- Admin master inicial (senha: admin123 - TROCAR EM PRODUÇÃO!)
 -- Hash gerada com: password_hash('admin123', PASSWORD_BCRYPT)
 INSERT INTO `master_admins` (`name`, `username`, `email`, `password_hash`) VALUES
-('Administrador', 'admin', 'admin@cardapiofloripa.com.br', '$2y$10$8K1p/a0dR1LXMIgoEDFrwOQWwJ5HJz3V3GXEaPJ0qYHe.8b2FeVVO');
+('Administrador', 'admin', 'admin@cardapiofloripa.com.br', '$2y$10$dJnGPPHzUZG.MvjD6xKFxOmHQmCYz0zYp6qU3xX7a9dJ5mWqJBhiC');
 
 -- =====================================================
 -- TABELA: directory_restaurants (Guia Gastronômico)
