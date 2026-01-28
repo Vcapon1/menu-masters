@@ -1,5 +1,5 @@
 -- =====================================================
--- PREMIUM MENU - SCHEMA DO BANCO DE DADOS MySQL
+-- CARDÁPIO FLORIPA - SCHEMA DO BANCO DE DADOS MySQL
 -- =====================================================
 -- Execute este script para criar todas as tabelas
 -- Versão: 1.0
@@ -185,6 +185,7 @@ CREATE TABLE IF NOT EXISTS `access_stats` (
 -- =====================================================
 CREATE TABLE IF NOT EXISTS `master_admins` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(200) NOT NULL,
   `username` VARCHAR(100) NOT NULL UNIQUE,
   `email` VARCHAR(255) NOT NULL UNIQUE,
   `password_hash` VARCHAR(255) NOT NULL COMMENT 'Hash bcrypt da senha',
@@ -195,8 +196,9 @@ CREATE TABLE IF NOT EXISTS `master_admins` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Admin master inicial (senha: admin123 - TROCAR EM PRODUÇÃO!)
-INSERT INTO `master_admins` (`username`, `email`, `password_hash`) VALUES
-('admin', 'admin@cardapiofloripa.com.br', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi');
+-- Hash gerada com: password_hash('admin123', PASSWORD_BCRYPT)
+INSERT INTO `master_admins` (`name`, `username`, `email`, `password_hash`) VALUES
+('Administrador', 'admin', 'admin@cardapiofloripa.com.br', '$2y$10$8K1p/a0dR1LXMIgoEDFrwOQWwJ5HJz3V3GXEaPJ0qYHe.8b2FeVVO');
 
 -- =====================================================
 -- TABELA: directory_restaurants (Guia Gastronômico)
