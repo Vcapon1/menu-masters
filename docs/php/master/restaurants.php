@@ -306,9 +306,12 @@ $restaurants = $stmt->fetchAll();
     </div>
     
     <!-- Modal de Criar/Editar Restaurante -->
-    <div id="form-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
-        <div class="bg-gray-800 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h2 id="form-title" class="text-xl font-bold mb-6">Novo Restaurante</h2>
+    <div id="form-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4 overflow-y-auto">
+        <div class="bg-gray-800 rounded-lg p-6 max-w-4xl w-full my-8 relative">
+            <div class="flex justify-between items-center mb-6">
+                <h2 id="form-title" class="text-xl font-bold">Novo Restaurante</h2>
+                <button type="button" onclick="closeModal()" class="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
             
             <form method="post" enctype="multipart/form-data" class="grid grid-cols-2 gap-4">
                 <input type="hidden" name="action" id="form-action" value="create">
