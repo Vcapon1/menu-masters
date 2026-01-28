@@ -107,9 +107,14 @@ if ($statusFilter !== 'all') {
 }
 $directoryRestaurants = $stmt->fetchAll();
 
-// Buscar restaurantes clientes para vincular
-$stmt = db()->query("SELECT id, name FROM restaurants WHERE status = 'active' ORDER BY name ASC");
-$clientRestaurants = $stmt->fetchAll();
+// Buscar restaurantes clientes para vincular (com tratamento de erro)
+$clientRestaurants = [];
+try {
+    $stmt = db()->query("SELECT id, name FROM restaurants WHERE status = 'active' ORDER BY name ASC");
+    $clientRestaurants = $stmt->fetchAll();
+} catch (Exception $e) {
+    // Tabela restaurants pode não existir ainda
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">

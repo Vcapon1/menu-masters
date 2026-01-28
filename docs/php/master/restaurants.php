@@ -305,6 +305,173 @@ $restaurants = $stmt->fetchAll();
         </div>
     </div>
     
+    <!-- Modal de Criar/Editar Restaurante -->
+    <div id="form-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+        <div class="bg-gray-800 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <h2 id="form-title" class="text-xl font-bold mb-6">Novo Restaurante</h2>
+            
+            <form method="post" enctype="multipart/form-data" class="grid grid-cols-2 gap-4">
+                <input type="hidden" name="action" id="form-action" value="create">
+                <input type="hidden" name="id" id="form-id">
+                <input type="hidden" name="current_logo" id="form-current-logo">
+                <input type="hidden" name="current_banner" id="form-current-banner">
+                <input type="hidden" name="current_background_image" id="form-current-bg">
+                
+                <!-- Dados Básicos -->
+                <div class="col-span-2">
+                    <h3 class="text-sm font-medium text-gray-400 border-b border-gray-700 pb-2 mb-4">Dados Básicos</h3>
+                </div>
+                
+                <div>
+                    <label class="block text-sm mb-1">Nome *</label>
+                    <input type="text" name="name" id="form-name" required
+                           class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                </div>
+                
+                <div>
+                    <label class="block text-sm mb-1">Slug (URL)</label>
+                    <input type="text" name="slug" id="form-slug" placeholder="gerado-automaticamente"
+                           class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                </div>
+                
+                <div>
+                    <label class="block text-sm mb-1">Email *</label>
+                    <input type="email" name="email" id="form-email" required
+                           class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                </div>
+                
+                <div>
+                    <label class="block text-sm mb-1">Telefone</label>
+                    <input type="text" name="phone" id="form-phone"
+                           class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                </div>
+                
+                <div class="col-span-2">
+                    <label class="block text-sm mb-1">Endereço</label>
+                    <input type="text" name="address" id="form-address"
+                           class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                </div>
+                
+                <div class="col-span-2">
+                    <label class="block text-sm mb-1">Notas Internas (oculto do restaurante)</label>
+                    <textarea name="internal_notes" id="form-notes" rows="2"
+                              class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2"></textarea>
+                </div>
+                
+                <!-- Plano e Template -->
+                <div class="col-span-2">
+                    <h3 class="text-sm font-medium text-gray-400 border-b border-gray-700 pb-2 mb-4 mt-4">Plano e Template</h3>
+                </div>
+                
+                <div>
+                    <label class="block text-sm mb-1">Plano *</label>
+                    <select name="plan_id" id="form-plan" required
+                            class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                        <option value="">Selecione o plano...</option>
+                        <?php foreach ($plans as $plan): ?>
+                            <option value="<?= $plan['id'] ?>"><?= htmlspecialchars($plan['name']) ?> - R$ <?= number_format($plan['price'], 2, ',', '.') ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm mb-1">Template *</label>
+                    <select name="template_id" id="form-template" required
+                            class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                        <option value="">Selecione o plano primeiro...</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm mb-1">Status</label>
+                    <select name="status" id="form-status"
+                            class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                        <option value="pending">Pendente</option>
+                        <option value="active">Ativo</option>
+                        <option value="inactive">Inativo</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm mb-1">Data de Expiração</label>
+                    <input type="date" name="expires_at" id="form-expires"
+                           class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                </div>
+                
+                <!-- Mídia -->
+                <div class="col-span-2">
+                    <h3 class="text-sm font-medium text-gray-400 border-b border-gray-700 pb-2 mb-4 mt-4">Mídia</h3>
+                </div>
+                
+                <div>
+                    <label class="block text-sm mb-1">Logo</label>
+                    <input type="file" name="logo" accept="image/*"
+                           class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+                </div>
+                
+                <div>
+                    <label class="block text-sm mb-1">Banner</label>
+                    <input type="file" name="banner" accept="image/*"
+                           class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+                </div>
+                
+                <div class="col-span-2">
+                    <label class="block text-sm mb-1">Imagem de Fundo</label>
+                    <input type="file" name="background_image" accept="image/*"
+                           class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+                </div>
+                
+                <!-- Cores -->
+                <div class="col-span-2">
+                    <h3 class="text-sm font-medium text-gray-400 border-b border-gray-700 pb-2 mb-4 mt-4">Personalização de Cores</h3>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-4 col-span-2">
+                    <div>
+                        <label class="block text-sm mb-1">Cor Primária</label>
+                        <input type="color" name="primary_color" id="form-primary-color" value="#dc2626"
+                               class="w-full h-10 rounded cursor-pointer">
+                    </div>
+                    <div>
+                        <label class="block text-sm mb-1">Cor Secundária</label>
+                        <input type="color" name="secondary_color" id="form-secondary-color" value="#fbbf24"
+                               class="w-full h-10 rounded cursor-pointer">
+                    </div>
+                    <div>
+                        <label class="block text-sm mb-1">Cor de Destaque</label>
+                        <input type="color" name="accent_color" id="form-accent-color" value="#ff6b00"
+                               class="w-full h-10 rounded cursor-pointer">
+                    </div>
+                    <div>
+                        <label class="block text-sm mb-1">Cor do Botão</label>
+                        <input type="color" name="button_color" id="form-button-color" value="#dc2626"
+                               class="w-full h-10 rounded cursor-pointer">
+                    </div>
+                    <div>
+                        <label class="block text-sm mb-1">Texto do Botão</label>
+                        <input type="color" name="button_text_color" id="form-button-text-color" value="#ffffff"
+                               class="w-full h-10 rounded cursor-pointer">
+                    </div>
+                    <div>
+                        <label class="block text-sm mb-1">Cor da Fonte</label>
+                        <input type="color" name="font_color" id="form-font-color" value="#ffffff"
+                               class="w-full h-10 rounded cursor-pointer">
+                    </div>
+                </div>
+                
+                <!-- Botões -->
+                <div class="col-span-2 flex gap-4 mt-6">
+                    <button type="submit" class="flex-1 bg-purple-600 hover:bg-purple-700 py-3 rounded-lg font-medium">
+                        Salvar
+                    </button>
+                    <button type="button" onclick="closeModal()" class="px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
     <script>
         // Templates disponíveis por plano (carregado do PHP)
         const templatesByPlan = <?= json_encode(
@@ -313,6 +480,75 @@ $restaurants = $stmt->fetchAll();
                 return $acc;
             }, [])
         ) ?>;
+        
+        function openModal() {
+            // Reset form
+            document.getElementById('form-action').value = 'create';
+            document.getElementById('form-title').textContent = 'Novo Restaurante';
+            document.getElementById('form-id').value = '';
+            document.getElementById('form-name').value = '';
+            document.getElementById('form-slug').value = '';
+            document.getElementById('form-email').value = '';
+            document.getElementById('form-phone').value = '';
+            document.getElementById('form-address').value = '';
+            document.getElementById('form-notes').value = '';
+            document.getElementById('form-plan').value = '';
+            document.getElementById('form-template').innerHTML = '<option value="">Selecione o plano primeiro...</option>';
+            document.getElementById('form-status').value = 'pending';
+            document.getElementById('form-expires').value = '';
+            document.getElementById('form-current-logo').value = '';
+            document.getElementById('form-current-banner').value = '';
+            document.getElementById('form-current-bg').value = '';
+            document.getElementById('form-primary-color').value = '#dc2626';
+            document.getElementById('form-secondary-color').value = '#fbbf24';
+            document.getElementById('form-accent-color').value = '#ff6b00';
+            document.getElementById('form-button-color').value = '#dc2626';
+            document.getElementById('form-button-text-color').value = '#ffffff';
+            document.getElementById('form-font-color').value = '#ffffff';
+            
+            document.getElementById('form-modal').classList.remove('hidden');
+            document.getElementById('form-modal').classList.add('flex');
+        }
+        
+        function closeModal() {
+            document.getElementById('form-modal').classList.add('hidden');
+            document.getElementById('form-modal').classList.remove('flex');
+        }
+        
+        function editRestaurant(r) {
+            document.getElementById('form-action').value = 'update';
+            document.getElementById('form-title').textContent = 'Editar Restaurante';
+            document.getElementById('form-id').value = r.id;
+            document.getElementById('form-name').value = r.name || '';
+            document.getElementById('form-slug').value = r.slug || '';
+            document.getElementById('form-email').value = r.email || '';
+            document.getElementById('form-phone').value = r.phone || '';
+            document.getElementById('form-address').value = r.address || '';
+            document.getElementById('form-notes').value = r.internal_notes || '';
+            document.getElementById('form-plan').value = r.plan_id || '';
+            document.getElementById('form-status').value = r.status || 'pending';
+            document.getElementById('form-expires').value = r.expires_at ? r.expires_at.split(' ')[0] : '';
+            document.getElementById('form-current-logo').value = r.logo || '';
+            document.getElementById('form-current-banner').value = r.banner || '';
+            document.getElementById('form-current-bg').value = r.background_image || '';
+            document.getElementById('form-primary-color').value = r.primary_color || '#dc2626';
+            document.getElementById('form-secondary-color').value = r.secondary_color || '#fbbf24';
+            document.getElementById('form-accent-color').value = r.accent_color || '#ff6b00';
+            document.getElementById('form-button-color').value = r.button_color || '#dc2626';
+            document.getElementById('form-button-text-color').value = r.button_text_color || '#ffffff';
+            document.getElementById('form-font-color').value = r.font_color || '#ffffff';
+            
+            // Atualizar templates para o plano selecionado
+            updateTemplateOptions(r.plan_id);
+            
+            // Aguardar atualização e selecionar template
+            setTimeout(() => {
+                document.getElementById('form-template').value = r.template_id || '';
+            }, 100);
+            
+            document.getElementById('form-modal').classList.remove('hidden');
+            document.getElementById('form-modal').classList.add('flex');
+        }
         
         function confirmDelete(id, name) {
             document.getElementById('delete-id').value = id;
@@ -342,6 +578,14 @@ $restaurants = $stmt->fetchAll();
         // Quando trocar plano, atualizar templates disponíveis
         document.getElementById('form-plan')?.addEventListener('change', function() {
             updateTemplateOptions(this.value);
+        });
+        
+        // Fechar modal clicando fora
+        document.getElementById('form-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+        document.getElementById('delete-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeDeleteModal();
         });
     </script>
 </body>
