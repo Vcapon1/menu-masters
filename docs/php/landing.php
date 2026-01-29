@@ -490,54 +490,91 @@ try {
             grid-template-columns: repeat(3, 1fr);
             gap: 2rem;
             margin-top: 4rem;
+            align-items: start;
         }
         
         .plan-card {
             background: var(--background);
             border: 1px solid var(--border);
-            border-radius: 24px;
-            padding: 2.5rem;
+            border-radius: 16px;
+            padding: 2rem;
             position: relative;
-            transition: all 0.3s;
+            transition: all 0.5s;
+            overflow: hidden;
+        }
+        
+        .plan-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(249, 115, 22, 0.3);
         }
         
         .plan-card.featured {
-            border-color: var(--primary);
+            border: 2px solid rgba(249, 115, 22, 0.5);
             transform: scale(1.05);
+            z-index: 10;
+            box-shadow: 0 0 40px rgba(249, 115, 22, 0.2);
         }
         
         .plan-card.featured::before {
-            content: 'Mais Popular';
+            content: '';
             position: absolute;
-            top: -12px;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+        }
+        
+        .plan-badge {
+            position: absolute;
+            top: -1px;
             left: 50%;
             transform: translateX(-50%);
-            background: var(--primary);
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
             color: white;
-            padding: 0.25rem 1rem;
-            border-radius: 20px;
+            padding: 0.375rem 1rem;
+            border-radius: 0 0 8px 8px;
             font-size: 0.75rem;
             font-weight: 600;
         }
         
         .plan-name {
-            font-size: 1.5rem;
+            font-family: 'Sora', sans-serif;
+            font-size: 1.75rem;
             font-weight: 700;
             margin-bottom: 0.5rem;
         }
         
-        .plan-price {
-            font-family: 'Sora', sans-serif;
-            font-size: 3rem;
-            font-weight: 800;
-            color: var(--primary);
+        .plan-description {
+            color: var(--text-muted);
+            font-size: 0.9rem;
             margin-bottom: 1.5rem;
+            line-height: 1.5;
         }
         
-        .plan-price span {
+        .plan-price {
+            display: flex;
+            align-items: baseline;
+            gap: 0.25rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .plan-price-value {
+            font-family: 'Sora', sans-serif;
+            font-size: 2.75rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+        
+        .plan-price-period {
             font-size: 1rem;
             color: var(--text-muted);
-            font-weight: 400;
+        }
+        
+        .plan-annual {
+            color: var(--primary);
+            font-size: 0.875rem;
+            margin-bottom: 2rem;
         }
         
         .plan-features {
@@ -547,20 +584,46 @@ try {
         
         .plan-features li {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             gap: 0.75rem;
-            padding: 0.75rem 0;
-            border-bottom: 1px solid var(--border);
-            font-size: 0.95rem;
+            padding: 0.5rem 0;
+            font-size: 0.9rem;
+            line-height: 1.4;
         }
         
-        .plan-features li:last-child {
-            border-bottom: none;
+        .plan-features li.included {
+            color: var(--text-light);
         }
         
-        .plan-features li svg {
-            color: var(--primary);
+        .plan-features li.excluded {
+            color: var(--text-muted);
+            opacity: 0.5;
+        }
+        
+        .feature-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             flex-shrink: 0;
+            margin-top: 2px;
+        }
+        
+        .feature-icon.check {
+            background: rgba(249, 115, 22, 0.2);
+            color: var(--primary);
+        }
+        
+        .feature-icon.x {
+            background: var(--surface);
+            color: var(--text-muted);
+        }
+        
+        .feature-icon svg {
+            width: 12px;
+            height: 12px;
         }
         
         /* Contact */
@@ -881,85 +944,148 @@ try {
                 <p>Escolha o plano ideal para o seu negócio.</p>
             </div>
             <div class="plans-grid">
+                <!-- Basic Plan -->
                 <div class="plan-card">
-                    <div class="plan-name">Básico</div>
-                    <div class="plan-price">R$ 49<span>/mês</span></div>
+                    <div class="plan-name">Basic</div>
+                    <p class="plan-description">Perfeito para começar seu cardápio digital</p>
+                    <div class="plan-price">
+                        <span class="plan-price-value">R$65</span>
+                        <span class="plan-price-period">/mês</span>
+                    </div>
+                    <p class="plan-annual">ou R$45/mês no plano anual</p>
                     <ul class="plan-features">
-                        <li>
-                            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                            Até 30 produtos
+                        <li class="included">
+                            <span class="feature-icon check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></span>
+                            Lista completa de produtos
                         </li>
-                        <li>
-                            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                            5 categorias
+                        <li class="included">
+                            <span class="feature-icon check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></span>
+                            Nome, preço e foto dos itens
                         </li>
-                        <li>
-                            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                            QR Code exclusivo
+                        <li class="included">
+                            <span class="feature-icon check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></span>
+                            Clique para ampliar imagens
                         </li>
-                        <li>
-                            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                            Template Classic
+                        <li class="included">
+                            <span class="feature-icon check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></span>
+                            URL única + QR Code
+                        </li>
+                        <li class="excluded">
+                            <span class="feature-icon x"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l6 6M9 3l-6 6"/></svg></span>
+                            Filtro por categorias
+                        </li>
+                        <li class="excluded">
+                            <span class="feature-icon x"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l6 6M9 3l-6 6"/></svg></span>
+                            Ícones especiais (vegano, promoção)
+                        </li>
+                        <li class="excluded">
+                            <span class="feature-icon x"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l6 6M9 3l-6 6"/></svg></span>
+                            Vídeos nos produtos
+                        </li>
+                        <li class="excluded">
+                            <span class="feature-icon x"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l6 6M9 3l-6 6"/></svg></span>
+                            Logotipo e cores personalizadas
                         </li>
                     </ul>
-                    <a href="https://wa.me/5548999999999?text=Olá! Quero assinar o plano Básico" class="btn btn-outline" style="width: 100%; justify-content: center;">
-                        Escolher Básico
+                    <a href="https://wa.me/5548999999999?text=Olá! Quero assinar o plano Basic" class="btn btn-outline" style="width: 100%; justify-content: center;">
+                        Começar agora
                     </a>
                 </div>
                 
+                <!-- Premium Plan (Featured) -->
                 <div class="plan-card featured">
+                    <span class="plan-badge">Mais Popular</span>
                     <div class="plan-name">Premium</div>
-                    <div class="plan-price">R$ 99<span>/mês</span></div>
+                    <p class="plan-description">O mais completo para restaurantes exigentes</p>
+                    <div class="plan-price">
+                        <span class="plan-price-value">R$99</span>
+                        <span class="plan-price-period">/mês</span>
+                    </div>
+                    <p class="plan-annual">ou R$79/mês no plano anual</p>
                     <ul class="plan-features">
-                        <li>
-                            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                            Produtos ilimitados
+                        <li class="included">
+                            <span class="feature-icon check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></span>
+                            Tudo do plano Basic
                         </li>
-                        <li>
-                            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                            Categorias ilimitadas
+                        <li class="included">
+                            <span class="feature-icon check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></span>
+                            Filtro por categorias (estilo iFood)
                         </li>
-                        <li>
-                            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                            Todos os templates
+                        <li class="included">
+                            <span class="feature-icon check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></span>
+                            Ícones: promoção, vegano, destaque
                         </li>
-                        <li>
-                            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                            Estatísticas avançadas
+                        <li class="included">
+                            <span class="feature-icon check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></span>
+                            Vídeos por produto
                         </li>
-                        <li>
-                            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                            Suporte de vídeo
+                        <li class="included">
+                            <span class="feature-icon check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></span>
+                            Logotipo do restaurante
+                        </li>
+                        <li class="included">
+                            <span class="feature-icon check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></span>
+                            Cores personalizadas
+                        </li>
+                        <li class="included">
+                            <span class="feature-icon check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></span>
+                            Indicador de mais pedidos
+                        </li>
+                        <li class="included">
+                            <span class="feature-icon check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></span>
+                            Status de produto em falta
                         </li>
                     </ul>
                     <a href="https://wa.me/5548999999999?text=Olá! Quero assinar o plano Premium" class="btn btn-primary" style="width: 100%; justify-content: center;">
-                        Escolher Premium
+                        Começar agora
                     </a>
                 </div>
                 
+                <!-- Personalité Plan -->
                 <div class="plan-card">
                     <div class="plan-name">Personalité</div>
-                    <div class="plan-price">R$ 199<span>/mês</span></div>
+                    <p class="plan-description">Layout exclusivo para sua marca</p>
+                    <div class="plan-price">
+                        <span class="plan-price-value">R$199</span>
+                        <span class="plan-price-period">/mês</span>
+                    </div>
+                    <p class="plan-annual">ou R$149/mês no plano anual</p>
                     <ul class="plan-features">
-                        <li>
-                            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                            Tudo do Premium
+                        <li class="included">
+                            <span class="feature-icon check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></span>
+                            Tudo do plano Premium
                         </li>
-                        <li>
-                            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                            Design exclusivo
+                        <li class="included">
+                            <span class="feature-icon check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></span>
+                            Layout totalmente personalizado
                         </li>
-                        <li>
-                            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                            Domínio próprio
+                        <li class="included">
+                            <span class="feature-icon check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></span>
+                            Design exclusivo da sua marca
                         </li>
-                        <li>
-                            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                        <li class="included">
+                            <span class="feature-icon check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></span>
+                            Consultoria de design inclusa
+                        </li>
+                        <li class="included">
+                            <span class="feature-icon check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></span>
                             Suporte prioritário
+                        </li>
+                        <li class="included">
+                            <span class="feature-icon check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></span>
+                            Integrações especiais
+                        </li>
+                        <li class="included">
+                            <span class="feature-icon check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></span>
+                            Múltiplos cardápios
+                        </li>
+                        <li class="included">
+                            <span class="feature-icon check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></span>
+                            Relatórios de visualização
                         </li>
                     </ul>
                     <a href="https://wa.me/5548999999999?text=Olá! Quero assinar o plano Personalité" class="btn btn-outline" style="width: 100%; justify-content: center;">
-                        Escolher Personalité
+                        Começar agora
                     </a>
                 </div>
             </div>
