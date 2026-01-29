@@ -53,6 +53,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     throw new Exception('Preencha todos os campos obrigatórios.');
                 }
                 
+                // Validar email único
+                $emailCheckSql = "SELECT id FROM restaurants WHERE email = :email";
+                if ($action === 'update' && $id) {
+                    $emailCheckSql .= " AND id != :current_id";
+                }
+                $emailCheckStmt = db()->prepare($emailCheckSql);
+                $emailParams = ['email' => $data['email']];
+                if ($action === 'update' && $id) {
+                    $emailParams['current_id'] = $id;
+                }
+                $emailCheckStmt->execute($emailParams);
+                if ($emailCheckStmt->fetch()) {
+                    throw new Exception('Este email já está cadastrado para outro restaurante.');
+                }
+                
                 // Validar se template está disponível para o plano
                 if (!isTemplateAvailableForPlan($data['template_id'], $data['plan_id'])) {
                     throw new Exception('Template não disponível para o plano selecionado.');
@@ -73,6 +88,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $data['background_image'] = uploadImage($_FILES['background_image'], 'backgrounds');
                 }
                 
+                // Processar senha do cliente
+                $adminPassword = $_POST['admin_password'] ?? '';
+                
                 if ($action === 'create') {
                     // Gerar slug se não fornecido
                     if (empty($data['slug'])) {
@@ -87,12 +105,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $data['slug'] .= '-' . time();
                     }
                     
+                    // Senha obrigatória na criação
+                    if (empty($adminPassword)) {
+                        throw new Exception('A senha de acesso do cliente é obrigatória.');
+                    }
+                    
+                    $data['admin_username'] = $data['email']; // Email é o login
+                    $data['admin_password_hash'] = password_hash($adminPassword, PASSWORD_BCRYPT);
+                    
                     $sql = "INSERT INTO restaurants (name, slug, email, phone, address, internal_notes, 
                             plan_id, template_id, status, expires_at, logo, banner, background_image,
-                            primary_color, secondary_color, accent_color, button_color, button_text_color, font_color)
+                            primary_color, secondary_color, accent_color, button_color, button_text_color, font_color,
+                            admin_username, admin_password_hash)
                             VALUES (:name, :slug, :email, :phone, :address, :internal_notes,
                             :plan_id, :template_id, :status, :expires_at, :logo, :banner, :background_image,
-                            :primary_color, :secondary_color, :accent_color, :button_color, :button_text_color, :font_color)";
+                            :primary_color, :secondary_color, :accent_color, :button_color, :button_text_color, :font_color,
+                            :admin_username, :admin_password_hash)";
                     
                     $stmt = db()->prepare($sql);
                     $stmt->execute($data);
@@ -101,6 +129,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } else {
                     $data['id'] = $id;
                     
+                    // Atualizar senha se fornecida
+                    $passwordUpdate = '';
+                    if (!empty($adminPassword)) {
+                        $passwordUpdate = ', admin_password_hash = :admin_password_hash';
+                        $data['admin_password_hash'] = password_hash($adminPassword, PASSWORD_BCRYPT);
+                    }
+                    
+                    // Sempre atualizar admin_username para email
+                    $data['admin_username'] = $data['email'];
+                    
                     $sql = "UPDATE restaurants SET 
                             name = :name, slug = :slug, email = :email, phone = :phone, address = :address,
                             internal_notes = :internal_notes, plan_id = :plan_id, template_id = :template_id,
@@ -108,7 +146,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             background_image = :background_image, primary_color = :primary_color,
                             secondary_color = :secondary_color, accent_color = :accent_color,
                             button_color = :button_color, button_text_color = :button_text_color,
-                            font_color = :font_color
+                            font_color = :font_color, admin_username = :admin_username{$passwordUpdate}
                             WHERE id = :id";
                     
                     $stmt = db()->prepare($sql);
@@ -157,6 +195,9 @@ $sql = "SELECT r.*, p.name AS plan_name, t.name AS template_name,
 
 $stmt = db()->query($sql);
 $restaurants = $stmt->fetchAll();
+
+// Data padrão para expiração: 1 ano a partir de hoje
+$defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -165,6 +206,56 @@ $restaurants = $stmt->fetchAll();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Restaurantes - Master Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        /* Modal com scroll interno */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 50;
+            display: none;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-container {
+            background: #1f2937;
+            border-radius: 0.75rem;
+            width: 100%;
+            max-width: 56rem;
+            margin: 2rem auto;
+            position: relative;
+            max-height: calc(100vh - 4rem);
+            display: flex;
+            flex-direction: column;
+        }
+        .modal-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid #374151;
+            flex-shrink: 0;
+            background: #1f2937;
+            border-radius: 0.75rem 0.75rem 0 0;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .modal-body {
+            padding: 1.5rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid #374151;
+            flex-shrink: 0;
+            background: #1f2937;
+            border-radius: 0 0 0.75rem 0.75rem;
+        }
+    </style>
 </head>
 <body class="bg-gray-900 text-white min-h-screen">
     <nav class="bg-purple-900 border-b border-purple-700">
@@ -274,25 +365,28 @@ $restaurants = $stmt->fetchAll();
     </main>
     
     <!-- Modal de Exclusão com Senha -->
-    <div id="delete-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
-        <div class="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
-            <h2 class="text-xl font-bold mb-4 text-red-400">⚠️ Confirmar Exclusão</h2>
-            <p class="text-gray-300 mb-4">
-                Você está prestes a excluir o restaurante <strong id="delete-name"></strong>.
-                Esta ação é irreversível.
-            </p>
+    <div id="delete-modal" class="modal-overlay">
+        <div class="modal-container" style="max-width: 28rem;">
+            <div class="modal-header">
+                <h2 class="text-xl font-bold text-red-400">⚠️ Confirmar Exclusão</h2>
+            </div>
             <form method="post">
-                <input type="hidden" name="action" value="delete">
-                <input type="hidden" name="id" id="delete-id">
-                
-                <div class="mb-4">
-                    <label class="block text-sm mb-1">Digite sua senha para confirmar:</label>
-                    <input type="password" name="password" required
-                           class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2"
-                           placeholder="Senha do Admin Master">
+                <div class="modal-body">
+                    <p class="text-gray-300 mb-4">
+                        Você está prestes a excluir o restaurante <strong id="delete-name"></strong>.
+                        Esta ação é irreversível.
+                    </p>
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="id" id="delete-id">
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm mb-1">Digite sua senha para confirmar:</label>
+                        <input type="password" name="password" required
+                               class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2"
+                               placeholder="Senha do Admin Master">
+                    </div>
                 </div>
-                
-                <div class="flex gap-2">
+                <div class="modal-footer flex gap-2">
                     <button type="submit" class="flex-1 bg-red-600 hover:bg-red-700 py-2 rounded">
                         Confirmar Exclusão
                     </button>
@@ -306,164 +400,184 @@ $restaurants = $stmt->fetchAll();
     </div>
     
     <!-- Modal de Criar/Editar Restaurante -->
-    <div id="form-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4 overflow-y-auto">
-        <div class="bg-gray-800 rounded-lg p-6 max-w-4xl w-full my-8 relative">
-            <div class="flex justify-between items-center mb-6">
+    <div id="form-modal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header flex justify-between items-center">
                 <h2 id="form-title" class="text-xl font-bold">Novo Restaurante</h2>
                 <button type="button" onclick="closeModal()" class="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
             </div>
             
-            <form method="post" enctype="multipart/form-data" class="grid grid-cols-2 gap-4">
+            <form method="post" enctype="multipart/form-data">
                 <input type="hidden" name="action" id="form-action" value="create">
                 <input type="hidden" name="id" id="form-id">
                 <input type="hidden" name="current_logo" id="form-current-logo">
                 <input type="hidden" name="current_banner" id="form-current-banner">
                 <input type="hidden" name="current_background_image" id="form-current-bg">
                 
-                <!-- Dados Básicos -->
-                <div class="col-span-2">
-                    <h3 class="text-sm font-medium text-gray-400 border-b border-gray-700 pb-2 mb-4">Dados Básicos</h3>
-                </div>
-                
-                <div>
-                    <label class="block text-sm mb-1">Nome *</label>
-                    <input type="text" name="name" id="form-name" required
-                           class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
-                </div>
-                
-                <div>
-                    <label class="block text-sm mb-1">Slug (URL)</label>
-                    <input type="text" name="slug" id="form-slug" placeholder="gerado-automaticamente"
-                           class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
-                </div>
-                
-                <div>
-                    <label class="block text-sm mb-1">Email *</label>
-                    <input type="email" name="email" id="form-email" required
-                           class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
-                </div>
-                
-                <div>
-                    <label class="block text-sm mb-1">Telefone</label>
-                    <input type="text" name="phone" id="form-phone"
-                           class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
-                </div>
-                
-                <div class="col-span-2">
-                    <label class="block text-sm mb-1">Endereço</label>
-                    <input type="text" name="address" id="form-address"
-                           class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
-                </div>
-                
-                <div class="col-span-2">
-                    <label class="block text-sm mb-1">Notas Internas (oculto do restaurante)</label>
-                    <textarea name="internal_notes" id="form-notes" rows="2"
-                              class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2"></textarea>
-                </div>
-                
-                <!-- Plano e Template -->
-                <div class="col-span-2">
-                    <h3 class="text-sm font-medium text-gray-400 border-b border-gray-700 pb-2 mb-4 mt-4">Plano e Template</h3>
-                </div>
-                
-                <div>
-                    <label class="block text-sm mb-1">Plano *</label>
-                    <select name="plan_id" id="form-plan" required
-                            class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
-                        <option value="">Selecione o plano...</option>
-                        <?php foreach ($plans as $plan): ?>
-                            <option value="<?= $plan['id'] ?>"><?= htmlspecialchars($plan['name']) ?> - R$ <?= number_format($plan['price'], 2, ',', '.') ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                
-                <div>
-                    <label class="block text-sm mb-1">Template *</label>
-                    <select name="template_id" id="form-template" required
-                            class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
-                        <option value="">Selecione o plano primeiro...</option>
-                    </select>
-                </div>
-                
-                <div>
-                    <label class="block text-sm mb-1">Status</label>
-                    <select name="status" id="form-status"
-                            class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
-                        <option value="pending">Pendente</option>
-                        <option value="active">Ativo</option>
-                        <option value="inactive">Inativo</option>
-                    </select>
-                </div>
-                
-                <div>
-                    <label class="block text-sm mb-1">Data de Expiração</label>
-                    <input type="date" name="expires_at" id="form-expires"
-                           class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
-                </div>
-                
-                <!-- Mídia -->
-                <div class="col-span-2">
-                    <h3 class="text-sm font-medium text-gray-400 border-b border-gray-700 pb-2 mb-4 mt-4">Mídia</h3>
-                </div>
-                
-                <div>
-                    <label class="block text-sm mb-1">Logo</label>
-                    <input type="file" name="logo" accept="image/*"
-                           class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
-                </div>
-                
-                <div>
-                    <label class="block text-sm mb-1">Banner</label>
-                    <input type="file" name="banner" accept="image/*"
-                           class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
-                </div>
-                
-                <div class="col-span-2">
-                    <label class="block text-sm mb-1">Imagem de Fundo</label>
-                    <input type="file" name="background_image" accept="image/*"
-                           class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
-                </div>
-                
-                <!-- Cores -->
-                <div class="col-span-2">
-                    <h3 class="text-sm font-medium text-gray-400 border-b border-gray-700 pb-2 mb-4 mt-4">Personalização de Cores</h3>
-                </div>
-                
-                <div class="grid grid-cols-3 gap-4 col-span-2">
-                    <div>
-                        <label class="block text-sm mb-1">Cor Primária</label>
-                        <input type="color" name="primary_color" id="form-primary-color" value="#dc2626"
-                               class="w-full h-10 rounded cursor-pointer">
+                <div class="modal-body">
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- Dados Básicos -->
+                        <div class="col-span-2">
+                            <h3 class="text-sm font-medium text-gray-400 border-b border-gray-700 pb-2 mb-4">Dados Básicos</h3>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm mb-1">Nome *</label>
+                            <input type="text" name="name" id="form-name" required
+                                   class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm mb-1">Slug (URL)</label>
+                            <input type="text" name="slug" id="form-slug" placeholder="gerado-automaticamente"
+                                   class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm mb-1">Email * <span class="text-gray-500 text-xs">(será o login)</span></label>
+                            <input type="email" name="email" id="form-email" required
+                                   class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm mb-1">Telefone</label>
+                            <input type="text" name="phone" id="form-phone"
+                                   class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                        </div>
+                        
+                        <div class="col-span-2">
+                            <label class="block text-sm mb-1">Endereço</label>
+                            <input type="text" name="address" id="form-address"
+                                   class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                        </div>
+                        
+                        <div class="col-span-2">
+                            <label class="block text-sm mb-1">Notas Internas (oculto do restaurante)</label>
+                            <textarea name="internal_notes" id="form-notes" rows="2"
+                                      class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2"></textarea>
+                        </div>
+                        
+                        <!-- Credenciais de Acesso -->
+                        <div class="col-span-2">
+                            <h3 class="text-sm font-medium text-gray-400 border-b border-gray-700 pb-2 mb-4 mt-4">Credenciais de Acesso</h3>
+                        </div>
+                        
+                        <div class="col-span-2">
+                            <label class="block text-sm mb-1">
+                                Senha do Cliente * 
+                                <span id="password-hint" class="text-gray-500 text-xs">(obrigatória na criação)</span>
+                            </label>
+                            <input type="password" name="admin_password" id="form-password"
+                                   class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2"
+                                   placeholder="Senha para acesso ao painel do restaurante">
+                            <p class="text-xs text-gray-500 mt-1">O cliente usará o email como login e esta senha para acessar o painel administrativo.</p>
+                        </div>
+                        
+                        <!-- Plano e Template -->
+                        <div class="col-span-2">
+                            <h3 class="text-sm font-medium text-gray-400 border-b border-gray-700 pb-2 mb-4 mt-4">Plano e Template</h3>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm mb-1">Plano *</label>
+                            <select name="plan_id" id="form-plan" required
+                                    class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                                <option value="">Selecione o plano...</option>
+                                <?php foreach ($plans as $plan): ?>
+                                    <option value="<?= $plan['id'] ?>"><?= htmlspecialchars($plan['name']) ?> - R$ <?= number_format($plan['price'], 2, ',', '.') ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm mb-1">Template *</label>
+                            <select name="template_id" id="form-template" required
+                                    class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                                <option value="">Selecione o plano primeiro...</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm mb-1">Status</label>
+                            <select name="status" id="form-status"
+                                    class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                                <option value="pending">Pendente</option>
+                                <option value="active">Ativo</option>
+                                <option value="inactive">Inativo</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm mb-1">Data de Expiração</label>
+                            <input type="date" name="expires_at" id="form-expires"
+                                   class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                        </div>
+                        
+                        <!-- Mídia -->
+                        <div class="col-span-2">
+                            <h3 class="text-sm font-medium text-gray-400 border-b border-gray-700 pb-2 mb-4 mt-4">Mídia</h3>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm mb-1">Logo</label>
+                            <input type="file" name="logo" accept="image/*"
+                                   class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm mb-1">Banner</label>
+                            <input type="file" name="banner" accept="image/*"
+                                   class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+                        </div>
+                        
+                        <div class="col-span-2">
+                            <label class="block text-sm mb-1">Imagem de Fundo</label>
+                            <input type="file" name="background_image" accept="image/*"
+                                   class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+                        </div>
+                        
+                        <!-- Cores -->
+                        <div class="col-span-2">
+                            <h3 class="text-sm font-medium text-gray-400 border-b border-gray-700 pb-2 mb-4 mt-4">Personalização de Cores</h3>
+                        </div>
+                        
+                        <div class="grid grid-cols-3 gap-4 col-span-2">
+                            <div>
+                                <label class="block text-sm mb-1">Cor Primária</label>
+                                <input type="color" name="primary_color" id="form-primary-color" value="#dc2626"
+                                       class="w-full h-10 rounded cursor-pointer">
+                            </div>
+                            <div>
+                                <label class="block text-sm mb-1">Cor Secundária</label>
+                                <input type="color" name="secondary_color" id="form-secondary-color" value="#fbbf24"
+                                       class="w-full h-10 rounded cursor-pointer">
+                            </div>
+                            <div>
+                                <label class="block text-sm mb-1">Cor de Destaque</label>
+                                <input type="color" name="accent_color" id="form-accent-color" value="#ff6b00"
+                                       class="w-full h-10 rounded cursor-pointer">
+                            </div>
+                            <div>
+                                <label class="block text-sm mb-1">Cor do Botão</label>
+                                <input type="color" name="button_color" id="form-button-color" value="#dc2626"
+                                       class="w-full h-10 rounded cursor-pointer">
+                            </div>
+                            <div>
+                                <label class="block text-sm mb-1">Texto do Botão</label>
+                                <input type="color" name="button_text_color" id="form-button-text-color" value="#ffffff"
+                                       class="w-full h-10 rounded cursor-pointer">
+                            </div>
+                            <div>
+                                <label class="block text-sm mb-1">Cor da Fonte</label>
+                                <input type="color" name="font_color" id="form-font-color" value="#ffffff"
+                                       class="w-full h-10 rounded cursor-pointer">
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm mb-1">Cor Secundária</label>
-                        <input type="color" name="secondary_color" id="form-secondary-color" value="#fbbf24"
-                               class="w-full h-10 rounded cursor-pointer">
-                    </div>
-                    <div>
-                        <label class="block text-sm mb-1">Cor de Destaque</label>
-                        <input type="color" name="accent_color" id="form-accent-color" value="#ff6b00"
-                               class="w-full h-10 rounded cursor-pointer">
-                    </div>
-                    <div>
-                        <label class="block text-sm mb-1">Cor do Botão</label>
-                        <input type="color" name="button_color" id="form-button-color" value="#dc2626"
-                               class="w-full h-10 rounded cursor-pointer">
-                    </div>
-                    <div>
-                        <label class="block text-sm mb-1">Texto do Botão</label>
-                        <input type="color" name="button_text_color" id="form-button-text-color" value="#ffffff"
-                               class="w-full h-10 rounded cursor-pointer">
-                    </div>
-                    <div>
-                        <label class="block text-sm mb-1">Cor da Fonte</label>
-                        <input type="color" name="font_color" id="form-font-color" value="#ffffff"
-                               class="w-full h-10 rounded cursor-pointer">
-                    </div>
                 </div>
                 
-                <!-- Botões -->
-                <div class="col-span-2 flex gap-4 mt-6">
+                <!-- Botões fixos no footer -->
+                <div class="modal-footer flex gap-4">
                     <button type="submit" class="flex-1 bg-purple-600 hover:bg-purple-700 py-3 rounded-lg font-medium">
                         Salvar
                     </button>
@@ -476,6 +590,9 @@ $restaurants = $stmt->fetchAll();
     </div>
     
     <script>
+        // Data padrão para expiração
+        const defaultExpiresAt = '<?= $defaultExpiresAt ?>';
+        
         // Templates disponíveis por plano (carregado do PHP)
         const templatesByPlan = <?= json_encode(
             array_reduce($plans, function($acc, $plan) {
@@ -495,10 +612,13 @@ $restaurants = $stmt->fetchAll();
             document.getElementById('form-phone').value = '';
             document.getElementById('form-address').value = '';
             document.getElementById('form-notes').value = '';
+            document.getElementById('form-password').value = '';
+            document.getElementById('form-password').required = true;
+            document.getElementById('password-hint').textContent = '(obrigatória na criação)';
             document.getElementById('form-plan').value = '';
             document.getElementById('form-template').innerHTML = '<option value="">Selecione o plano primeiro...</option>';
             document.getElementById('form-status').value = 'pending';
-            document.getElementById('form-expires').value = '';
+            document.getElementById('form-expires').value = defaultExpiresAt;
             document.getElementById('form-current-logo').value = '';
             document.getElementById('form-current-banner').value = '';
             document.getElementById('form-current-bg').value = '';
@@ -509,13 +629,11 @@ $restaurants = $stmt->fetchAll();
             document.getElementById('form-button-text-color').value = '#ffffff';
             document.getElementById('form-font-color').value = '#ffffff';
             
-            document.getElementById('form-modal').classList.remove('hidden');
-            document.getElementById('form-modal').classList.add('flex');
+            document.getElementById('form-modal').classList.add('active');
         }
         
         function closeModal() {
-            document.getElementById('form-modal').classList.add('hidden');
-            document.getElementById('form-modal').classList.remove('flex');
+            document.getElementById('form-modal').classList.remove('active');
         }
         
         function editRestaurant(r) {
@@ -528,9 +646,12 @@ $restaurants = $stmt->fetchAll();
             document.getElementById('form-phone').value = r.phone || '';
             document.getElementById('form-address').value = r.address || '';
             document.getElementById('form-notes').value = r.internal_notes || '';
+            document.getElementById('form-password').value = '';
+            document.getElementById('form-password').required = false;
+            document.getElementById('password-hint').textContent = '(deixe vazio para manter a senha atual)';
             document.getElementById('form-plan').value = r.plan_id || '';
             document.getElementById('form-status').value = r.status || 'pending';
-            document.getElementById('form-expires').value = r.expires_at ? r.expires_at.split(' ')[0] : '';
+            document.getElementById('form-expires').value = r.expires_at ? r.expires_at.split(' ')[0] : defaultExpiresAt;
             document.getElementById('form-current-logo').value = r.logo || '';
             document.getElementById('form-current-banner').value = r.banner || '';
             document.getElementById('form-current-bg').value = r.background_image || '';
@@ -549,20 +670,17 @@ $restaurants = $stmt->fetchAll();
                 document.getElementById('form-template').value = r.template_id || '';
             }, 100);
             
-            document.getElementById('form-modal').classList.remove('hidden');
-            document.getElementById('form-modal').classList.add('flex');
+            document.getElementById('form-modal').classList.add('active');
         }
         
         function confirmDelete(id, name) {
             document.getElementById('delete-id').value = id;
             document.getElementById('delete-name').textContent = name;
-            document.getElementById('delete-modal').classList.remove('hidden');
-            document.getElementById('delete-modal').classList.add('flex');
+            document.getElementById('delete-modal').classList.add('active');
         }
         
         function closeDeleteModal() {
-            document.getElementById('delete-modal').classList.add('hidden');
-            document.getElementById('delete-modal').classList.remove('flex');
+            document.getElementById('delete-modal').classList.remove('active');
         }
         
         function updateTemplateOptions(planId) {
