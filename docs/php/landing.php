@@ -104,19 +104,8 @@ try {
         }
         
         .logo img {
-            height: 48px;
+            height: 56px;
             width: auto;
-        }
-        
-        .logo-text {
-            font-family: 'Sora', sans-serif;
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--text);
-        }
-        
-        .logo-text span {
-            color: var(--primary);
         }
         
         .nav {
@@ -196,7 +185,6 @@ try {
             right: 0;
             bottom: 0;
             background: url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1920&q=80') center/cover;
-            opacity: 0.3;
         }
         
         .hero-bg::after {
@@ -206,23 +194,43 @@ try {
             left: 0;
             right: 0;
             bottom: 0;
-            background: linear-gradient(135deg, rgba(12, 10, 9, 0.95) 0%, rgba(12, 10, 9, 0.7) 50%, rgba(12, 10, 9, 0.5) 100%);
+            background: linear-gradient(to right, var(--background) 0%, rgba(12, 10, 9, 0.8) 50%, rgba(12, 10, 9, 0.4) 100%);
+        }
+        
+        .hero-bg::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to top, var(--background) 0%, transparent 30%, rgba(12, 10, 9, 0.3) 100%);
+            z-index: 1;
+        }
+        
+        .hero-glow {
+            position: absolute;
+            top: 50%;
+            left: 25%;
+            width: 600px;
+            height: 600px;
+            background: rgba(249, 115, 22, 0.2);
+            border-radius: 50%;
+            filter: blur(120px);
+            transform: translateY(-50%);
+            pointer-events: none;
         }
         
         .hero-inner {
             max-width: 1280px;
             margin: 0 auto;
             width: 100%;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 4rem;
-            align-items: center;
             position: relative;
-            z-index: 1;
+            z-index: 2;
         }
         
         .hero-content {
-            max-width: 600px;
+            max-width: 750px;
         }
         
         .hero-badge {
@@ -236,12 +244,17 @@ try {
             color: var(--primary);
             font-size: 0.875rem;
             font-weight: 500;
-            margin-bottom: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .hero-badge svg {
+            width: 16px;
+            height: 16px;
         }
         
         .hero h1 {
             font-family: 'Sora', sans-serif;
-            font-size: 3.5rem;
+            font-size: 4rem;
             font-weight: 800;
             line-height: 1.1;
             margin-bottom: 1.5rem;
@@ -254,19 +267,21 @@ try {
         .hero p {
             font-size: 1.25rem;
             color: var(--text-muted);
-            margin-bottom: 2rem;
+            margin-bottom: 2.5rem;
             line-height: 1.7;
+            max-width: 600px;
         }
         
         .hero-buttons {
             display: flex;
             gap: 1rem;
-            margin-bottom: 2.5rem;
+            margin-bottom: 3rem;
         }
         
         .hero-features {
             display: flex;
             gap: 2rem;
+            flex-wrap: wrap;
         }
         
         .hero-feature {
@@ -279,64 +294,46 @@ try {
         
         .hero-feature svg {
             color: var(--primary);
+            width: 20px;
+            height: 20px;
         }
         
-        .hero-visual {
-            position: relative;
-            display: flex;
-            justify-content: center;
-        }
-        
-        .hero-phone {
-            position: relative;
-            width: 280px;
-            height: 560px;
-            background: var(--surface);
-            border-radius: 40px;
-            border: 3px solid var(--surface-light);
-            overflow: hidden;
-            box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5);
-        }
-        
-        .hero-phone::before {
-            content: '';
+        /* Scroll Indicator */
+        .scroll-indicator {
             position: absolute;
-            top: 12px;
+            bottom: 2rem;
             left: 50%;
             transform: translateX(-50%);
-            width: 80px;
-            height: 24px;
-            background: var(--background);
+            animation: bounce 2s infinite;
+        }
+        
+        .scroll-indicator-inner {
+            width: 24px;
+            height: 40px;
+            border: 2px solid rgba(168, 162, 158, 0.3);
             border-radius: 20px;
-            z-index: 10;
+            display: flex;
+            justify-content: center;
+            padding-top: 8px;
         }
         
-        .hero-phone-screen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&q=80') center/cover;
+        .scroll-indicator-dot {
+            width: 6px;
+            height: 10px;
+            background: var(--primary);
+            border-radius: 3px;
         }
         
-        .hero-qr {
-            position: absolute;
-            right: -60px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 180px;
-            height: 180px;
-            background: white;
-            border-radius: 20px;
-            padding: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
-        }
-        
-        .hero-qr img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateX(-50%) translateY(0);
+            }
+            40% {
+                transform: translateX(-50%) translateY(-10px);
+            }
+            60% {
+                transform: translateX(-50%) translateY(-5px);
+            }
         }
         
         /* Features */
@@ -669,22 +666,12 @@ try {
         
         /* Responsive */
         @media (max-width: 1024px) {
-            .hero-inner {
-                grid-template-columns: 1fr;
-                text-align: center;
-            }
-            
             .hero-content {
                 max-width: 100%;
             }
             
-            .hero-buttons,
-            .hero-features {
-                justify-content: center;
-            }
-            
-            .hero-visual {
-                display: none;
+            .hero h1 {
+                font-size: 3rem;
             }
             
             .features-grid,
@@ -756,7 +743,7 @@ try {
     <header class="header">
         <div class="header-inner">
             <a href="/" class="logo">
-                <span class="logo-text">Cardápio<span>Floripa</span></span>
+                <img src="<?= APP_URL ?>/assets/logo-cardapio-floripa.png" alt="<?= APP_NAME ?>">
             </a>
             <nav class="nav">
                 <a href="#vantagens">Vantagens</a>
@@ -772,12 +759,14 @@ try {
     <!-- Hero -->
     <section class="hero">
         <div class="hero-bg"></div>
+        <div class="hero-glow"></div>
         <div class="hero-inner">
             <div class="hero-content">
                 <div class="hero-badge">
-                    ✨ Cardápio Digital Profissional
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.912 5.813L20 10l-4.796 3.396L17 19l-5-3.333L7 19l1.796-5.604L4 10l6.088-1.187L12 3z"/></svg>
+                    Cardápio Digital Profissional
                 </div>
-                <h1>Transforme seu <span>cardápio</span> em uma <span>máquina de vendas</span></h1>
+                <h1>Transforme seu <span>cardápio</span><br>em uma <span>máquina de vendas</span></h1>
                 <p>Cardápio digital moderno e elegante. Seus clientes escaneiam o QR Code e têm acesso instantâneo ao menu completo do seu restaurante.</p>
                 <div class="hero-buttons">
                     <a href="https://wa.me/5548999999999?text=Olá! Gostaria de saber mais sobre o Cardápio Floripa" class="btn btn-primary btn-lg">
@@ -789,26 +778,23 @@ try {
                 </div>
                 <div class="hero-features">
                     <div class="hero-feature">
-                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
                         Sem fidelidade
                     </div>
                     <div class="hero-feature">
-                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
                         Setup em 24h
                     </div>
                     <div class="hero-feature">
-                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
                         Suporte dedicado
                     </div>
                 </div>
             </div>
-            <div class="hero-visual">
-                <div class="hero-phone">
-                    <div class="hero-phone-screen"></div>
-                </div>
-                <div class="hero-qr">
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=<?= urlencode(APP_URL) ?>" alt="QR Code">
-                </div>
+        </div>
+        <div class="scroll-indicator">
+            <div class="scroll-indicator-inner">
+                <div class="scroll-indicator-dot"></div>
             </div>
         </div>
     </section>
