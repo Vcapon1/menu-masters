@@ -326,16 +326,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </html>
                 ";
                 
-                // Tentar enviar email
-                $headers = "MIME-Version: 1.0\r\n";
-                $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
-                $headers .= "From: Cardápio Floripa <noreply@cardapiofloripa.com.br>\r\n";
+                // Tentar enviar email com headers simplificados
+                $to = $restaurant['email'];
+                $headers = [];
+                $headers[] = "MIME-Version: 1.0";
+                $headers[] = "Content-Type: text/html; charset=UTF-8";
+                $headers[] = "From: noreply@cardapiofloripa.com.br";
+                $headers[] = "Reply-To: noreply@cardapiofloripa.com.br";
+                $headers[] = "X-Mailer: PHP/" . phpversion();
                 
-                if (mail($restaurant['email'], $subject, $body, $headers)) {
+                $headerString = implode("\r\n", $headers);
+                
+                $emailSent = @mail($to, $subject, $body, $headerString);
+                
+                if ($emailSent) {
                     $message = 'Email enviado com sucesso para ' . $restaurant['email'] . '!';
                 } else {
-                    // Se mail() falhar, ainda mostrar sucesso parcial
-                    $message = 'Dados preparados! Configure o servidor SMTP para envio automático. Email: ' . $restaurant['email'];
+                    $lastError = error_get_last();
+                    $errorMsg = $lastError ? $lastError['message'] : 'Função mail() indisponível no servidor';
+                    $message = 'Falha ao enviar email: ' . $errorMsg;
                 }
                 break;
         }
