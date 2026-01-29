@@ -1,128 +1,67 @@
 
-# Plano: Corrigir Envio de Email com PHPMailer
+# Plano: Corrigir Envio de Email (Método Simples)
 
-## Diagnóstico do Problema
+## Diagnóstico
 
-O sistema atual usa a função nativa `mail()` do PHP, que é **pouco confiável** e depende totalmente da configuração do servidor. Problemas comuns:
-
-- Servidores compartilhados bloqueiam `mail()`
-- Sem autenticação SMTP, emails caem no spam
-- Falhas silenciosas sem log de erro
-- Cabeçalhos podem ser rejeitados
-
-## Solução Proposta
-
-Implementar **PHPMailer** com configuração SMTP profissional, garantindo entrega confiável.
+O email não está sendo enviado porque os headers têm um problema: o formato `From: Nome <email>` pode ser rejeitado por alguns servidores. Vou simplificar para o formato que funcionou antes.
 
 ---
 
-## Etapa 1: Adicionar PHPMailer ao Projeto
+## Correção Proposta
 
-Criar arquivo `docs/php/includes/mailer.php` com classe PHPMailer simplificada ou incluir via Composer.
+Modificar os headers do email em `docs/php/master/restaurants.php` (linhas 329-339):
 
-**Configurações SMTP necessárias no `config/database.php`:**
+### De:
 ```php
-// Configurações de Email
-define('SMTP_HOST', 'smtp.seuservidor.com');
-define('SMTP_PORT', 587);
-define('SMTP_USER', 'noreply@cardapiofloripa.com.br');
-define('SMTP_PASS', 'sua_senha_aqui');
-define('SMTP_FROM_NAME', 'Cardápio Floripa');
-define('SMTP_FROM_EMAIL', 'noreply@cardapiofloripa.com.br');
+$headers = "MIME-Version: 1.0\r\n";
+$headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+$headers .= "From: Cardápio Floripa <noreply@cardapiofloripa.com.br>\r\n";
+
+if (mail($restaurant['email'], $subject, $body, $headers)) {
 ```
 
----
-
-## Etapa 2: Criar Função de Envio Robusta
-
-Adicionar em `docs/php/includes/functions.php`:
-
+### Para:
 ```php
-function sendEmail(string $to, string $subject, string $htmlBody): bool {
-    // Usar PHPMailer com SMTP autenticado
-    // Fallback para mail() se PHPMailer não disponível
-    // Log de erros para diagnóstico
-}
-```
+$to = $restaurant['email'];
+$headers = [];
+$headers[] = "MIME-Version: 1.0";
+$headers[] = "Content-Type: text/html; charset=UTF-8";
+$headers[] = "From: noreply@cardapiofloripa.com.br";
+$headers[] = "Reply-To: noreply@cardapiofloripa.com.br";
+$headers[] = "X-Mailer: PHP/" . phpversion();
 
----
+$headerString = implode("\r\n", $headers);
 
-## Etapa 3: Atualizar restaurants.php
+$emailSent = @mail($to, $subject, $body, $headerString);
 
-Substituir chamada `mail()` por função robusta:
-
-```php
-// Antes:
-if (mail($restaurant['email'], $subject, $body, $headers)) { ... }
-
-// Depois:
-if (sendEmail($restaurant['email'], $subject, $body)) {
-    $message = 'Email enviado com sucesso!';
+if ($emailSent) {
+    $message = 'Email enviado com sucesso para ' . $restaurant['email'] . '!';
 } else {
-    $error = 'Falha ao enviar email. Verifique configurações SMTP.';
+    $lastError = error_get_last();
+    $errorMsg = $lastError ? $lastError['message'] : 'Função mail() indisponível';
+    $message = 'Falha ao enviar email: ' . $errorMsg;
 }
 ```
 
 ---
 
-## Etapa 4: Adicionar Log de Email
+## Alterações Principais
 
-Criar tabela `email_logs` para rastrear tentativas:
+1. **Remover nome do From** - Usar apenas o email sem "Cardápio Floripa <...>"
+2. **Adicionar Reply-To** - Header importante para entregabilidade
+3. **Adicionar X-Mailer** - Identificador padrão do PHP
+4. **Melhorar tratamento de erro** - Capturar mensagem de erro real se falhar
 
-```sql
-CREATE TABLE email_logs (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    restaurant_id INT,
-    email_to VARCHAR(255),
-    subject VARCHAR(255),
-    status ENUM('sent', 'failed'),
-    error_message TEXT,
-    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+---
+
+## Arquivo Modificado
+
+```text
+docs/php/master/restaurants.php  ← Ajustar headers da função mail()
 ```
-
----
-
-## Alternativa Simples (sem PHPMailer)
-
-Se preferir não instalar PHPMailer, podemos:
-
-1. **Melhorar headers do mail()** - Adicionar cabeçalhos mais completos
-2. **Verificar função mail()** - Adicionar diagnóstico para identificar erro
-3. **Usar serviço externo** - Integrar com SendGrid, Mailgun ou Resend via API HTTP
-
----
-
-## Informações Necessárias
-
-Para implementar, preciso saber:
-
-1. **Qual provedor de email você usa?** (Gmail, Hostinger, Locaweb, etc.)
-2. **Tem acesso às credenciais SMTP do servidor?**
-3. **Prefere PHPMailer ou integração com serviço como SendGrid?**
 
 ---
 
 ## Seção Técnica
 
-### Estrutura de Arquivos Modificados
-
-```text
-docs/php/
-├── config/
-│   └── database.php          ← Adicionar configurações SMTP
-├── includes/
-│   ├── functions.php         ← Adicionar função sendEmail()
-│   └── mailer.php            ← Nova classe de email (opcional)
-└── master/
-    └── restaurants.php       ← Substituir mail() por sendEmail()
-```
-
-### Dependências
-
-Se usar PHPMailer:
-```bash
-composer require phpmailer/phpmailer
-```
-
-Ou download manual: https://github.com/PHPMailer/PHPMailer
+O problema está no formato do header `From:`. Alguns servidores de email rejeitam o formato `Nome <email>` quando há caracteres especiais (como "á" em "Cardápio"). Usando apenas o email puro `noreply@cardapiofloripa.com.br` resolve esse problema de compatibilidade.
