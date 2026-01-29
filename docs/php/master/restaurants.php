@@ -170,6 +170,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->execute(['id' => $id]);
                 $message = 'Restaurante excluído com sucesso!';
                 break;
+                
+            case 'send_contract':
+                $id = (int)($_POST['id'] ?? 0);
+                $generatePassword = ($_POST['generate_password'] ?? '0') === '1';
+                
+                // Buscar dados do restaurante
+                $restaurant = getRestaurantById($id);
+                if (!$restaurant) {
+                    throw new Exception('Restaurante não encontrado.');
+                }
+                
+                // Gerar nova senha se solicitado
+                $newPassword = null;
+                if ($generatePassword) {
+                    $newPassword = bin2hex(random_bytes(4)); // 8 caracteres
+                    $passwordHash = password_hash($newPassword, PASSWORD_BCRYPT);
+                    
+                    $updateSql = "UPDATE restaurants SET admin_password_hash = :hash WHERE id = :id";
+                    $updateStmt = db()->prepare($updateSql);
+                    $updateStmt->execute(['hash' => $passwordHash, 'id' => $id]);
+                }
+                
+                // Montar email (simulado - requer configuração SMTP)
+                $menuUrl = (isset($_SERVER['HTTPS']) ? 'https://' : 'http://') . $_SERVER['HTTP_HOST'] . '/' . $restaurant['slug'];
+                $adminUrl = (isset($_SERVER['HTTPS']) ? 'https://' : 'http://') . $_SERVER['HTTP_HOST'] . '/admin/login.php';
+                
+                $subject = "Dados do seu cardápio digital - " . $restaurant['name'];
+                $body = "
+                    <h2>Olá, {$restaurant['name']}!</h2>
+                    <p>Seguem os dados do seu cardápio digital:</p>
+                    
+                    <h3>🔗 Acesso ao Cardápio</h3>
+                    <p><strong>URL:</strong> <a href='{$menuUrl}'>{$menuUrl}</a></p>
+                    
+                    <h3>📋 Dados do Plano</h3>
+                    <p><strong>Plano:</strong> {$restaurant['plan_name']}</p>
+                    <p><strong>Validade:</strong> " . ($restaurant['expires_at'] ? date('d/m/Y', strtotime($restaurant['expires_at'])) : 'Não definida') . "</p>
+                    
+                    <h3>🔑 Acesso Administrativo</h3>
+                    <p><strong>URL do Painel:</strong> <a href='{$adminUrl}'>{$adminUrl}</a></p>
+                    <p><strong>Login:</strong> {$restaurant['email']}</p>
+                    " . ($newPassword ? "<p><strong>Nova Senha:</strong> {$newPassword}</p><p style='color: orange;'>⚠️ Recomendamos alterar esta senha no primeiro acesso.</p>" : "<p><em>Sua senha permanece a mesma.</em></p>") . "
+                    
+                    <hr>
+                    <p>Atenciosamente,<br>Equipe Premium Menu</p>
+                ";
+                
+                // Tentar enviar email
+                $headers = "MIME-Version: 1.0\r\n";
+                $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+                $headers .= "From: Premium Menu <noreply@premiummenu.com.br>\r\n";
+                
+                if (mail($restaurant['email'], $subject, $body, $headers)) {
+                    $message = 'Email enviado com sucesso para ' . $restaurant['email'] . '!';
+                } else {
+                    // Se mail() falhar, ainda mostrar sucesso parcial
+                    $message = 'Dados preparados! Configure o servidor SMTP para envio automático. Email: ' . $restaurant['email'];
+                }
+                break;
         }
     } catch (Exception $e) {
         $error = $e->getMessage();
@@ -207,36 +266,30 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
     <title>Restaurantes - Master Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
-        /* Modal com scroll interno */
+        /* Modal com scroll interno - CORRIGIDO */
         .modal-overlay {
             position: fixed;
             inset: 0;
             background: rgba(0, 0, 0, 0.6);
             z-index: 50;
             display: none;
-            align-items: flex-start;
-            justify-content: center;
-            padding: 1rem;
             overflow-y: auto;
+            padding: 2rem 1rem;
         }
         .modal-overlay.active {
-            display: flex;
+            display: block;
         }
         .modal-container {
             background: #1f2937;
             border-radius: 0.75rem;
             width: 100%;
             max-width: 56rem;
-            margin: 2rem auto;
+            margin: 0 auto;
             position: relative;
-            max-height: calc(100vh - 4rem);
-            display: flex;
-            flex-direction: column;
         }
         .modal-header {
             padding: 1.25rem 1.5rem;
             border-bottom: 1px solid #374151;
-            flex-shrink: 0;
             background: #1f2937;
             border-radius: 0.75rem 0.75rem 0 0;
             position: sticky;
@@ -349,13 +402,15 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
                                     <span class="text-gray-400">-</span>
                                 <?php endif; ?>
                             </td>
-                            <td class="px-4 py-3 text-right">
+                            <td class="px-4 py-3 text-right whitespace-nowrap">
                                 <a href="/<?= htmlspecialchars($r['slug']) ?>" target="_blank" 
-                                   class="text-purple-400 hover:text-purple-300 mr-2">Ver</a>
+                                   class="text-purple-400 hover:text-purple-300 mr-2" title="Ver cardápio">Ver</a>
                                 <button onclick="editRestaurant(<?= htmlspecialchars(json_encode($r)) ?>)" 
-                                        class="text-blue-400 hover:text-blue-300 mr-2">Editar</button>
+                                        class="text-blue-400 hover:text-blue-300 mr-2" title="Editar">Editar</button>
+                                <button onclick="sendContractData(<?= htmlspecialchars(json_encode($r)) ?>)" 
+                                        class="text-green-400 hover:text-green-300 mr-2" title="Enviar dados do contrato por email">📧</button>
                                 <button onclick="confirmDelete(<?= $r['id'] ?>, '<?= htmlspecialchars($r['name']) ?>')" 
-                                        class="text-red-400 hover:text-red-300">Excluir</button>
+                                        class="text-red-400 hover:text-red-300" title="Excluir">Excluir</button>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -396,6 +451,58 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+    
+    <!-- Modal de Enviar Dados do Contrato -->
+    <div id="send-modal" class="modal-overlay">
+        <div class="modal-container" style="max-width: 32rem;">
+            <div class="modal-header flex justify-between items-center">
+                <h2 class="text-xl font-bold text-green-400">📧 Enviar Dados do Contrato</h2>
+                <button type="button" onclick="closeSendModal()" class="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="text-gray-300 mb-4">
+                    Enviar dados do contrato para o restaurante <strong id="send-name" class="text-white"></strong>?
+                </p>
+                
+                <div class="bg-gray-900 rounded-lg p-4 mb-4 text-sm">
+                    <h4 class="font-medium mb-2 text-gray-200">Dados que serão enviados:</h4>
+                    <ul class="space-y-1 text-gray-400">
+                        <li>✅ Nome do restaurante</li>
+                        <li>✅ URL do cardápio: <span id="send-url" class="text-purple-400"></span></li>
+                        <li>✅ Plano contratado: <span id="send-plan" class="text-white"></span></li>
+                        <li>✅ Data de expiração: <span id="send-expires" class="text-white"></span></li>
+                        <li>✅ Login de acesso (email)</li>
+                        <li>⚠️ <span class="text-yellow-400">Senha não inclusa por segurança</span></li>
+                    </ul>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm mb-1">Email do destinatário:</label>
+                    <input type="email" id="send-email" readonly
+                           class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                </div>
+                
+                <div class="flex items-center gap-2 mb-4">
+                    <input type="checkbox" id="send-new-password" class="rounded bg-gray-700 border-gray-600">
+                    <label for="send-new-password" class="text-sm">Gerar e enviar nova senha temporária</label>
+                </div>
+            </div>
+            <div class="modal-footer flex gap-2">
+                <form method="post" class="flex-1">
+                    <input type="hidden" name="action" value="send_contract">
+                    <input type="hidden" name="id" id="send-id">
+                    <input type="hidden" name="generate_password" id="send-generate-password" value="0">
+                    <button type="submit" class="w-full bg-green-600 hover:bg-green-700 py-2 rounded font-medium">
+                        📧 Enviar Email
+                    </button>
+                </form>
+                <button type="button" onclick="closeSendModal()" 
+                        class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded">
+                    Cancelar
+                </button>
+            </div>
         </div>
     </div>
     
@@ -683,6 +790,27 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
             document.getElementById('delete-modal').classList.remove('active');
         }
         
+        function sendContractData(r) {
+            document.getElementById('send-id').value = r.id;
+            document.getElementById('send-name').textContent = r.name;
+            document.getElementById('send-email').value = r.email;
+            document.getElementById('send-url').textContent = window.location.origin + '/' + r.slug;
+            document.getElementById('send-plan').textContent = r.plan_name;
+            document.getElementById('send-expires').textContent = r.expires_at ? new Date(r.expires_at).toLocaleDateString('pt-BR') : 'Não definida';
+            document.getElementById('send-new-password').checked = false;
+            document.getElementById('send-generate-password').value = '0';
+            document.getElementById('send-modal').classList.add('active');
+        }
+        
+        function closeSendModal() {
+            document.getElementById('send-modal').classList.remove('active');
+        }
+        
+        // Atualizar hidden field quando checkbox muda
+        document.getElementById('send-new-password')?.addEventListener('change', function() {
+            document.getElementById('send-generate-password').value = this.checked ? '1' : '0';
+        });
+        
         function updateTemplateOptions(planId) {
             const templateSelect = document.getElementById('form-template');
             const templates = templatesByPlan[planId] || [];
@@ -707,6 +835,9 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
         });
         document.getElementById('delete-modal').addEventListener('click', function(e) {
             if (e.target === this) closeDeleteModal();
+        });
+        document.getElementById('send-modal')?.addEventListener('click', function(e) {
+            if (e.target === this) closeSendModal();
         });
     </script>
 </body>
