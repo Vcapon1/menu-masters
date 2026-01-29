@@ -455,17 +455,30 @@ function verifyMasterPassword(string $password): bool {
 
 /**
  * Verifica credenciais do restaurante
+ * Aceita login por username ou email
  */
 function verifyRestaurantLogin(string $username, string $password): ?array {
-    $sql = "SELECT id, name, slug, admin_password_hash 
+    // Buscar por admin_username OU email (para maior flexibilidade)
+    $sql = "SELECT id, name, slug, admin_password_hash, status 
             FROM restaurants 
-            WHERE admin_username = :username AND status = 'active'";
+            WHERE (admin_username = :username OR email = :username)";
     
     $stmt = db()->prepare($sql);
     $stmt->execute(['username' => $username]);
     $restaurant = $stmt->fetch();
     
-    if (!$restaurant || !password_verify($password, $restaurant['admin_password_hash'])) {
+    // Verificar se encontrou
+    if (!$restaurant) {
+        return null;
+    }
+    
+    // Verificar senha
+    if (!password_verify($password, $restaurant['admin_password_hash'])) {
+        return null;
+    }
+    
+    // Verificar status (retornar null se não ativo para bloquear acesso)
+    if ($restaurant['status'] !== 'active') {
         return null;
     }
     

@@ -192,35 +192,144 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $updateStmt->execute(['hash' => $passwordHash, 'id' => $id]);
                 }
                 
-                // Montar email (simulado - requer configuração SMTP)
+                // Montar email com layout profissional
                 $menuUrl = (isset($_SERVER['HTTPS']) ? 'https://' : 'http://') . $_SERVER['HTTP_HOST'] . '/' . $restaurant['slug'];
                 $adminUrl = (isset($_SERVER['HTTPS']) ? 'https://' : 'http://') . $_SERVER['HTTP_HOST'] . '/admin/login.php';
+                $expiresDate = $restaurant['expires_at'] ? date('d/m/Y', strtotime($restaurant['expires_at'])) : 'Não definida';
                 
-                $subject = "Dados do seu cardápio digital - " . $restaurant['name'];
+                $subject = "🍽️ Dados do seu cardápio digital - " . $restaurant['name'];
+                
+                $passwordSection = $newPassword 
+                    ? "<tr>
+                        <td style='padding: 12px 16px; border-bottom: 1px solid #374151;'>
+                            <span style='color: #9CA3AF;'>Nova Senha:</span>
+                        </td>
+                        <td style='padding: 12px 16px; border-bottom: 1px solid #374151;'>
+                            <code style='background: #fbbf24; color: #1f2937; padding: 4px 12px; border-radius: 4px; font-weight: bold; font-size: 16px;'>{$newPassword}</code>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan='2' style='padding: 16px; background: #422006; border-radius: 0 0 8px 8px;'>
+                            <span style='color: #fbbf24;'>⚠️ Por segurança, recomendamos alterar esta senha no primeiro acesso.</span>
+                        </td>
+                    </tr>"
+                    : "<tr>
+                        <td colspan='2' style='padding: 12px 16px; color: #9CA3AF; font-style: italic;'>
+                            Sua senha permanece a mesma.
+                        </td>
+                    </tr>";
+                
                 $body = "
-                    <h2>Olá, {$restaurant['name']}!</h2>
-                    <p>Seguem os dados do seu cardápio digital:</p>
-                    
-                    <h3>🔗 Acesso ao Cardápio</h3>
-                    <p><strong>URL:</strong> <a href='{$menuUrl}'>{$menuUrl}</a></p>
-                    
-                    <h3>📋 Dados do Plano</h3>
-                    <p><strong>Plano:</strong> {$restaurant['plan_name']}</p>
-                    <p><strong>Validade:</strong> " . ($restaurant['expires_at'] ? date('d/m/Y', strtotime($restaurant['expires_at'])) : 'Não definida') . "</p>
-                    
-                    <h3>🔑 Acesso Administrativo</h3>
-                    <p><strong>URL do Painel:</strong> <a href='{$adminUrl}'>{$adminUrl}</a></p>
-                    <p><strong>Login:</strong> {$restaurant['email']}</p>
-                    " . ($newPassword ? "<p><strong>Nova Senha:</strong> {$newPassword}</p><p style='color: orange;'>⚠️ Recomendamos alterar esta senha no primeiro acesso.</p>" : "<p><em>Sua senha permanece a mesma.</em></p>") . "
-                    
-                    <hr>
-                    <p>Atenciosamente,<br>Equipe Premium Menu</p>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+</head>
+<body style='margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif; background-color: #0c0a09;'>
+    <div style='max-width: 600px; margin: 0 auto; padding: 20px;'>
+        
+        <!-- Header -->
+        <div style='background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); border-radius: 16px 16px 0 0; padding: 32px; text-align: center;'>
+            <h1 style='margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;'>🍽️ Cardápio Floripa</h1>
+            <p style='margin: 8px 0 0 0; color: rgba(255,255,255,0.9); font-size: 14px;'>Seu cardápio digital profissional</p>
+        </div>
+        
+        <!-- Content -->
+        <div style='background: #1f2937; padding: 32px; border-radius: 0 0 16px 16px;'>
+            
+            <h2 style='margin: 0 0 8px 0; color: #ffffff; font-size: 22px;'>Olá, {$restaurant['name']}! 👋</h2>
+            <p style='margin: 0 0 24px 0; color: #9CA3AF; font-size: 15px;'>Seguem os dados do seu cardápio digital:</p>
+            
+            <!-- Card: Cardápio -->
+            <div style='background: #111827; border: 1px solid #374151; border-radius: 12px; margin-bottom: 20px; overflow: hidden;'>
+                <div style='background: #374151; padding: 12px 16px;'>
+                    <h3 style='margin: 0; color: #f97316; font-size: 14px; font-weight: 600;'>🔗 SEU CARDÁPIO</h3>
+                </div>
+                <div style='padding: 16px;'>
+                    <a href='{$menuUrl}' style='display: block; background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: #ffffff; text-decoration: none; padding: 14px 20px; border-radius: 8px; font-weight: 600; text-align: center; font-size: 15px;'>
+                        Acessar Cardápio →
+                    </a>
+                    <p style='margin: 12px 0 0 0; color: #6B7280; font-size: 12px; word-break: break-all;'>{$menuUrl}</p>
+                </div>
+            </div>
+            
+            <!-- Card: Plano -->
+            <div style='background: #111827; border: 1px solid #374151; border-radius: 12px; margin-bottom: 20px; overflow: hidden;'>
+                <div style='background: #374151; padding: 12px 16px;'>
+                    <h3 style='margin: 0; color: #f97316; font-size: 14px; font-weight: 600;'>📋 DADOS DO PLANO</h3>
+                </div>
+                <table style='width: 100%; border-collapse: collapse;'>
+                    <tr>
+                        <td style='padding: 12px 16px; border-bottom: 1px solid #374151; width: 40%;'>
+                            <span style='color: #9CA3AF;'>Plano:</span>
+                        </td>
+                        <td style='padding: 12px 16px; border-bottom: 1px solid #374151;'>
+                            <span style='color: #ffffff; font-weight: 600;'>{$restaurant['plan_name']}</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style='padding: 12px 16px;'>
+                            <span style='color: #9CA3AF;'>Validade:</span>
+                        </td>
+                        <td style='padding: 12px 16px;'>
+                            <span style='color: #ffffff; font-weight: 600;'>{$expiresDate}</span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            
+            <!-- Card: Acesso Admin -->
+            <div style='background: #111827; border: 1px solid #374151; border-radius: 12px; margin-bottom: 20px; overflow: hidden;'>
+                <div style='background: #374151; padding: 12px 16px;'>
+                    <h3 style='margin: 0; color: #f97316; font-size: 14px; font-weight: 600;'>🔑 ACESSO ADMINISTRATIVO</h3>
+                </div>
+                <table style='width: 100%; border-collapse: collapse;'>
+                    <tr>
+                        <td style='padding: 12px 16px; border-bottom: 1px solid #374151; width: 40%;'>
+                            <span style='color: #9CA3AF;'>Painel:</span>
+                        </td>
+                        <td style='padding: 12px 16px; border-bottom: 1px solid #374151;'>
+                            <a href='{$adminUrl}' style='color: #f97316; text-decoration: none;'>{$adminUrl}</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style='padding: 12px 16px; border-bottom: 1px solid #374151;'>
+                            <span style='color: #9CA3AF;'>Login:</span>
+                        </td>
+                        <td style='padding: 12px 16px; border-bottom: 1px solid #374151;'>
+                            <span style='color: #ffffff; font-weight: 600;'>{$restaurant['email']}</span>
+                        </td>
+                    </tr>
+                    {$passwordSection}
+                </table>
+            </div>
+            
+            <!-- Footer -->
+            <div style='border-top: 1px solid #374151; padding-top: 24px; margin-top: 8px; text-align: center;'>
+                <p style='margin: 0 0 8px 0; color: #9CA3AF; font-size: 14px;'>Precisa de ajuda? Entre em contato conosco!</p>
+                <p style='margin: 0; color: #6B7280; font-size: 13px;'>
+                    Atenciosamente,<br>
+                    <strong style='color: #f97316;'>Equipe Cardápio Floripa</strong>
+                </p>
+            </div>
+            
+        </div>
+        
+        <!-- Copyright -->
+        <p style='text-align: center; color: #6B7280; font-size: 12px; margin-top: 20px;'>
+            © " . date('Y') . " Cardápio Floripa. Todos os direitos reservados.
+        </p>
+        
+    </div>
+</body>
+</html>
                 ";
                 
                 // Tentar enviar email
                 $headers = "MIME-Version: 1.0\r\n";
                 $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
-                $headers .= "From: Premium Menu <noreply@premiummenu.com.br>\r\n";
+                $headers .= "From: Cardápio Floripa <noreply@cardapiofloripa.com.br>\r\n";
                 
                 if (mail($restaurant['email'], $subject, $body, $headers)) {
                     $message = 'Email enviado com sucesso para ' . $restaurant['email'] . '!';
