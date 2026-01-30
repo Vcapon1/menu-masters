@@ -5,17 +5,32 @@
  * Página de login para o painel administrativo do restaurante.
  */
 
-// Ativar exibição de erros para debug (remover em produção)
-ini_set('display_errors', 0);
+// Ativar exibição de erros para debug temporário
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-session_start();
+// Iniciar sessão com tratamento de erro
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Tentar carregar as dependências
+$configPath = __DIR__ . '/../includes/functions.php';
+if (!file_exists($configPath)) {
+    die('Erro: Arquivo de configuração não encontrado em: ' . $configPath);
+}
+
+require_once $configPath;
+
+// Testar conexão com banco
 try {
-    require_once __DIR__ . '/../includes/functions.php';
+    $testConn = db();
+    if (!$testConn) {
+        die('Erro: Conexão com banco de dados falhou');
+    }
 } catch (Exception $e) {
-    die('Erro ao carregar configurações: ' . $e->getMessage());
+    die('Erro de conexão: ' . $e->getMessage());
 }
 
 // Se já logado, redirecionar para dashboard
