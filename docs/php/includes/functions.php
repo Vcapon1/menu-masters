@@ -460,11 +460,13 @@ function verifyMasterPassword(string $password): bool {
 function verifyRestaurantLogin(string $username, string $password): ?array {
     // Buscar por admin_username OU email (para maior flexibilidade)
     $sql = "SELECT id, name, slug, admin_password_hash, status 
-            FROM restaurants 
-            WHERE (admin_username = :username OR email = :username)";
-    
+        FROM restaurants 
+        WHERE (admin_username = :username1 OR email = :username2)";
     $stmt = db()->prepare($sql);
-    $stmt->execute(['username' => $username]);
+    $stmt->execute([
+        'username1' => $username,
+        'username2' => $username
+    ]);
     $restaurant = $stmt->fetch();
     
     // Verificar se encontrou
