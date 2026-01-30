@@ -85,11 +85,13 @@ function getRestaurantById(int $id): ?array {
     $sql = "SELECT r.*, 
                    p.name AS plan_name, p.slug AS plan_slug,
                    t.name AS template_name, t.slug AS template_slug,
-                   t.supports_video, t.supports_promo_price
+                   t.supports_video, t.supports_promo_price,
+                    p.max_products,
+                   p.max_categories
             FROM restaurants r
             JOIN plans p ON r.plan_id = p.id
             JOIN templates t ON r.template_id = t.id
-            WHERE r.id = :id";
+            WHERE r.id = :id;
     
     $stmt = db()->prepare($sql);
     $stmt->execute(['id' => $id]);
