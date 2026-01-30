@@ -5,8 +5,18 @@
  * Página de login para o painel administrativo do restaurante.
  */
 
+// Ativar exibição de erros para debug (remover em produção)
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
+
 session_start();
-require_once __DIR__ . '/../includes/functions.php';
+
+// Tentar carregar as dependências
+try {
+    require_once __DIR__ . '/../includes/functions.php';
+} catch (Exception $e) {
+    die('Erro ao carregar configurações: ' . $e->getMessage());
+}
 
 // Se já logado, redirecionar para dashboard
 if (isset($_SESSION['restaurant_id'])) {
@@ -23,17 +33,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($username) || empty($password)) {
         $error = 'Preencha todos os campos.';
     } else {
-        $restaurant = verifyRestaurantLogin($username, $password);
-        
-        if ($restaurant) {
-            $_SESSION['restaurant_id'] = $restaurant['id'];
-            $_SESSION['restaurant_name'] = $restaurant['name'];
-            $_SESSION['restaurant_slug'] = $restaurant['slug'];
+        try {
+            $restaurant = verifyRestaurantLogin($username, $password);
             
-            header('Location: index.php');
-            exit;
-        } else {
-            $error = 'Usuário ou senha incorretos.';
+            if ($restaurant) {
+                $_SESSION['restaurant_id'] = $restaurant['id'];
+                $_SESSION['restaurant_name'] = $restaurant['name'];
+                $_SESSION['restaurant_slug'] = $restaurant['slug'];
+                
+                header('Location: index.php');
+                exit;
+            } else {
+                $error = 'Usuário ou senha incorretos.';
+            }
+        } catch (PDOException $e) {
+            $error = 'Erro no banco de dados. Verifique se a tabela restaurants possui a coluna admin_password_hash.';
+        } catch (Exception $e) {
+            $error = 'Erro: ' . $e->getMessage();
         }
     }
 }
