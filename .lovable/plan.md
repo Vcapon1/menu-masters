@@ -1,67 +1,185 @@
 
-# Plano: Corrigir Envio de Email (Método Simples)
+# Plano: Corrigir Modais e Erro 500 do Diretório
 
-## Diagnóstico
+## Resumo dos Problemas
 
-O email não está sendo enviado porque os headers têm um problema: o formato `From: Nome <email>` pode ser rejeitado por alguns servidores. Vou simplificar para o formato que funcionou antes.
+1. Modal de pratos sem rolagem adequada e sem preview de imagem/video
+2. Modal de restaurantes sem preview das imagens já carregadas
+3. Página do Diretório com erro 500
 
 ---
 
-## Correção Proposta
+## Parte 1: Diretório - O que é e por que está dando erro
 
-Modificar os headers do email em `docs/php/master/restaurants.php` (linhas 329-339):
+### O que e o Diretorio?
+O Diretorio (Guia Gastronomico) e uma funcionalidade separada para listar restaurantes da cidade, **incluindo os que NAO sao clientes**. Serve como:
+- Guia gastronomico publico de Florianopolis
+- Ferramenta de prospeccao de novos clientes
+- Vinculo entre restaurantes do guia e clientes do sistema
 
-### De:
+### Causa do Erro 500
+O codigo PHP esta tentando usar a coluna `is_featured` que nao existe na tabela `directory_restaurants`:
 ```php
-$headers = "MIME-Version: 1.0\r\n";
-$headers .= "Content-Type: text/html; charset=UTF-8\r\n";
-$headers .= "From: Cardápio Floripa <noreply@cardapiofloripa.com.br>\r\n";
-
-if (mail($restaurant['email'], $subject, $body, $headers)) {
+$sql .= " ORDER BY is_featured DESC, name ASC";  // Linha 100
+<?php if ($dr['is_featured']): ?>  // Linha 195
 ```
 
-### Para:
-```php
-$to = $restaurant['email'];
-$headers = [];
-$headers[] = "MIME-Version: 1.0";
-$headers[] = "Content-Type: text/html; charset=UTF-8";
-$headers[] = "From: noreply@cardapiofloripa.com.br";
-$headers[] = "Reply-To: noreply@cardapiofloripa.com.br";
-$headers[] = "X-Mailer: PHP/" . phpversion();
+### Solucao
+**Opcao A - Adicionar coluna ao banco:**
+```sql
+ALTER TABLE directory_restaurants 
+ADD COLUMN is_featured TINYINT(1) NOT NULL DEFAULT 0 AFTER status;
+```
 
-$headerString = implode("\r\n", $headers);
+**Opcao B - Remover referencia** se nao quiser usar destaque (mais simples)
 
-$emailSent = @mail($to, $subject, $body, $headerString);
+---
 
-if ($emailSent) {
-    $message = 'Email enviado com sucesso para ' . $restaurant['email'] . '!';
-} else {
-    $lastError = error_get_last();
-    $errorMsg = $lastError ? $lastError['message'] : 'Função mail() indisponível';
-    $message = 'Falha ao enviar email: ' . $errorMsg;
+## Parte 2: Modal de Pratos - Rolagem + Preview
+
+### Arquivo: `docs/php/admin/products.php`
+
+### Alteracoes:
+
+1. **Estrutura do Modal** (linhas 268-364)
+   - Adicionar estilos CSS para header fixo, body rolavel, footer fixo
+   - Mesma estrutura usada no modal de restaurantes
+
+2. **Preview de Imagem Atual** (apos linha 318)
+   - Adicionar div para mostrar imagem atual
+   - Adicionar div para mostrar video atual (se houver)
+
+3. **JavaScript** (funcao `editProduct`)
+   - Preencher o preview com a imagem/video do produto
+
+### Codigo CSS a adicionar:
+```css
+.modal-container {
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+}
+.modal-header {
+    flex-shrink: 0;
+    padding: 1.25rem;
+    border-bottom: 1px solid #374151;
+}
+.modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+}
+.modal-footer {
+    flex-shrink: 0;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #374151;
+}
+```
+
+### Codigo HTML para Preview:
+```html
+<div>
+    <label class="block text-sm mb-1">Imagem</label>
+    <div id="current-image-preview" class="mb-2 hidden">
+        <img id="preview-img" src="" class="w-24 h-24 rounded object-cover border border-gray-600">
+        <span class="text-xs text-gray-400 ml-2">Imagem atual</span>
+    </div>
+    <input type="file" name="image" ...>
+</div>
+```
+
+---
+
+## Parte 3: Modal de Restaurantes - Preview de Imagens
+
+### Arquivo: `docs/php/master/restaurants.php`
+
+### Alteracoes:
+
+1. **Preview de Logo** (apos linha 749)
+   - Adicionar div `#preview-logo` com imagem
+
+2. **Preview de Banner** (apos linha 755)
+   - Adicionar div `#preview-banner` com imagem
+
+3. **Preview de Background** (apos linha 761)
+   - Adicionar div `#preview-bg` com imagem
+
+4. **JavaScript** (funcao `editRestaurant`)
+   - Mostrar previews das imagens existentes
+
+### Codigo HTML para cada preview:
+```html
+<div>
+    <label class="block text-sm mb-1">Logo</label>
+    <div id="preview-logo" class="mb-2 hidden">
+        <img src="" class="w-16 h-16 rounded object-cover border border-gray-600">
+    </div>
+    <input type="file" name="logo" ...>
+</div>
+```
+
+### JavaScript para mostrar previews:
+```javascript
+function editRestaurant(r) {
+    // ... codigo existente ...
+    
+    // Mostrar preview do logo
+    const logoPreview = document.getElementById('preview-logo');
+    if (r.logo) {
+        logoPreview.querySelector('img').src = r.logo;
+        logoPreview.classList.remove('hidden');
+    } else {
+        logoPreview.classList.add('hidden');
+    }
+    
+    // Repetir para banner e background
 }
 ```
 
 ---
 
-## Alterações Principais
-
-1. **Remover nome do From** - Usar apenas o email sem "Cardápio Floripa <...>"
-2. **Adicionar Reply-To** - Header importante para entregabilidade
-3. **Adicionar X-Mailer** - Identificador padrão do PHP
-4. **Melhorar tratamento de erro** - Capturar mensagem de erro real se falhar
-
----
-
-## Arquivo Modificado
+## Arquivos a Modificar
 
 ```text
-docs/php/master/restaurants.php  ← Ajustar headers da função mail()
+docs/php/admin/products.php      - Modal com scroll + preview de imagem/video
+docs/php/master/restaurants.php  - Preview das imagens no modal
+docs/php/master/directory.php    - Corrigir referencia a is_featured
+docs/database/schema.sql         - Adicionar coluna is_featured
 ```
 
 ---
 
-## Seção Técnica
+## Ordem de Execucao
 
-O problema está no formato do header `From:`. Alguns servidores de email rejeitam o formato `Nome <email>` quando há caracteres especiais (como "á" em "Cardápio"). Usando apenas o email puro `noreply@cardapiofloripa.com.br` resolve esse problema de compatibilidade.
+1. Primeiro corrigir o Diretorio (SQL + PHP) - resolve o erro 500
+2. Depois melhorar o modal de Pratos - scroll + preview
+3. Por ultimo adicionar previews no modal de Restaurantes
+
+---
+
+## Secao Tecnica
+
+### Problema do Modal sem Scroll
+O modal atual usa `max-h-[90vh] overflow-y-auto` no container inteiro, mas nao tem estrutura flex para manter header/footer fixos. A solucao e:
+
+```css
+.modal-container {
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+}
+.modal-body {
+    flex: 1;
+    overflow-y: auto;
+}
+```
+
+### Preview de Imagem com JavaScript
+Ao editar um produto/restaurante, o JavaScript recebe o objeto completo com URLs das imagens. Basta:
+1. Verificar se a URL existe
+2. Definir o `src` da tag `<img>`
+3. Remover classe `hidden` do container
+
+### Coluna is_featured
+Usada para destacar restaurantes no topo da listagem do diretorio. O ORDER BY coloca os featured primeiro.
