@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     throw new Exception('Nome é obrigatório.');
                 }
                 
-                $sql = "INSERT INTO directory_restaurants (name, slug, description, address, neighborhood, phone, cuisine_types, price_range, is_client, linked_restaurant_id, city) VALUES (:name, :slug, :desc, :addr, :nb, :phone, :ct, :pr, :ic, :lri, 'Florianópolis')";
+                $sql = "INSERT INTO directory_restaurants (name, slug, description, address, neighborhood, phone, cuisine_types, price_range, is_client, linked_restaurant_id, city, is_featured) VALUES (:name, :slug, :desc, :addr, :nb, :phone, :ct, :pr, :ic, :lri, 'Florianópolis', 0)";
                 $stmt = db()->prepare($sql);
                 $stmt->execute([
                     'name' => $name,
