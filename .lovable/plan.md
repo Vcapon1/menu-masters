@@ -1,185 +1,213 @@
 
-# Plano: Corrigir Modais e Erro 500 do Diretório
 
-## Resumo dos Problemas
+# Plano: Seletor de Tipos de Cozinha com Autocomplete
 
-1. Modal de pratos sem rolagem adequada e sem preview de imagem/video
-2. Modal de restaurantes sem preview das imagens já carregadas
-3. Página do Diretório com erro 500
-
----
-
-## Parte 1: Diretório - O que é e por que está dando erro
-
-### O que e o Diretorio?
-O Diretorio (Guia Gastronomico) e uma funcionalidade separada para listar restaurantes da cidade, **incluindo os que NAO sao clientes**. Serve como:
-- Guia gastronomico publico de Florianopolis
-- Ferramenta de prospeccao de novos clientes
-- Vinculo entre restaurantes do guia e clientes do sistema
-
-### Causa do Erro 500
-O codigo PHP esta tentando usar a coluna `is_featured` que nao existe na tabela `directory_restaurants`:
-```php
-$sql .= " ORDER BY is_featured DESC, name ASC";  // Linha 100
-<?php if ($dr['is_featured']): ?>  // Linha 195
-```
-
-### Solucao
-**Opcao A - Adicionar coluna ao banco:**
-```sql
-ALTER TABLE directory_restaurants 
-ADD COLUMN is_featured TINYINT(1) NOT NULL DEFAULT 0 AFTER status;
-```
-
-**Opcao B - Remover referencia** se nao quiser usar destaque (mais simples)
+## Objetivo
+Substituir o campo de texto livre por um seletor inteligente que:
+- Mostra tipos de cozinha ja cadastrados (usando DISTINCT)
+- Permite adicionar novos tipos
+- Suporta multipla selecao (tags/badges)
 
 ---
 
-## Parte 2: Modal de Pratos - Rolagem + Preview
-
-### Arquivo: `docs/php/admin/products.php`
-
-### Alteracoes:
-
-1. **Estrutura do Modal** (linhas 268-364)
-   - Adicionar estilos CSS para header fixo, body rolavel, footer fixo
-   - Mesma estrutura usada no modal de restaurantes
-
-2. **Preview de Imagem Atual** (apos linha 318)
-   - Adicionar div para mostrar imagem atual
-   - Adicionar div para mostrar video atual (se houver)
-
-3. **JavaScript** (funcao `editProduct`)
-   - Preencher o preview com a imagem/video do produto
-
-### Codigo CSS a adicionar:
-```css
-.modal-container {
-    display: flex;
-    flex-direction: column;
-    max-height: 90vh;
-}
-.modal-header {
-    flex-shrink: 0;
-    padding: 1.25rem;
-    border-bottom: 1px solid #374151;
-}
-.modal-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 1.5rem;
-}
-.modal-footer {
-    flex-shrink: 0;
-    padding: 1rem 1.5rem;
-    border-top: 1px solid #374151;
-}
-```
-
-### Codigo HTML para Preview:
-```html
-<div>
-    <label class="block text-sm mb-1">Imagem</label>
-    <div id="current-image-preview" class="mb-2 hidden">
-        <img id="preview-img" src="" class="w-24 h-24 rounded object-cover border border-gray-600">
-        <span class="text-xs text-gray-400 ml-2">Imagem atual</span>
-    </div>
-    <input type="file" name="image" ...>
-</div>
-```
-
----
-
-## Parte 3: Modal de Restaurantes - Preview de Imagens
-
-### Arquivo: `docs/php/master/restaurants.php`
-
-### Alteracoes:
-
-1. **Preview de Logo** (apos linha 749)
-   - Adicionar div `#preview-logo` com imagem
-
-2. **Preview de Banner** (apos linha 755)
-   - Adicionar div `#preview-banner` com imagem
-
-3. **Preview de Background** (apos linha 761)
-   - Adicionar div `#preview-bg` com imagem
-
-4. **JavaScript** (funcao `editRestaurant`)
-   - Mostrar previews das imagens existentes
-
-### Codigo HTML para cada preview:
-```html
-<div>
-    <label class="block text-sm mb-1">Logo</label>
-    <div id="preview-logo" class="mb-2 hidden">
-        <img src="" class="w-16 h-16 rounded object-cover border border-gray-600">
-    </div>
-    <input type="file" name="logo" ...>
-</div>
-```
-
-### JavaScript para mostrar previews:
-```javascript
-function editRestaurant(r) {
-    // ... codigo existente ...
-    
-    // Mostrar preview do logo
-    const logoPreview = document.getElementById('preview-logo');
-    if (r.logo) {
-        logoPreview.querySelector('img').src = r.logo;
-        logoPreview.classList.remove('hidden');
-    } else {
-        logoPreview.classList.add('hidden');
-    }
-    
-    // Repetir para banner e background
-}
-```
-
----
-
-## Arquivos a Modificar
+## Fluxo da Interface
 
 ```text
-docs/php/admin/products.php      - Modal com scroll + preview de imagem/video
-docs/php/master/restaurants.php  - Preview das imagens no modal
-docs/php/master/directory.php    - Corrigir referencia a is_featured
-docs/database/schema.sql         - Adicionar coluna is_featured
++--------------------------------------------------+
+|  Tipos de Cozinha                                |
+|  +--------------------------------------------+  |
+|  | [Italiana x] [Pizza x]      [+ Adicionar]  |  |
+|  +--------------------------------------------+  |
+|                                                  |
+|  Sugestoes:                                      |
+|  [Brasileira] [Japonesa] [Hamburger] [Sushi]... |
++--------------------------------------------------+
+```
+
+1. **Tags selecionadas**: Badges removiveis para tipos ja escolhidos
+2. **Botao Adicionar**: Campo para digitar novo tipo
+3. **Sugestoes**: Lista de tipos existentes no banco (DISTINCT)
+
+---
+
+## Implementacao
+
+### 1. Buscar Tipos Existentes (PHP)
+
+Adicionar no inicio do arquivo, junto com as outras queries:
+
+```php
+// Buscar tipos de cozinha unicos do banco
+$existingCuisines = [];
+try {
+    $stmt = db()->query("SELECT DISTINCT cuisine_types FROM directory_restaurants WHERE cuisine_types IS NOT NULL");
+    $allCuisines = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    
+    // Extrair valores unicos do JSON
+    foreach ($allCuisines as $jsonCuisines) {
+        $cuisines = json_decode($jsonCuisines, true) ?? [];
+        foreach ($cuisines as $c) {
+            $c = trim($c);
+            if ($c && !in_array($c, $existingCuisines)) {
+                $existingCuisines[] = $c;
+            }
+        }
+    }
+    sort($existingCuisines);
+} catch (Exception $e) {
+    // Fallback silencioso
+}
+```
+
+### 2. HTML do Seletor (Modal)
+
+Substituir o campo atual (linhas 283-286) por:
+
+```html
+<div>
+    <label class="block text-sm text-gray-400 mb-1">Tipos de Cozinha</label>
+    
+    <!-- Tags selecionadas -->
+    <div id="selected-cuisines" class="flex flex-wrap gap-2 mb-2 min-h-[32px]">
+        <!-- Tags serao inseridas via JS -->
+    </div>
+    
+    <!-- Campo para adicionar novo -->
+    <div class="flex gap-2">
+        <input type="text" id="new-cuisine-input" 
+               placeholder="Digite ou selecione abaixo" 
+               class="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm">
+        <button type="button" onclick="addCuisine()" 
+                class="bg-orange-600 hover:bg-orange-700 px-3 py-2 rounded-lg text-sm">
+            Adicionar
+        </button>
+    </div>
+    
+    <!-- Sugestoes existentes -->
+    <div class="mt-3">
+        <span class="text-xs text-gray-500">Sugestoes:</span>
+        <div class="flex flex-wrap gap-1 mt-1">
+            <?php foreach ($existingCuisines as $cuisine): ?>
+                <button type="button" 
+                        onclick="addCuisineFromSuggestion('<?= htmlspecialchars($cuisine, ENT_QUOTES) ?>')"
+                        class="cuisine-suggestion px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition">
+                    <?= htmlspecialchars($cuisine) ?>
+                </button>
+            <?php endforeach; ?>
+            <?php if (empty($existingCuisines)): ?>
+                <span class="text-xs text-gray-500 italic">Nenhum tipo cadastrado ainda</span>
+            <?php endif; ?>
+        </div>
+    </div>
+    
+    <!-- Campo hidden para enviar ao form -->
+    <input type="hidden" name="cuisine_types" id="cuisine-types-hidden" value="">
+</div>
+```
+
+### 3. JavaScript para Gerenciar Tags
+
+```javascript
+let selectedCuisines = [];
+
+function updateCuisinesDisplay() {
+    const container = document.getElementById('selected-cuisines');
+    const hidden = document.getElementById('cuisine-types-hidden');
+    
+    container.innerHTML = selectedCuisines.map(c => `
+        <span class="bg-orange-600/20 text-orange-400 px-2 py-1 rounded text-sm flex items-center gap-1">
+            ${escapeHtml(c)}
+            <button type="button" onclick="removeCuisine('${escapeHtml(c)}')" 
+                    class="hover:text-red-400">&times;</button>
+        </span>
+    `).join('');
+    
+    hidden.value = selectedCuisines.join(',');
+    
+    // Esconder sugestoes ja selecionadas
+    document.querySelectorAll('.cuisine-suggestion').forEach(btn => {
+        if (selectedCuisines.includes(btn.textContent.trim())) {
+            btn.classList.add('hidden');
+        } else {
+            btn.classList.remove('hidden');
+        }
+    });
+}
+
+function addCuisine() {
+    const input = document.getElementById('new-cuisine-input');
+    const value = input.value.trim();
+    
+    if (value && !selectedCuisines.includes(value)) {
+        selectedCuisines.push(value);
+        updateCuisinesDisplay();
+    }
+    input.value = '';
+    input.focus();
+}
+
+function addCuisineFromSuggestion(cuisine) {
+    if (!selectedCuisines.includes(cuisine)) {
+        selectedCuisines.push(cuisine);
+        updateCuisinesDisplay();
+    }
+}
+
+function removeCuisine(cuisine) {
+    selectedCuisines = selectedCuisines.filter(c => c !== cuisine);
+    updateCuisinesDisplay();
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+// Permitir adicionar com Enter
+document.getElementById('new-cuisine-input')?.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        addCuisine();
+    }
+});
 ```
 
 ---
 
-## Ordem de Execucao
+## Arquivo a Modificar
 
-1. Primeiro corrigir o Diretorio (SQL + PHP) - resolve o erro 500
-2. Depois melhorar o modal de Pratos - scroll + preview
-3. Por ultimo adicionar previews no modal de Restaurantes
+```text
+docs/php/master/directory.php
+```
+
+---
+
+## Beneficios
+
+1. **Consistencia**: Evita duplicatas como "Italiana" vs "italiana" vs "Italiaana"
+2. **Agilidade**: Clique rapido nas sugestoes em vez de digitar
+3. **Flexibilidade**: Ainda permite criar novos tipos quando necessario
+4. **Sem nova tabela**: Usa DISTINCT diretamente na coluna JSON existente
 
 ---
 
 ## Secao Tecnica
 
-### Problema do Modal sem Scroll
-O modal atual usa `max-h-[90vh] overflow-y-auto` no container inteiro, mas nao tem estrutura flex para manter header/footer fixos. A solucao e:
+### Por que DISTINCT no JSON?
+O campo `cuisine_types` armazena um array JSON (ex: `["Italiana", "Pizza"]`). A query busca todos os registros e o PHP extrai valores unicos:
 
-```css
-.modal-container {
-    display: flex;
-    flex-direction: column;
-    max-height: 90vh;
-}
-.modal-body {
-    flex: 1;
-    overflow-y: auto;
-}
+```php
+// Cada row retorna algo como: '["Italiana", "Pizza"]'
+// O PHP decodifica e agrupa em um array unico
 ```
 
-### Preview de Imagem com JavaScript
-Ao editar um produto/restaurante, o JavaScript recebe o objeto completo com URLs das imagens. Basta:
-1. Verificar se a URL existe
-2. Definir o `src` da tag `<img>`
-3. Remover classe `hidden` do container
+### Processamento no Backend
+O campo hidden envia valores separados por virgula (`Italiana,Pizza,Nova`), e o PHP converte para JSON antes de salvar:
 
-### Coluna is_featured
-Usada para destacar restaurantes no topo da listagem do diretorio. O ORDER BY coloca os featured primeiro.
+```php
+$cuisineTypes = json_encode(array_filter(explode(',', $_POST['cuisine_types'] ?? '')));
+```
+
+Isso ja esta implementado na acao `create` (linha 35).
+
