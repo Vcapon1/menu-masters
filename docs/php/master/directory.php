@@ -115,6 +115,27 @@ try {
 } catch (Exception $e) {
     // Tabela restaurants pode não existir ainda
 }
+
+// Buscar tipos de cozinha únicos do banco
+$existingCuisines = [];
+try {
+    $stmt = db()->query("SELECT DISTINCT cuisine_types FROM directory_restaurants WHERE cuisine_types IS NOT NULL AND cuisine_types != '[]'");
+    $allCuisines = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    
+    // Extrair valores únicos do JSON
+    foreach ($allCuisines as $jsonCuisines) {
+        $cuisines = json_decode($jsonCuisines, true) ?? [];
+        foreach ($cuisines as $c) {
+            $c = trim($c);
+            if ($c && !in_array($c, $existingCuisines)) {
+                $existingCuisines[] = $c;
+            }
+        }
+    }
+    sort($existingCuisines);
+} catch (Exception $e) {
+    // Fallback silencioso
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -281,8 +302,43 @@ try {
                 </div>
                 
                 <div>
-                    <label class="text-sm text-gray-400">Tipos de Cozinha (separados por vírgula)</label>
-                    <input type="text" name="cuisine_types" placeholder="Italiana, Pizza, Massas" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 mt-1">
+                    <label class="block text-sm text-gray-400 mb-1">Tipos de Cozinha</label>
+                    
+                    <!-- Tags selecionadas -->
+                    <div id="selected-cuisines" class="flex flex-wrap gap-2 mb-2 min-h-[32px]">
+                        <!-- Tags serão inseridas via JS -->
+                    </div>
+                    
+                    <!-- Campo para adicionar novo -->
+                    <div class="flex gap-2">
+                        <input type="text" id="new-cuisine-input" 
+                               placeholder="Digite ou selecione abaixo" 
+                               class="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm">
+                        <button type="button" onclick="addCuisine()" 
+                                class="bg-orange-600 hover:bg-orange-700 px-3 py-2 rounded-lg text-sm">
+                            Adicionar
+                        </button>
+                    </div>
+                    
+                    <!-- Sugestões existentes -->
+                    <div class="mt-3">
+                        <span class="text-xs text-gray-500">Sugestões:</span>
+                        <div class="flex flex-wrap gap-1 mt-1">
+                            <?php foreach ($existingCuisines as $cuisine): ?>
+                                <button type="button" 
+                                        onclick="addCuisineFromSuggestion('<?= htmlspecialchars($cuisine, ENT_QUOTES) ?>')"
+                                        class="cuisine-suggestion px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition">
+                                    <?= htmlspecialchars($cuisine) ?>
+                                </button>
+                            <?php endforeach; ?>
+                            <?php if (empty($existingCuisines)): ?>
+                                <span class="text-xs text-gray-500 italic">Nenhum tipo cadastrado ainda</span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    
+                    <!-- Campo hidden para enviar ao form -->
+                    <input type="hidden" name="cuisine_types" id="cuisine-types-hidden" value="">
                 </div>
                 
                 <div class="flex items-center gap-4">
@@ -311,8 +367,80 @@ try {
     </div>
     
     <script>
+        // Fechar modal ao clicar fora
         document.getElementById('newModal').addEventListener('click', function(e) {
-            if (e.target === this) this.style.display = 'none';
+            if (e.target === this) this.classList.add('hidden');
+        });
+        
+        // Sistema de seleção de tipos de cozinha
+        let selectedCuisines = [];
+        
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+        
+        function updateCuisinesDisplay() {
+            const container = document.getElementById('selected-cuisines');
+            const hidden = document.getElementById('cuisine-types-hidden');
+            
+            container.innerHTML = selectedCuisines.map(c => `
+                <span class="bg-orange-600/20 text-orange-400 px-2 py-1 rounded text-sm flex items-center gap-1">
+                    ${escapeHtml(c)}
+                    <button type="button" onclick="removeCuisine('${escapeHtml(c).replace(/'/g, "\\'")}'" 
+                            class="hover:text-red-400 ml-1">&times;</button>
+                </span>
+            `).join('');
+            
+            hidden.value = selectedCuisines.join(',');
+            
+            // Esconder sugestões já selecionadas
+            document.querySelectorAll('.cuisine-suggestion').forEach(btn => {
+                if (selectedCuisines.includes(btn.textContent.trim())) {
+                    btn.classList.add('hidden');
+                } else {
+                    btn.classList.remove('hidden');
+                }
+            });
+        }
+        
+        function addCuisine() {
+            const input = document.getElementById('new-cuisine-input');
+            const value = input.value.trim();
+            
+            if (value && !selectedCuisines.includes(value)) {
+                selectedCuisines.push(value);
+                updateCuisinesDisplay();
+            }
+            input.value = '';
+            input.focus();
+        }
+        
+        function addCuisineFromSuggestion(cuisine) {
+            if (!selectedCuisines.includes(cuisine)) {
+                selectedCuisines.push(cuisine);
+                updateCuisinesDisplay();
+            }
+        }
+        
+        function removeCuisine(cuisine) {
+            selectedCuisines = selectedCuisines.filter(c => c !== cuisine);
+            updateCuisinesDisplay();
+        }
+        
+        // Permitir adicionar com Enter
+        document.getElementById('new-cuisine-input')?.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addCuisine();
+            }
+        });
+        
+        // Limpar seleção ao abrir modal
+        document.querySelector('[onclick*="newModal"]')?.addEventListener('click', function() {
+            selectedCuisines = [];
+            updateCuisinesDisplay();
         });
     </script>
 </body>
