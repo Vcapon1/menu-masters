@@ -222,6 +222,7 @@ CREATE TABLE IF NOT EXISTS `directory_restaurants` (
   `linked_restaurant_id` INT UNSIGNED NULL COMMENT 'ID do restaurante cliente se aplicável',
   `menu_url` VARCHAR(255) COMMENT 'URL do cardápio digital se for cliente',
   `status` ENUM('active', 'pending', 'draft') DEFAULT 'draft',
+  `is_featured` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Destacar no topo do diretório',
   `internal_notes` TEXT COMMENT 'Notas internas para prospecção',
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

@@ -745,18 +745,30 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
                         
                         <div>
                             <label class="block text-sm mb-1">Logo</label>
+                            <div id="preview-logo" class="mb-2 hidden">
+                                <img src="" class="w-16 h-16 rounded object-cover border border-gray-600">
+                                <span class="text-xs text-gray-400 mt-1 block">Logo atual</span>
+                            </div>
                             <input type="file" name="logo" accept="image/*"
                                    class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
                         </div>
                         
                         <div>
                             <label class="block text-sm mb-1">Banner</label>
+                            <div id="preview-banner" class="mb-2 hidden">
+                                <img src="" class="w-full h-16 rounded object-cover border border-gray-600">
+                                <span class="text-xs text-gray-400 mt-1 block">Banner atual</span>
+                            </div>
                             <input type="file" name="banner" accept="image/*"
                                    class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
                         </div>
                         
                         <div class="col-span-2">
                             <label class="block text-sm mb-1">Imagem de Fundo</label>
+                            <div id="preview-bg" class="mb-2 hidden">
+                                <img src="" class="w-full h-24 rounded object-cover border border-gray-600">
+                                <span class="text-xs text-gray-400 mt-1 block">Fundo atual</span>
+                            </div>
                             <input type="file" name="background_image" accept="image/*"
                                    class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
                         </div>
@@ -854,6 +866,11 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
             document.getElementById('form-button-text-color').value = '#ffffff';
             document.getElementById('form-font-color').value = '#ffffff';
             
+            // Esconder previews de imagem
+            document.getElementById('preview-logo').classList.add('hidden');
+            document.getElementById('preview-banner').classList.add('hidden');
+            document.getElementById('preview-bg').classList.add('hidden');
+            
             document.getElementById('form-modal').classList.add('active');
         }
         
@@ -886,6 +903,31 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
             document.getElementById('form-button-color').value = r.button_color || '#dc2626';
             document.getElementById('form-button-text-color').value = r.button_text_color || '#ffffff';
             document.getElementById('form-font-color').value = r.font_color || '#ffffff';
+            
+            // Preview de imagens existentes
+            const logoPreview = document.getElementById('preview-logo');
+            if (r.logo) {
+                logoPreview.querySelector('img').src = r.logo;
+                logoPreview.classList.remove('hidden');
+            } else {
+                logoPreview.classList.add('hidden');
+            }
+            
+            const bannerPreview = document.getElementById('preview-banner');
+            if (r.banner) {
+                bannerPreview.querySelector('img').src = r.banner;
+                bannerPreview.classList.remove('hidden');
+            } else {
+                bannerPreview.classList.add('hidden');
+            }
+            
+            const bgPreview = document.getElementById('preview-bg');
+            if (r.background_image) {
+                bgPreview.querySelector('img').src = r.background_image;
+                bgPreview.classList.remove('hidden');
+            } else {
+                bgPreview.classList.add('hidden');
+            }
             
             // Atualizar templates para o plano selecionado
             updateTemplateOptions(r.plan_id);
