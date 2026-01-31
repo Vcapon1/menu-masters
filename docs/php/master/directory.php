@@ -237,7 +237,7 @@ try {
     </main>
     
     <!-- Modal Novo -->
-    <div id="newModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4" style="display:none;">
+    <div id="newModal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4">
         <div class="bg-gray-800 rounded-lg border border-gray-700 p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h3 class="font-bold mb-4">Adicionar ao Diretório</h3>
             <form method="POST" class="space-y-4">
