@@ -222,11 +222,10 @@
         
         .product-card {
             position: relative;
-            display: flex;
-            background: var(--card-bg);
             border-radius: 16px;
             overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             cursor: pointer;
             transition: all 0.3s ease;
         }
@@ -244,10 +243,8 @@
         
         .product-image-wrapper {
             position: relative;
-            flex-shrink: 0;
-            width: 140px;
-            height: 140px;
-            border-radius: 12px;
+            width: 100%;
+            aspect-ratio: 16/9;
             overflow: hidden;
         }
         
@@ -273,13 +270,21 @@
             font-size: 2rem;
         }
         
+        .product-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px 16px 16px;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.7) 50%, transparent 100%);
+        }
+        
         .play-icon {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 44px;
-            height: 44px;
+            top: 12px;
+            right: 12px;
+            width: 40px;
+            height: 40px;
             background: rgba(0, 0, 0, 0.6);
             border-radius: 50%;
             display: flex;
@@ -289,43 +294,38 @@
         }
         
         .play-icon svg {
-            width: 20px;
-            height: 20px;
+            width: 18px;
+            height: 18px;
             fill: white;
             margin-left: 2px;
         }
         
-        .product-info {
-            flex: 1;
-            padding: 16px;
+        .product-badges-float {
+            position: absolute;
+            top: 12px;
+            left: 12px;
             display: flex;
-            flex-direction: column;
-            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 6px;
         }
         
         .product-name {
-            font-size: 1rem;
-            font-weight: 600;
+            font-size: 1.15rem;
+            font-weight: 700;
             color: var(--font);
-            margin-bottom: 6px;
+            margin-bottom: 4px;
             line-height: 1.3;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
         }
         
         .product-description {
             font-size: 0.8rem;
-            color: rgba(255, 255, 255, 0.6);
+            color: rgba(255, 255, 255, 0.65);
             line-height: 1.4;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
-            margin-bottom: 10px;
-        }
-        
-        .product-badges {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
             margin-bottom: 10px;
         }
         
@@ -368,14 +368,15 @@
         }
         
         .product-price {
-            font-size: 1.1rem;
+            font-size: 1.2rem;
             font-weight: 700;
             color: var(--secondary);
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
         }
         
         .product-price-old {
-            font-size: 0.85rem;
-            color: rgba(255, 255, 255, 0.4);
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.5);
             text-decoration: line-through;
         }
         
@@ -387,6 +388,7 @@
             display: flex;
             align-items: flex-end;
             justify-content: center;
+            padding-bottom: 20px;
             opacity: 0;
             visibility: hidden;
             transition: all 0.3s ease;
@@ -408,12 +410,14 @@
             position: relative;
             width: 100%;
             max-width: 500px;
-            max-height: 90vh;
+            max-height: 88vh;
             background: var(--card-bg);
             border-radius: 24px 24px 0 0;
             overflow: hidden;
             transform: translateY(100%);
             transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
         }
         
         .modal.active .modal-content {
@@ -425,9 +429,9 @@
             top: 16px;
             right: 16px;
             z-index: 10;
-            width: 36px;
-            height: 36px;
-            background: rgba(0, 0, 0, 0.5);
+            width: 40px;
+            height: 40px;
+            background: rgba(30, 30, 30, 0.8);
             border: none;
             border-radius: 50%;
             color: white;
@@ -441,15 +445,16 @@
         }
         
         .modal-close:hover {
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(50, 50, 50, 0.9);
         }
         
         .modal-media {
             position: relative;
             width: 100%;
-            aspect-ratio: 1/1;
+            aspect-ratio: 4/3;
             background: rgba(0, 0, 0, 0.5);
             overflow: hidden;
+            flex-shrink: 0;
         }
         
         .modal-media img {
@@ -465,23 +470,58 @@
             pointer-events: none;
         }
         
+        /* Modal Info - Fixed header with scrollable description */
         .modal-info {
-            padding: 24px;
-            max-height: 50vh;
-            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            background: var(--background);
+        }
+        
+        .modal-header {
+            padding: 20px 20px 0 20px;
+            flex-shrink: 0;
         }
         
         .modal-name {
             font-size: 1.5rem;
             font-weight: 700;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
             color: var(--font);
+        }
+        
+        .modal-price-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .modal-price {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--secondary);
+        }
+        
+        .modal-price-old {
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.4);
+            text-decoration: line-through;
+        }
+        
+        .modal-scrollable {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 20px 20px 20px;
+            -webkit-overflow-scrolling: touch;
         }
         
         .modal-description {
             font-size: 0.95rem;
             color: rgba(255, 255, 255, 0.7);
-            line-height: 1.6;
+            line-height: 1.7;
+            white-space: pre-wrap;
             margin-bottom: 16px;
         }
         
@@ -489,27 +529,6 @@
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
-            margin-bottom: 20px;
-        }
-        
-        .modal-price-row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding-top: 16px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .modal-price {
-            font-size: 1.75rem;
-            font-weight: 700;
-            color: var(--secondary);
-        }
-        
-        .modal-price-old {
-            font-size: 1.1rem;
-            color: rgba(255, 255, 255, 0.4);
-            text-decoration: line-through;
         }
         
         /* Utilities */
@@ -634,46 +653,44 @@
                                     <div class="product-no-image">🍽️</div>
                                 <?php endif; ?>
                                 
+                                <?php if (!empty($badges) || $hasPromo): ?>
+                                    <div class="product-badges-float">
+                                        <?php if ($hasPromo): ?>
+                                            <span class="badge badge-promo">Promoção</span>
+                                        <?php endif; ?>
+                                        <?php if (in_array('chef', $badges)): ?>
+                                            <span class="badge badge-chef">⭐ Chef</span>
+                                        <?php endif; ?>
+                                        <?php if (in_array('vegan', $badges)): ?>
+                                            <span class="badge badge-vegan">🌱 Vegano</span>
+                                        <?php endif; ?>
+                                        <?php if (in_array('new', $badges)): ?>
+                                            <span class="badge badge-new">Novo</span>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
+                                
                                 <?php if ($hasVideo): ?>
                                     <div class="play-icon">
                                         <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                                     </div>
                                 <?php endif; ?>
-                            </div>
-                            
-                            <div class="product-info">
-                                <div>
+                                
+                                <div class="product-overlay">
                                     <h3 class="product-name"><?= htmlspecialchars($product['name']) ?></h3>
                                     
                                     <?php if ($product['description']): ?>
                                         <p class="product-description"><?= htmlspecialchars($product['description']) ?></p>
                                     <?php endif; ?>
                                     
-                                    <?php if (!empty($badges) || $hasPromo): ?>
-                                        <div class="product-badges">
-                                            <?php if ($hasPromo): ?>
-                                                <span class="badge badge-promo">Promoção</span>
-                                            <?php endif; ?>
-                                            <?php if (in_array('chef', $badges)): ?>
-                                                <span class="badge badge-chef">⭐ Chef</span>
-                                            <?php endif; ?>
-                                            <?php if (in_array('vegan', $badges)): ?>
-                                                <span class="badge badge-vegan">🌱 Vegano</span>
-                                            <?php endif; ?>
-                                            <?php if (in_array('new', $badges)): ?>
-                                                <span class="badge badge-new">Novo</span>
-                                            <?php endif; ?>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                                
-                                <div class="product-price-row">
-                                    <?php if ($hasPromo): ?>
-                                        <span class="product-price-old">R$ <?= number_format($product['price'], 2, ',', '.') ?></span>
-                                    <?php endif; ?>
-                                    <span class="product-price">
-                                        R$ <?= number_format($hasPromo ? $product['promo_price'] : $product['price'], 2, ',', '.') ?>
-                                    </span>
+                                    <div class="product-price-row">
+                                        <?php if ($hasPromo): ?>
+                                            <span class="product-price-old">R$ <?= number_format($product['price'], 2, ',', '.') ?></span>
+                                        <?php endif; ?>
+                                        <span class="product-price">
+                                            R$ <?= number_format($hasPromo ? $product['promo_price'] : $product['price'], 2, ',', '.') ?>
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </article>
@@ -695,12 +712,16 @@
             </div>
             
             <div class="modal-info">
-                <h2 id="modalName" class="modal-name"></h2>
-                <p id="modalDescription" class="modal-description"></p>
-                <div id="modalBadges" class="modal-badges"></div>
-                <div class="modal-price-row">
-                    <span id="modalOldPrice" class="modal-price-old"></span>
-                    <span id="modalPrice" class="modal-price"></span>
+                <div class="modal-header">
+                    <h2 id="modalName" class="modal-name"></h2>
+                    <div class="modal-price-row">
+                        <span id="modalOldPrice" class="modal-price-old"></span>
+                        <span id="modalPrice" class="modal-price"></span>
+                    </div>
+                </div>
+                <div class="modal-scrollable">
+                    <p id="modalDescription" class="modal-description"></p>
+                    <div id="modalBadges" class="modal-badges"></div>
                 </div>
             </div>
         </div>
