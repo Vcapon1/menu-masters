@@ -1,213 +1,289 @@
 
+# Plano: Criar Template "Hero" (Estilo Hamburgeria)
 
-# Plano: Seletor de Tipos de Cozinha com Autocomplete
+## Visao Geral
 
-## Objetivo
-Substituir o campo de texto livre por um seletor inteligente que:
-- Mostra tipos de cozinha ja cadastrados (usando DISTINCT)
-- Permite adicionar novos tipos
-- Suporta multipla selecao (tags/badges)
+Criar um novo template chamado **Hero** com design escuro e impactante, inspirado na imagem de referencia. Caracteristicas principais:
+
+- Hero section com banner de fundo e logo centralizado (aceita PNG transparente)
+- Navegacao horizontal de categorias estilo chips
+- Cards de produto com imagem grande, badges, e icone de play para video
+- Modal de detalhes ao clicar no produto com foto/video expandido
+- Tema escuro com acentos dourados/laranja
 
 ---
 
-## Fluxo da Interface
+## Estrutura Visual
 
 ```text
-+--------------------------------------------------+
-|  Tipos de Cozinha                                |
-|  +--------------------------------------------+  |
-|  | [Italiana x] [Pizza x]      [+ Adicionar]  |  |
-|  +--------------------------------------------+  |
-|                                                  |
-|  Sugestoes:                                      |
-|  [Brasileira] [Japonesa] [Hamburger] [Sushi]... |
-+--------------------------------------------------+
-```
++------------------------------------------+
+|                                          |
+|            [BANNER FUNDO]                |
+|                                          |
+|         [LOGO - PNG TRANSPARENTE]        |
+|                                          |
++------------------------------------------+
+| [LANCHES] [COMBOS] [REFRIGERANTES] [...]  |
++------------------------------------------+
+|                                          |
+|  Combos                                  |
+|  ========================================|
+|  +------------------------------------+  |
+|  |  [BADGE]              [PLAY ICON]  |  |
+|  |  Combo Premium                     |  |
+|  |  R$ 39,00                          |  |
+|  |                                    |  |
+|  +------------------------------------+  |
+|  +------------------------------------+  |
+|  |  [BADGE]              [PLAY ICON]  |  |
+|  |  Combo Vegano                      |  |
+|  |  R$ 39,00                          |  |
+|  +------------------------------------+  |
+|                                          |
++------------------------------------------+
 
-1. **Tags selecionadas**: Badges removiveis para tipos ja escolhidos
-2. **Botao Adicionar**: Campo para digitar novo tipo
-3. **Sugestoes**: Lista de tipos existentes no banco (DISTINCT)
+        MODAL (ao clicar no prato)
++------------------------------------------+
+|  [X]                                     |
+|  +------------------------------------+  |
+|  |                                    |  |
+|  |      [IMAGEM OU VIDEO GRANDE]      |  |
+|  |                                    |  |
+|  +------------------------------------+  |
+|                                          |
+|  Combo Premium                           |
+|  Hamburguer artesanal com queijo...      |
+|                                          |
+|  [BADGE] [BADGE]                         |
+|                                          |
+|  R$ 39,00                                |
++------------------------------------------+
+```
 
 ---
 
-## Implementacao
+## Arquivos a Criar/Modificar
 
-### 1. Buscar Tipos Existentes (PHP)
+### 1. Criar pasta e arquivo do template
 
-Adicionar no inicio do arquivo, junto com as outras queries:
+**Arquivo:** `docs/php/templates/hero/template.php`
+
+Template completo com:
+- Hero section com banner fullwidth e logo centralizado
+- Navegacao horizontal de categorias
+- Cards de produto estilo imagem grande
+- Modal de detalhes do produto
+- Suporte a video com icone de play
+
+### 2. Adicionar template ao banco de dados
+
+**Arquivo:** `docs/database/schema.sql`
+
+Adicionar INSERT do template "Hero" com cores padrao (escuro com dourado/laranja):
+
+```sql
+INSERT INTO `templates` (...) VALUES
+('Hero', 'hero', 'Design impactante com hero banner - ideal para hamburgerias', 
+ 2, 1, 1, 1, 1, 
+ '{"primary": "#f59e0b", "secondary": "#fbbf24", "accent": "#f97316", 
+   "button": "#f59e0b", "buttonText": "#000000", "font": "#ffffff"}');
+```
+
+### 3. Adicionar preset de cores no React
+
+**Arquivo:** `src/lib/templatePresets.ts`
+
+Adicionar entrada "hero" com cores:
+- Primary: Dourado (#f59e0b)
+- Secondary: Amarelo (#fbbf24)
+- Accent: Laranja (#f97316)
+- Background: Preto (#0a0a0a)
+- Font: Branco (#ffffff)
+
+### 4. Atualizar referencia no Master Admin
+
+**Arquivo:** `docs/php/master/templates.php`
+
+Adicionar icone para o template "hero" no array de icones.
+
+---
+
+## Secao Tecnica: Detalhes do Template
+
+### Hero Section
 
 ```php
-// Buscar tipos de cozinha unicos do banco
-$existingCuisines = [];
-try {
-    $stmt = db()->query("SELECT DISTINCT cuisine_types FROM directory_restaurants WHERE cuisine_types IS NOT NULL");
-    $allCuisines = $stmt->fetchAll(PDO::FETCH_COLUMN);
-    
-    // Extrair valores unicos do JSON
-    foreach ($allCuisines as $jsonCuisines) {
-        $cuisines = json_decode($jsonCuisines, true) ?? [];
-        foreach ($cuisines as $c) {
-            $c = trim($c);
-            if ($c && !in_array($c, $existingCuisines)) {
-                $existingCuisines[] = $c;
-            }
-        }
-    }
-    sort($existingCuisines);
-} catch (Exception $e) {
-    // Fallback silencioso
+<section class="hero" style="background-image: url('<?= $restaurant['banner'] ?>')">
+    <div class="hero-overlay">
+        <?php if ($restaurant['logo']): ?>
+            <img src="<?= $restaurant['logo'] ?>" alt="..." class="hero-logo">
+        <?php endif; ?>
+    </div>
+</section>
+```
+
+CSS do Hero:
+```css
+.hero {
+    height: 35vh;
+    min-height: 200px;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+}
+
+.hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.hero-logo {
+    max-width: 200px;
+    max-height: 150px;
+    object-fit: contain; /* PNG transparente sem crop */
+    filter: drop-shadow(0 4px 20px rgba(0,0,0,0.5));
 }
 ```
 
-### 2. HTML do Seletor (Modal)
+### Cards de Produto
 
-Substituir o campo atual (linhas 283-286) por:
+Cards fullwidth com imagem de fundo, informacoes sobrepostas:
+
+```css
+.product-card {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid var(--accent);
+    background: rgba(0,0,0,0.6);
+    cursor: pointer;
+}
+
+.product-card-bg {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+}
+
+.product-card-content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 12px;
+    background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+}
+
+.play-icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 40px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+```
+
+### Modal de Detalhes
 
 ```html
-<div>
-    <label class="block text-sm text-gray-400 mb-1">Tipos de Cozinha</label>
-    
-    <!-- Tags selecionadas -->
-    <div id="selected-cuisines" class="flex flex-wrap gap-2 mb-2 min-h-[32px]">
-        <!-- Tags serao inseridas via JS -->
-    </div>
-    
-    <!-- Campo para adicionar novo -->
-    <div class="flex gap-2">
-        <input type="text" id="new-cuisine-input" 
-               placeholder="Digite ou selecione abaixo" 
-               class="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm">
-        <button type="button" onclick="addCuisine()" 
-                class="bg-orange-600 hover:bg-orange-700 px-3 py-2 rounded-lg text-sm">
-            Adicionar
-        </button>
-    </div>
-    
-    <!-- Sugestoes existentes -->
-    <div class="mt-3">
-        <span class="text-xs text-gray-500">Sugestoes:</span>
-        <div class="flex flex-wrap gap-1 mt-1">
-            <?php foreach ($existingCuisines as $cuisine): ?>
-                <button type="button" 
-                        onclick="addCuisineFromSuggestion('<?= htmlspecialchars($cuisine, ENT_QUOTES) ?>')"
-                        class="cuisine-suggestion px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs transition">
-                    <?= htmlspecialchars($cuisine) ?>
-                </button>
-            <?php endforeach; ?>
-            <?php if (empty($existingCuisines)): ?>
-                <span class="text-xs text-gray-500 italic">Nenhum tipo cadastrado ainda</span>
-            <?php endif; ?>
+<div id="productModal" class="modal hidden">
+    <div class="modal-overlay" onclick="closeModal()"></div>
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+        
+        <div class="modal-media">
+            <img id="modalImage" src="" alt="">
+            <video id="modalVideo" controls style="display:none"></video>
+        </div>
+        
+        <div class="modal-info">
+            <h2 id="modalName"></h2>
+            <p id="modalDescription"></p>
+            <div id="modalBadges" class="modal-badges"></div>
+            <div id="modalPrice" class="modal-price"></div>
         </div>
     </div>
-    
-    <!-- Campo hidden para enviar ao form -->
-    <input type="hidden" name="cuisine_types" id="cuisine-types-hidden" value="">
 </div>
 ```
 
-### 3. JavaScript para Gerenciar Tags
-
+JavaScript para abrir modal:
 ```javascript
-let selectedCuisines = [];
-
-function updateCuisinesDisplay() {
-    const container = document.getElementById('selected-cuisines');
-    const hidden = document.getElementById('cuisine-types-hidden');
+function openProductModal(product) {
+    const modal = document.getElementById('productModal');
+    const img = document.getElementById('modalImage');
+    const video = document.getElementById('modalVideo');
     
-    container.innerHTML = selectedCuisines.map(c => `
-        <span class="bg-orange-600/20 text-orange-400 px-2 py-1 rounded text-sm flex items-center gap-1">
-            ${escapeHtml(c)}
-            <button type="button" onclick="removeCuisine('${escapeHtml(c)}')" 
-                    class="hover:text-red-400">&times;</button>
-        </span>
-    `).join('');
-    
-    hidden.value = selectedCuisines.join(',');
-    
-    // Esconder sugestoes ja selecionadas
-    document.querySelectorAll('.cuisine-suggestion').forEach(btn => {
-        if (selectedCuisines.includes(btn.textContent.trim())) {
-            btn.classList.add('hidden');
-        } else {
-            btn.classList.remove('hidden');
-        }
-    });
-}
-
-function addCuisine() {
-    const input = document.getElementById('new-cuisine-input');
-    const value = input.value.trim();
-    
-    if (value && !selectedCuisines.includes(value)) {
-        selectedCuisines.push(value);
-        updateCuisinesDisplay();
+    // Mostrar imagem ou video
+    if (product.video) {
+        img.style.display = 'none';
+        video.style.display = 'block';
+        video.src = product.video;
+    } else {
+        video.style.display = 'none';
+        img.style.display = 'block';
+        img.src = product.image;
     }
-    input.value = '';
-    input.focus();
+    
+    document.getElementById('modalName').textContent = product.name;
+    document.getElementById('modalDescription').textContent = product.description;
+    document.getElementById('modalPrice').textContent = 'R$ ' + product.price;
+    
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
 }
 
-function addCuisineFromSuggestion(cuisine) {
-    if (!selectedCuisines.includes(cuisine)) {
-        selectedCuisines.push(cuisine);
-        updateCuisinesDisplay();
-    }
+function closeModal() {
+    const modal = document.getElementById('productModal');
+    const video = document.getElementById('modalVideo');
+    
+    modal.classList.add('hidden');
+    video.pause();
+    document.body.style.overflow = '';
 }
-
-function removeCuisine(cuisine) {
-    selectedCuisines = selectedCuisines.filter(c => c !== cuisine);
-    updateCuisinesDisplay();
-}
-
-function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-}
-
-// Permitir adicionar com Enter
-document.getElementById('new-cuisine-input')?.addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-        e.preventDefault();
-        addCuisine();
-    }
-});
 ```
+
+### Cores Padrao do Template
+
+| Variavel | Valor | Uso |
+|----------|-------|-----|
+| --background | #0a0a0a | Fundo principal |
+| --primary | #f59e0b | Titulos de categorias, linha |
+| --secondary | #fbbf24 | Preco, destaques |
+| --accent | #f97316 | Bordas dos cards |
+| --font | #ffffff | Texto geral |
+| --badge-promo | #dc2626 | Badge promocao |
+| --badge-chef | #3b82f6 | Badge sugestao do chef |
 
 ---
 
-## Arquivo a Modificar
+## Ordem de Implementacao
 
-```text
-docs/php/master/directory.php
-```
-
----
-
-## Beneficios
-
-1. **Consistencia**: Evita duplicatas como "Italiana" vs "italiana" vs "Italiaana"
-2. **Agilidade**: Clique rapido nas sugestoes em vez de digitar
-3. **Flexibilidade**: Ainda permite criar novos tipos quando necessario
-4. **Sem nova tabela**: Usa DISTINCT diretamente na coluna JSON existente
+1. Criar arquivo `docs/php/templates/hero/template.php` com todo o HTML/CSS/JS
+2. Adicionar INSERT no `docs/database/schema.sql`
+3. Adicionar preset no `src/lib/templatePresets.ts`
+4. Atualizar icone no `docs/php/master/templates.php`
 
 ---
 
-## Secao Tecnica
+## Features Incluidas
 
-### Por que DISTINCT no JSON?
-O campo `cuisine_types` armazena um array JSON (ex: `["Italiana", "Pizza"]`). A query busca todos os registros e o PHP extrai valores unicos:
-
-```php
-// Cada row retorna algo como: '["Italiana", "Pizza"]'
-// O PHP decodifica e agrupa em um array unico
-```
-
-### Processamento no Backend
-O campo hidden envia valores separados por virgula (`Italiana,Pizza,Nova`), e o PHP converte para JSON antes de salvar:
-
-```php
-$cuisineTypes = json_encode(array_filter(explode(',', $_POST['cuisine_types'] ?? '')));
-```
-
-Isso ja esta implementado na acao `create` (linha 35).
-
+- [x] Hero fullscreen com banner de fundo
+- [x] Logo PNG transparente sem corte circular
+- [x] Navegacao horizontal de categorias (scroll touch)
+- [x] Cards com imagem grande e overlay de informacoes
+- [x] Badge de promocao e sugestao do chef
+- [x] Icone de play para pratos com video
+- [x] Modal de detalhes ao clicar no produto
+- [x] Suporte a video no modal
+- [x] Linha dourada decorativa nos titulos de categoria
+- [x] Tema escuro por padrao
