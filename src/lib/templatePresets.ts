@@ -93,6 +93,17 @@ export const templatePresets: Record<string, TemplatePreset> = {
     fontColor: "#0f172a",
     description: "Clean e moderno - azul tecnológico",
   },
+  hero: {
+    id: "hero",
+    name: "Hero",
+    primaryColor: "#f59e0b",
+    secondaryColor: "#fbbf24",
+    accentColor: "#f97316",
+    buttonColor: "#f59e0b",
+    buttonTextColor: "#000000",
+    fontColor: "#ffffff",
+    description: "Design impactante com hero banner - ideal para hamburgerias",
+  },
   visual: {
     id: "visual",
     name: "Visual",
