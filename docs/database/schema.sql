@@ -84,6 +84,13 @@ CREATE TABLE IF NOT EXISTS `restaurants` (
   `background_image` VARCHAR(500),
   `background_video` VARCHAR(500),
   
+  -- Redes Sociais
+  `instagram` VARCHAR(100),
+  `facebook` VARCHAR(200),
+  `whatsapp` VARCHAR(30),
+  `google_maps_url` VARCHAR(500),
+  `google_review_url` VARCHAR(500),
+  
   -- Cores do tema
   `primary_color` VARCHAR(7) NOT NULL DEFAULT '#dc2626',
   `secondary_color` VARCHAR(7) NOT NULL DEFAULT '#fbbf24',
