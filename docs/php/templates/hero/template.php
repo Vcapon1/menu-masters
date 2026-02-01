@@ -71,26 +71,37 @@
             -webkit-font-smoothing: antialiased;
         }
         
-        /* Hero Section */
+        /* Hero Section - Parallax Mobile */
         .hero {
             position: relative;
-            height: 40vh;
-            min-height: 280px;
-            max-height: 400px;
+            height: 45vh;
+            min-height: 300px;
+            max-height: 450px;
+            overflow: hidden;
+        }
+        
+        .hero-bg {
+            position: absolute;
+            inset: -20%;
+            width: 140%;
+            height: 140%;
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
+            will-change: transform;
+            transition: transform 0.1s ease-out;
         }
         
         .hero::before {
             content: '';
             position: absolute;
             inset: 0;
+            z-index: 1;
             background: linear-gradient(
                 to bottom,
-                rgba(0, 0, 0, 0.3) 0%,
+                rgba(0, 0, 0, 0.4) 0%,
                 rgba(0, 0, 0, 0.1) 40%,
-                rgba(0, 0, 0, 0.7) 80%,
+                rgba(0, 0, 0, 0.75) 85%,
                 var(--background) 100%
             );
         }
@@ -98,6 +109,7 @@
         .hero-content {
             position: absolute;
             inset: 0;
+            z-index: 2;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -233,14 +245,21 @@
         .product-image-wrapper {
             position: relative;
             flex-shrink: 0;
-            width: 130px;
-            height: 130px;
+            width: 140px;
+            height: 140px;
+            border-radius: 12px;
+            overflow: hidden;
         }
         
         .product-image {
             width: 100%;
             height: 100%;
             object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+        
+        .product-card:hover .product-image {
+            transform: scale(1.05);
         }
         
         .product-no-image {
@@ -428,15 +447,22 @@
         .modal-media {
             position: relative;
             width: 100%;
-            aspect-ratio: 16/10;
+            aspect-ratio: 1/1;
             background: rgba(0, 0, 0, 0.5);
+            overflow: hidden;
         }
         
-        .modal-media img,
+        .modal-media img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
         .modal-media video {
             width: 100%;
             height: 100%;
             object-fit: cover;
+            pointer-events: none;
         }
         
         .modal-info {
@@ -494,8 +520,8 @@
         /* Desktop Adjustments */
         @media (min-width: 768px) {
             .hero {
-                height: 50vh;
-                max-height: 500px;
+                height: 55vh;
+                max-height: 550px;
             }
             
             .hero-logo {
@@ -508,8 +534,8 @@
             }
             
             .product-image-wrapper {
-                width: 160px;
-                height: 160px;
+                width: 180px;
+                height: 180px;
             }
             
             .modal-content {
@@ -517,12 +543,17 @@
                 margin: auto;
                 max-height: 85vh;
             }
+            
+            .modal-media {
+                aspect-ratio: 16/10;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Hero Section -->
-    <section class="hero" style="background-image: url('<?= htmlspecialchars($restaurant['banner'] ?? '') ?>')">
+    <!-- Hero Section with Parallax -->
+    <section class="hero">
+        <div class="hero-bg" id="heroBg" style="background-image: url('<?= htmlspecialchars($restaurant['banner'] ?? '') ?>')"></div>
         <div class="hero-content">
             <?php if ($restaurant['logo']): ?>
                 <img 
@@ -660,7 +691,7 @@
             
             <div class="modal-media">
                 <img id="modalImage" src="" alt="">
-                <video id="modalVideo" controls playsinline style="display: none;"></video>
+                <video id="modalVideo" autoplay loop muted playsinline style="display: none;"></video>
             </div>
             
             <div class="modal-info">
@@ -676,17 +707,43 @@
     </div>
     
     <script>
+        // Hero Parallax Effect for Mobile
+        const heroBg = document.getElementById('heroBg');
+        let ticking = false;
+        
+        function updateParallax() {
+            const scrollY = window.scrollY;
+            const heroHeight = document.querySelector('.hero').offsetHeight;
+            
+            if (scrollY < heroHeight) {
+                const parallaxSpeed = 0.4;
+                const yPos = scrollY * parallaxSpeed;
+                heroBg.style.transform = `translateY(${yPos}px) scale(1.1)`;
+            }
+            ticking = false;
+        }
+        
+        window.addEventListener('scroll', function() {
+            if (!ticking) {
+                requestAnimationFrame(updateParallax);
+                ticking = true;
+            }
+        }, { passive: true });
+        
         // Product Modal Functions
         function openProductModal(product) {
             const modal = document.getElementById('productModal');
             const img = document.getElementById('modalImage');
             const video = document.getElementById('modalVideo');
             
-            // Handle media
+            // Handle media - video autoplay loop muted
             if (product.video) {
                 img.style.display = 'none';
                 video.style.display = 'block';
                 video.src = product.video;
+                video.muted = true;
+                video.loop = true;
+                video.play().catch(() => {});
             } else {
                 video.style.display = 'none';
                 video.pause();
@@ -740,6 +797,7 @@
             
             modal.classList.remove('active');
             video.pause();
+            video.src = '';
             document.body.style.overflow = '';
         }
         
