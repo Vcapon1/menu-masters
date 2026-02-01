@@ -102,7 +102,13 @@ $plans = getPlans();
                             $icons = [
                                 'classic' => '📋',
                                 'bold' => '🔥',
-                                'appetite' => '🍽️'
+                                'appetite' => '🍽️',
+                                'hero' => '🍔',
+                                'visual' => '📷',
+                                'modern' => '✨',
+                                'elegant' => '👔',
+                                'minimal' => '⚪',
+                                'dark' => '🌙'
                             ];
                             echo $icons[$template['slug']] ?? '📄';
                             ?>
