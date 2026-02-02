@@ -36,6 +36,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'phone' => sanitize($_POST['phone'] ?? ''),
                     'address' => sanitize($_POST['address'] ?? ''),
                     'internal_notes' => sanitize($_POST['internal_notes'] ?? ''),
+                    'instagram' => sanitize($_POST['instagram'] ?? ''),
+                    'facebook' => sanitize($_POST['facebook'] ?? ''),
+                    'whatsapp' => sanitize($_POST['whatsapp'] ?? ''),
+                    'google_maps_url' => sanitize($_POST['google_maps_url'] ?? ''),
+                    'google_review_url' => sanitize($_POST['google_review_url'] ?? ''),
                     'plan_id' => (int)($_POST['plan_id'] ?? 0),
                     'template_id' => (int)($_POST['template_id'] ?? 0),
                     'status' => sanitize($_POST['status'] ?? 'pending'),
@@ -114,10 +119,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $data['admin_password_hash'] = password_hash($adminPassword, PASSWORD_BCRYPT);
                     
                     $sql = "INSERT INTO restaurants (name, slug, email, phone, address, internal_notes, 
+                            instagram, facebook, whatsapp, google_maps_url, google_review_url,
                             plan_id, template_id, status, expires_at, logo, banner, background_image,
                             primary_color, secondary_color, accent_color, button_color, button_text_color, font_color,
                             admin_username, admin_password_hash)
                             VALUES (:name, :slug, :email, :phone, :address, :internal_notes,
+                            :instagram, :facebook, :whatsapp, :google_maps_url, :google_review_url,
                             :plan_id, :template_id, :status, :expires_at, :logo, :banner, :background_image,
                             :primary_color, :secondary_color, :accent_color, :button_color, :button_text_color, :font_color,
                             :admin_username, :admin_password_hash)";
@@ -141,7 +148,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     $sql = "UPDATE restaurants SET 
                             name = :name, slug = :slug, email = :email, phone = :phone, address = :address,
-                            internal_notes = :internal_notes, plan_id = :plan_id, template_id = :template_id,
+                            internal_notes = :internal_notes, instagram = :instagram, facebook = :facebook,
+                            whatsapp = :whatsapp, google_maps_url = :google_maps_url, google_review_url = :google_review_url,
+                            plan_id = :plan_id, template_id = :template_id,
                             status = :status, expires_at = :expires_at, logo = :logo, banner = :banner,
                             background_image = :background_image, primary_color = :primary_color,
                             secondary_color = :secondary_color, accent_color = :accent_color,
@@ -682,6 +691,46 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
                                       class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2"></textarea>
                         </div>
                         
+                        <!-- Redes Sociais -->
+                        <div class="col-span-2">
+                            <h3 class="text-sm font-medium text-gray-400 border-b border-gray-700 pb-2 mb-4 mt-4">Redes Sociais</h3>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm mb-1">Instagram</label>
+                            <div class="flex items-center">
+                                <span class="bg-gray-600 border border-gray-600 border-r-0 rounded-l px-3 py-2 text-gray-400 text-sm">@</span>
+                                <input type="text" name="instagram" id="form-instagram" placeholder="usuario"
+                                       class="w-full bg-gray-700 border border-gray-600 rounded-r px-3 py-2">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm mb-1">Facebook</label>
+                            <input type="url" name="facebook" id="form-facebook" placeholder="https://facebook.com/..."
+                                   class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm mb-1">WhatsApp</label>
+                            <input type="text" name="whatsapp" id="form-whatsapp" placeholder="48999999999"
+                                   class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                            <p class="text-xs text-gray-500 mt-1">Apenas números com DDD</p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm mb-1">Google Maps</label>
+                            <input type="url" name="google_maps_url" id="form-google-maps" placeholder="https://maps.google.com/..."
+                                   class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                        </div>
+                        
+                        <div class="col-span-2">
+                            <label class="block text-sm mb-1">Link para Avaliação no Google</label>
+                            <input type="url" name="google_review_url" id="form-google-review" placeholder="https://search.google.com/local/writereview?..."
+                                   class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                            <p class="text-xs text-gray-500 mt-1">Cole aqui o link direto para avaliação do Google My Business</p>
+                        </div>
+                        
                         <!-- Credenciais de Acesso -->
                         <div class="col-span-2">
                             <h3 class="text-sm font-medium text-gray-400 border-b border-gray-700 pb-2 mb-4 mt-4">Credenciais de Acesso</h3>
@@ -849,6 +898,11 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
             document.getElementById('form-phone').value = '';
             document.getElementById('form-address').value = '';
             document.getElementById('form-notes').value = '';
+            document.getElementById('form-instagram').value = '';
+            document.getElementById('form-facebook').value = '';
+            document.getElementById('form-whatsapp').value = '';
+            document.getElementById('form-google-maps').value = '';
+            document.getElementById('form-google-review').value = '';
             document.getElementById('form-password').value = '';
             document.getElementById('form-password').required = true;
             document.getElementById('password-hint').textContent = '(obrigatória na criação)';
@@ -888,6 +942,11 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
             document.getElementById('form-phone').value = r.phone || '';
             document.getElementById('form-address').value = r.address || '';
             document.getElementById('form-notes').value = r.internal_notes || '';
+            document.getElementById('form-instagram').value = r.instagram || '';
+            document.getElementById('form-facebook').value = r.facebook || '';
+            document.getElementById('form-whatsapp').value = r.whatsapp || '';
+            document.getElementById('form-google-maps').value = r.google_maps_url || '';
+            document.getElementById('form-google-review').value = r.google_review_url || '';
             document.getElementById('form-password').value = '';
             document.getElementById('form-password').required = false;
             document.getElementById('password-hint').textContent = '(deixe vazio para manter a senha atual)';
