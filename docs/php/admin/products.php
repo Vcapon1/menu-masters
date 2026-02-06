@@ -32,15 +32,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $name = sanitize($_POST['name'] ?? '');
                 $description = sanitize($_POST['description'] ?? '');
                 $categoryId = (int)($_POST['category_id'] ?? 0);
+                $hasSizes = isset($_POST['has_sizes']) && $_POST['has_sizes'] === '1';
                 $price = (float)($_POST['price'] ?? 0);
                 $promoPrice = !empty($_POST['promo_price']) ? (float)$_POST['promo_price'] : null;
+                
+                // Processar tamanhos/preços
+                $sizesPrices = null;
+                if ($hasSizes && !empty($_POST['size_labels']) && !empty($_POST['size_prices'])) {
+                    $sizeLabels = $_POST['size_labels'];
+                    $sizePrices = $_POST['size_prices'];
+                    $sizesArray = [];
+                    
+                    for ($i = 0; $i < count($sizeLabels); $i++) {
+                        $label = trim($sizeLabels[$i] ?? '');
+                        $sizePrice = (float)($sizePrices[$i] ?? 0);
+                        if (!empty($label) && $sizePrice > 0) {
+                            $sizesArray[] = ['label' => $label, 'price' => $sizePrice];
+                        }
+                    }
+                    
+                    if (!empty($sizesArray)) {
+                        $sizesPrices = json_encode($sizesArray);
+                        // Quando tem tamanhos, o preço principal é o menor dos tamanhos
+                        $price = min(array_column($sizesArray, 'price'));
+                    }
+                }
+                
                 $badges = isset($_POST['badges']) ? json_encode($_POST['badges']) : null;
                 $isAvailable = isset($_POST['is_available']) ? 1 : 0;
                 $hideWhenUnavailable = isset($_POST['hide_when_unavailable']) ? 1 : 0;
                 $sortOrder = (int)($_POST['sort_order'] ?? 0);
                 
                 // Validar
-                if (empty($name) || $categoryId === 0 || $price <= 0) {
+                $priceValid = $hasSizes ? ($sizesPrices !== null) : ($price > 0);
+                if (empty($name) || $categoryId === 0 || !$priceValid) {
                     throw new Exception('Preencha todos os campos obrigatórios.');
                 }
                 
