@@ -231,6 +231,29 @@
             color: #ff4444;
         }
         
+        /* Sizes Prices */
+        .product-sizes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        
+        .size-price-chip {
+            background: rgba(251, 191, 36, 0.2);
+            border: 1px solid var(--secondary-color);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--secondary-color);
+        }
+        
+        .size-price-chip .size-label {
+            color: rgba(255, 255, 255, 0.8);
+            margin-right: 4px;
+        }
+        
         /* Badges */
         .badges {
             display: flex;
