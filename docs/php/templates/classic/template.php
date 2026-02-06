@@ -340,7 +340,21 @@ $address = htmlspecialchars($restaurant['address'] ?? '');
                     </div>
                     <?php endif; ?>
                     
-                    <p class="product-price"><?= formatPrice($product['price']) ?></p>
+                    <?php 
+                                    $sizesPrices = json_decode($product['sizes_prices'] ?? 'null', true);
+                                    if ($sizesPrices && is_array($sizesPrices) && count($sizesPrices) > 0): 
+                                    ?>
+                                        <div class="product-sizes">
+                                            <?php foreach ($sizesPrices as $size): ?>
+                                                <span class="size-price-chip">
+                                                    <span class="size-label"><?= htmlspecialchars($size['label']) ?></span>
+                                                    R$ <?= number_format($size['price'], 2, ',', '.') ?>
+                                                </span>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <p class="product-price"><?= formatPrice($product['price']) ?></p>
+                                    <?php endif; ?>
                 </div>
             </article>
             <?php endforeach; ?>

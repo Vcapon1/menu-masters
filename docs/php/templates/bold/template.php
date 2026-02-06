@@ -427,7 +427,19 @@
                             <?php endif; ?>
                             
                             <div class="product-price">
-                                <?php if ($hasPromo): ?>
+                                <?php 
+                                $sizesPrices = json_decode($product['sizes_prices'] ?? 'null', true);
+                                if ($sizesPrices && is_array($sizesPrices) && count($sizesPrices) > 0): 
+                                ?>
+                                    <div class="product-sizes">
+                                        <?php foreach ($sizesPrices as $size): ?>
+                                            <span class="size-price-chip">
+                                                <span class="size-label"><?= htmlspecialchars($size['label']) ?></span>
+                                                R$ <?= number_format($size['price'], 2, ',', '.') ?>
+                                            </span>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php elseif ($hasPromo): ?>
                                     <span class="product-price-original"><?= formatPrice($product['price']) ?></span>
                                     <span class="product-price-promo"><?= formatPrice($product['promo_price']) ?></span>
                                 <?php else: ?>

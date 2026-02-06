@@ -847,12 +847,28 @@
                                     <?php endif; ?>
                                     
                                     <div class="product-price-row">
-                                        <?php if ($hasPromo): ?>
+                                        <?php 
+                                        $sizesPrices = json_decode($product['sizes_prices'] ?? 'null', true);
+                                        if ($sizesPrices && is_array($sizesPrices) && count($sizesPrices) > 0): 
+                                        ?>
+                                            <div class="product-sizes">
+                                                <?php foreach ($sizesPrices as $size): ?>
+                                                    <span class="size-price-chip">
+                                                        <span class="size-label"><?= htmlspecialchars($size['label']) ?></span>
+                                                        R$ <?= number_format($size['price'], 2, ',', '.') ?>
+                                                    </span>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        <?php elseif ($hasPromo): ?>
                                             <span class="product-price-old">R$ <?= number_format($product['price'], 2, ',', '.') ?></span>
+                                            <span class="product-price">
+                                                R$ <?= number_format($product['promo_price'], 2, ',', '.') ?>
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="product-price">
+                                                R$ <?= number_format($product['price'], 2, ',', '.') ?>
+                                            </span>
                                         <?php endif; ?>
-                                        <span class="product-price">
-                                            R$ <?= number_format($hasPromo ? $product['promo_price'] : $product['price'], 2, ',', '.') ?>
-                                        </span>
                                     </div>
                                 </div>
                             </div>
