@@ -539,13 +539,33 @@ $availableBadges = [
             document.getElementById('form-name').value = product.name;
             document.getElementById('form-category').value = product.category_id;
             document.getElementById('form-description').value = product.description || '';
-            document.getElementById('form-price').value = product.price;
-            document.getElementById('form-promo-price').value = product.promo_price || '';
             document.getElementById('form-available').checked = product.is_available == 1;
             document.getElementById('form-hide').checked = product.hide_when_unavailable == 1;
             document.getElementById('form-current-image').value = product.image || '';
             document.getElementById('form-current-video').value = product.video || '';
             document.getElementById('form-sort').value = product.sort_order || 0;
+            
+            // Verificar se tem tamanhos
+            const sizesPrices = product.sizes_prices ? JSON.parse(product.sizes_prices) : null;
+            const hasSizes = sizesPrices && Array.isArray(sizesPrices) && sizesPrices.length > 0;
+            
+            document.getElementById('form-has-sizes').checked = hasSizes;
+            document.getElementById('form-has-sizes-hidden').value = hasSizes ? '1' : '0';
+            document.getElementById('single-price-section').classList.toggle('hidden', hasSizes);
+            document.getElementById('sizes-section').classList.toggle('hidden', !hasSizes);
+            document.getElementById('form-price').required = !hasSizes;
+            
+            // Limpar container de tamanhos
+            document.getElementById('sizes-container').innerHTML = '';
+            
+            if (hasSizes) {
+                sizesPrices.forEach(size => {
+                    addSizeRow(size.label, size.price);
+                });
+            } else {
+                document.getElementById('form-price').value = product.price;
+                document.getElementById('form-promo-price').value = product.promo_price || '';
+            }
             
             // Preview de imagem atual
             const imagePreview = document.getElementById('current-image-preview');
