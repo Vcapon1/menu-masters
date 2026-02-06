@@ -453,6 +453,50 @@ $availableBadges = [
     </div>
     
     <script>
+        // Funções de Tamanhos
+        function toggleSizesMode(hasSizes) {
+            document.getElementById('form-has-sizes-hidden').value = hasSizes ? '1' : '0';
+            document.getElementById('single-price-section').classList.toggle('hidden', hasSizes);
+            document.getElementById('sizes-section').classList.toggle('hidden', !hasSizes);
+            
+            // Ajustar required
+            const priceInput = document.getElementById('form-price');
+            priceInput.required = !hasSizes;
+            
+            if (hasSizes && document.querySelectorAll('.size-row').length === 0) {
+                // Adicionar 3 tamanhos padrão
+                addSizeRow('Pequena', '');
+                addSizeRow('Média', '');
+                addSizeRow('Grande', '');
+            }
+        }
+        
+        function addSizeRow(label = '', price = '') {
+            const container = document.getElementById('sizes-container');
+            const index = container.children.length;
+            
+            const row = document.createElement('div');
+            row.className = 'size-row flex gap-2 items-center';
+            row.innerHTML = `
+                <input type="text" name="size_labels[]" value="${label}" placeholder="Ex: Pequena, Média, Grande" 
+                       class="flex-1 bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+                <div class="flex items-center gap-1">
+                    <span class="text-sm text-gray-400">R$</span>
+                    <input type="number" name="size_prices[]" value="${price}" step="0.01" min="0" placeholder="0,00"
+                           class="w-24 bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+                </div>
+                <button type="button" onclick="removeSizeRow(this)" class="text-red-400 hover:text-red-300 p-1">✕</button>
+            `;
+            container.appendChild(row);
+        }
+        
+        function removeSizeRow(btn) {
+            const container = document.getElementById('sizes-container');
+            if (container.children.length > 1) {
+                btn.closest('.size-row').remove();
+            }
+        }
+        
         function openModal() {
             document.getElementById('modal').classList.remove('hidden');
             document.getElementById('modal').classList.add('flex');
@@ -467,6 +511,14 @@ $availableBadges = [
             document.getElementById('form-available').checked = true;
             document.getElementById('form-hide').checked = false;
             document.querySelectorAll('.badge-checkbox').forEach(cb => cb.checked = false);
+            
+            // Reset tamanhos
+            document.getElementById('form-has-sizes').checked = false;
+            document.getElementById('form-has-sizes-hidden').value = '0';
+            document.getElementById('single-price-section').classList.remove('hidden');
+            document.getElementById('sizes-section').classList.add('hidden');
+            document.getElementById('sizes-container').innerHTML = '';
+            document.getElementById('form-price').required = true;
             
             // Esconder previews
             document.getElementById('current-image-preview').classList.add('hidden');
