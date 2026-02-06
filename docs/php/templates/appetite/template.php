@@ -406,6 +406,7 @@ $buttonTextColor = $restaurant['button_text_color'] ?? '#ffffff';
             align-items: center;
             gap: 8px;
             margin-top: 8px;
+            flex-wrap: wrap;
         }
         
         .price-old {
@@ -421,6 +422,28 @@ $buttonTextColor = $restaurant['button_text_color'] ?? '#ffffff';
         
         .price-promo {
             color: var(--promo);
+        }
+        
+        /* Sizes Prices */
+        .product-sizes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        
+        .size-price-chip {
+            background: rgba(249, 115, 22, 0.1);
+            border: 1px solid var(--primary);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .size-price-chip .size-label {
+            color: var(--secondary);
+            margin-right: 4px;
         }
         
         .product-image-container {
@@ -697,7 +720,19 @@ $buttonTextColor = $restaurant['button_text_color'] ?? '#ffffff';
                                         <p class="product-description"><?= htmlspecialchars($product['description']) ?></p>
                                         
                                         <div class="product-price">
-                                            <?php if ($hasPromo): ?>
+                                            <?php 
+                                            $sizesPrices = json_decode($product['sizes_prices'] ?? 'null', true);
+                                            if ($sizesPrices && is_array($sizesPrices) && count($sizesPrices) > 0): 
+                                            ?>
+                                                <div class="product-sizes">
+                                                    <?php foreach ($sizesPrices as $size): ?>
+                                                        <span class="size-price-chip">
+                                                            <span class="size-label"><?= htmlspecialchars($size['label']) ?></span>
+                                                            R$ <?= number_format($size['price'], 2, ',', '.') ?>
+                                                        </span>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                            <?php elseif ($hasPromo): ?>
                                                 <span class="price-old">R$ <?= number_format($product['price'], 2, ',', '.') ?></span>
                                                 <span class="price-current price-promo">R$ <?= number_format($product['promo_price'], 2, ',', '.') ?></span>
                                             <?php else: ?>

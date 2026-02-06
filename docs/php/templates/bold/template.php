@@ -231,6 +231,29 @@
             color: #ff4444;
         }
         
+        /* Sizes Prices */
+        .product-sizes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        
+        .size-price-chip {
+            background: rgba(251, 191, 36, 0.2);
+            border: 1px solid var(--secondary-color);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--secondary-color);
+        }
+        
+        .size-price-chip .size-label {
+            color: rgba(255, 255, 255, 0.8);
+            margin-right: 4px;
+        }
+        
         /* Badges */
         .badges {
             display: flex;
@@ -404,7 +427,19 @@
                             <?php endif; ?>
                             
                             <div class="product-price">
-                                <?php if ($hasPromo): ?>
+                                <?php 
+                                $sizesPrices = json_decode($product['sizes_prices'] ?? 'null', true);
+                                if ($sizesPrices && is_array($sizesPrices) && count($sizesPrices) > 0): 
+                                ?>
+                                    <div class="product-sizes">
+                                        <?php foreach ($sizesPrices as $size): ?>
+                                            <span class="size-price-chip">
+                                                <span class="size-label"><?= htmlspecialchars($size['label']) ?></span>
+                                                R$ <?= number_format($size['price'], 2, ',', '.') ?>
+                                            </span>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php elseif ($hasPromo): ?>
                                     <span class="product-price-original"><?= formatPrice($product['price']) ?></span>
                                     <span class="product-price-promo"><?= formatPrice($product['promo_price']) ?></span>
                                 <?php else: ?>

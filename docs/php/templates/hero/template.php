@@ -450,6 +450,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            flex-wrap: wrap;
         }
         
         .product-price {
@@ -463,6 +464,29 @@
             font-size: 0.9rem;
             color: rgba(255, 255, 255, 0.5);
             text-decoration: line-through;
+        }
+        
+        /* Sizes Prices */
+        .product-sizes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .size-price-chip {
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--secondary);
+            backdrop-filter: blur(4px);
+        }
+        
+        .size-price-chip .size-label {
+            color: rgba(255, 255, 255, 0.8);
+            margin-right: 4px;
         }
         
         /* Modal */
@@ -823,12 +847,28 @@
                                     <?php endif; ?>
                                     
                                     <div class="product-price-row">
-                                        <?php if ($hasPromo): ?>
+                                        <?php 
+                                        $sizesPrices = json_decode($product['sizes_prices'] ?? 'null', true);
+                                        if ($sizesPrices && is_array($sizesPrices) && count($sizesPrices) > 0): 
+                                        ?>
+                                            <div class="product-sizes">
+                                                <?php foreach ($sizesPrices as $size): ?>
+                                                    <span class="size-price-chip">
+                                                        <span class="size-label"><?= htmlspecialchars($size['label']) ?></span>
+                                                        R$ <?= number_format($size['price'], 2, ',', '.') ?>
+                                                    </span>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        <?php elseif ($hasPromo): ?>
                                             <span class="product-price-old">R$ <?= number_format($product['price'], 2, ',', '.') ?></span>
+                                            <span class="product-price">
+                                                R$ <?= number_format($product['promo_price'], 2, ',', '.') ?>
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="product-price">
+                                                R$ <?= number_format($product['price'], 2, ',', '.') ?>
+                                            </span>
                                         <?php endif; ?>
-                                        <span class="product-price">
-                                            R$ <?= number_format($hasPromo ? $product['promo_price'] : $product['price'], 2, ',', '.') ?>
-                                        </span>
                                     </div>
                                 </div>
                             </div>

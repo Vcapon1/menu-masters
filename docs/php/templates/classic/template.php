@@ -233,6 +233,30 @@ $address = htmlspecialchars($restaurant['address'] ?? '');
             color: var(--secondary);
         }
         
+        /* Sizes Prices */
+        .product-sizes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 0.5rem;
+        }
+        
+        .size-price-chip {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid var(--secondary);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--secondary);
+        }
+        
+        .size-price-chip .size-label {
+            color: var(--font);
+            opacity: 0.8;
+            margin-right: 4px;
+        }
+        
         /* Footer */
         .footer {
             text-align: center;
@@ -316,7 +340,21 @@ $address = htmlspecialchars($restaurant['address'] ?? '');
                     </div>
                     <?php endif; ?>
                     
-                    <p class="product-price"><?= formatPrice($product['price']) ?></p>
+                    <?php 
+                                    $sizesPrices = json_decode($product['sizes_prices'] ?? 'null', true);
+                                    if ($sizesPrices && is_array($sizesPrices) && count($sizesPrices) > 0): 
+                                    ?>
+                                        <div class="product-sizes">
+                                            <?php foreach ($sizesPrices as $size): ?>
+                                                <span class="size-price-chip">
+                                                    <span class="size-label"><?= htmlspecialchars($size['label']) ?></span>
+                                                    R$ <?= number_format($size['price'], 2, ',', '.') ?>
+                                                </span>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <p class="product-price"><?= formatPrice($product['price']) ?></p>
+                                    <?php endif; ?>
                 </div>
             </article>
             <?php endforeach; ?>

@@ -153,6 +153,7 @@ CREATE TABLE IF NOT EXISTS `products` (
   `description` TEXT,
   `price` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   `promo_price` DECIMAL(10,2) DEFAULT NULL COMMENT 'Preço promocional (NULL = sem promoção)',
+  `sizes_prices` JSON DEFAULT NULL COMMENT 'Preços por tamanho: [{"label": "P", "price": 29.90}, ...]',
   `image` VARCHAR(500),
   `video` VARCHAR(500) COMMENT 'Vídeo do prato (upload local)',
   `badges` JSON COMMENT '["promo", "vegan", "spicy", "new", "chef"]',

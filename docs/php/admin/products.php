@@ -32,15 +32,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $name = sanitize($_POST['name'] ?? '');
                 $description = sanitize($_POST['description'] ?? '');
                 $categoryId = (int)($_POST['category_id'] ?? 0);
+                $hasSizes = isset($_POST['has_sizes']) && $_POST['has_sizes'] === '1';
                 $price = (float)($_POST['price'] ?? 0);
                 $promoPrice = !empty($_POST['promo_price']) ? (float)$_POST['promo_price'] : null;
+                
+                // Processar tamanhos/preços
+                $sizesPrices = null;
+                if ($hasSizes && !empty($_POST['size_labels']) && !empty($_POST['size_prices'])) {
+                    $sizeLabels = $_POST['size_labels'];
+                    $sizePrices = $_POST['size_prices'];
+                    $sizesArray = [];
+                    
+                    for ($i = 0; $i < count($sizeLabels); $i++) {
+                        $label = trim($sizeLabels[$i] ?? '');
+                        $sizePrice = (float)($sizePrices[$i] ?? 0);
+                        if (!empty($label) && $sizePrice > 0) {
+                            $sizesArray[] = ['label' => $label, 'price' => $sizePrice];
+                        }
+                    }
+                    
+                    if (!empty($sizesArray)) {
+                        $sizesPrices = json_encode($sizesArray);
+                        // Quando tem tamanhos, o preço principal é o menor dos tamanhos
+                        $price = min(array_column($sizesArray, 'price'));
+                    }
+                }
+                
                 $badges = isset($_POST['badges']) ? json_encode($_POST['badges']) : null;
                 $isAvailable = isset($_POST['is_available']) ? 1 : 0;
                 $hideWhenUnavailable = isset($_POST['hide_when_unavailable']) ? 1 : 0;
                 $sortOrder = (int)($_POST['sort_order'] ?? 0);
                 
                 // Validar
-                if (empty($name) || $categoryId === 0 || $price <= 0) {
+                $priceValid = $hasSizes ? ($sizesPrices !== null) : ($price > 0);
+                if (empty($name) || $categoryId === 0 || !$priceValid) {
                     throw new Exception('Preencha todos os campos obrigatórios.');
                 }
                 
@@ -60,8 +85,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 
                 if ($action === 'create') {
-                    $sql = "INSERT INTO products (restaurant_id, category_id, name, description, price, promo_price, image, video, badges, is_available, hide_when_unavailable, sort_order)
-                            VALUES (:restaurant_id, :category_id, :name, :description, :price, :promo_price, :image, :video, :badges, :is_available, :hide_when_unavailable, :sort_order)";
+                    $sql = "INSERT INTO products (restaurant_id, category_id, name, description, price, promo_price, sizes_prices, image, video, badges, is_available, hide_when_unavailable, sort_order)
+                            VALUES (:restaurant_id, :category_id, :name, :description, :price, :promo_price, :sizes_prices, :image, :video, :badges, :is_available, :hide_when_unavailable, :sort_order)";
                     $params = [
                         'restaurant_id' => $restaurantId,
                         'category_id' => $categoryId,
@@ -69,6 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'description' => $description,
                         'price' => $price,
                         'promo_price' => $promoPrice,
+                        'sizes_prices' => $sizesPrices,
                         'image' => $image,
                         'video' => $video,
                         'badges' => $badges,
@@ -79,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $message = 'Prato criado com sucesso!';
                 } else {
                     $sql = "UPDATE products SET category_id = :category_id, name = :name, description = :description, 
-                            price = :price, promo_price = :promo_price, image = :image, video = :video, badges = :badges, 
+                            price = :price, promo_price = :promo_price, sizes_prices = :sizes_prices, image = :image, video = :video, badges = :badges, 
                             is_available = :is_available, hide_when_unavailable = :hide_when_unavailable, sort_order = :sort_order
                             WHERE id = :id AND restaurant_id = :restaurant_id";
                     $params = [
@@ -90,6 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'description' => $description,
                         'price' => $price,
                         'promo_price' => $promoPrice,
+                        'sizes_prices' => $sizesPrices,
                         'image' => $image,
                         'video' => $video,
                         'badges' => $badges,
@@ -323,17 +350,43 @@ $availableBadges = [
                                       class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2"></textarea>
                         </div>
                         
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm mb-1">Preço *</label>
-                                <input type="number" name="price" id="form-price" step="0.01" min="0" required
-                                       class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                        <!-- Toggle de Tamanhos -->
+                        <div class="bg-gray-700/50 p-3 rounded-lg">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="form-has-sizes" onchange="toggleSizesMode(this.checked)">
+                                <span class="text-sm font-medium">Produto com tamanhos variáveis (ex: P/M/G)</span>
+                            </label>
+                            <p class="text-xs text-gray-400 mt-1 ml-5">Ative para pizzas e produtos com múltiplos tamanhos</p>
+                        </div>
+                        
+                        <input type="hidden" name="has_sizes" id="form-has-sizes-hidden" value="0">
+                        
+                        <!-- Preço Único (padrão) -->
+                        <div id="single-price-section">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm mb-1">Preço *</label>
+                                    <input type="number" name="price" id="form-price" step="0.01" min="0"
+                                           class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                                </div>
+                                <div>
+                                    <label class="block text-sm mb-1">Preço Promocional</label>
+                                    <input type="number" name="promo_price" id="form-promo-price" step="0.01" min="0"
+                                           class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                                </div>
                             </div>
-                            <div>
-                                <label class="block text-sm mb-1">Preço Promocional</label>
-                                <input type="number" name="promo_price" id="form-promo-price" step="0.01" min="0"
-                                       class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                        </div>
+                        
+                        <!-- Tamanhos/Preços Múltiplos -->
+                        <div id="sizes-section" class="hidden">
+                            <label class="block text-sm mb-2">Tamanhos e Preços *</label>
+                            <div id="sizes-container" class="space-y-2">
+                                <!-- Linhas serão adicionadas via JavaScript -->
                             </div>
+                            <button type="button" onclick="addSizeRow()" 
+                                    class="mt-2 text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1">
+                                <span>+</span> Adicionar tamanho
+                            </button>
                         </div>
                         
                         <div>
@@ -400,6 +453,50 @@ $availableBadges = [
     </div>
     
     <script>
+        // Funções de Tamanhos
+        function toggleSizesMode(hasSizes) {
+            document.getElementById('form-has-sizes-hidden').value = hasSizes ? '1' : '0';
+            document.getElementById('single-price-section').classList.toggle('hidden', hasSizes);
+            document.getElementById('sizes-section').classList.toggle('hidden', !hasSizes);
+            
+            // Ajustar required
+            const priceInput = document.getElementById('form-price');
+            priceInput.required = !hasSizes;
+            
+            if (hasSizes && document.querySelectorAll('.size-row').length === 0) {
+                // Adicionar 3 tamanhos padrão
+                addSizeRow('Pequena', '');
+                addSizeRow('Média', '');
+                addSizeRow('Grande', '');
+            }
+        }
+        
+        function addSizeRow(label = '', price = '') {
+            const container = document.getElementById('sizes-container');
+            const index = container.children.length;
+            
+            const row = document.createElement('div');
+            row.className = 'size-row flex gap-2 items-center';
+            row.innerHTML = `
+                <input type="text" name="size_labels[]" value="${label}" placeholder="Ex: Pequena, Média, Grande" 
+                       class="flex-1 bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+                <div class="flex items-center gap-1">
+                    <span class="text-sm text-gray-400">R$</span>
+                    <input type="number" name="size_prices[]" value="${price}" step="0.01" min="0" placeholder="0,00"
+                           class="w-24 bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+                </div>
+                <button type="button" onclick="removeSizeRow(this)" class="text-red-400 hover:text-red-300 p-1">✕</button>
+            `;
+            container.appendChild(row);
+        }
+        
+        function removeSizeRow(btn) {
+            const container = document.getElementById('sizes-container');
+            if (container.children.length > 1) {
+                btn.closest('.size-row').remove();
+            }
+        }
+        
         function openModal() {
             document.getElementById('modal').classList.remove('hidden');
             document.getElementById('modal').classList.add('flex');
@@ -414,6 +511,14 @@ $availableBadges = [
             document.getElementById('form-available').checked = true;
             document.getElementById('form-hide').checked = false;
             document.querySelectorAll('.badge-checkbox').forEach(cb => cb.checked = false);
+            
+            // Reset tamanhos
+            document.getElementById('form-has-sizes').checked = false;
+            document.getElementById('form-has-sizes-hidden').value = '0';
+            document.getElementById('single-price-section').classList.remove('hidden');
+            document.getElementById('sizes-section').classList.add('hidden');
+            document.getElementById('sizes-container').innerHTML = '';
+            document.getElementById('form-price').required = true;
             
             // Esconder previews
             document.getElementById('current-image-preview').classList.add('hidden');
@@ -434,13 +539,33 @@ $availableBadges = [
             document.getElementById('form-name').value = product.name;
             document.getElementById('form-category').value = product.category_id;
             document.getElementById('form-description').value = product.description || '';
-            document.getElementById('form-price').value = product.price;
-            document.getElementById('form-promo-price').value = product.promo_price || '';
             document.getElementById('form-available').checked = product.is_available == 1;
             document.getElementById('form-hide').checked = product.hide_when_unavailable == 1;
             document.getElementById('form-current-image').value = product.image || '';
             document.getElementById('form-current-video').value = product.video || '';
             document.getElementById('form-sort').value = product.sort_order || 0;
+            
+            // Verificar se tem tamanhos
+            const sizesPrices = product.sizes_prices ? JSON.parse(product.sizes_prices) : null;
+            const hasSizes = sizesPrices && Array.isArray(sizesPrices) && sizesPrices.length > 0;
+            
+            document.getElementById('form-has-sizes').checked = hasSizes;
+            document.getElementById('form-has-sizes-hidden').value = hasSizes ? '1' : '0';
+            document.getElementById('single-price-section').classList.toggle('hidden', hasSizes);
+            document.getElementById('sizes-section').classList.toggle('hidden', !hasSizes);
+            document.getElementById('form-price').required = !hasSizes;
+            
+            // Limpar container de tamanhos
+            document.getElementById('sizes-container').innerHTML = '';
+            
+            if (hasSizes) {
+                sizesPrices.forEach(size => {
+                    addSizeRow(size.label, size.price);
+                });
+            } else {
+                document.getElementById('form-price').value = product.price;
+                document.getElementById('form-promo-price').value = product.promo_price || '';
+            }
             
             // Preview de imagem atual
             const imagePreview = document.getElementById('current-image-preview');
