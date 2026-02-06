@@ -85,8 +85,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 
                 if ($action === 'create') {
-                    $sql = "INSERT INTO products (restaurant_id, category_id, name, description, price, promo_price, image, video, badges, is_available, hide_when_unavailable, sort_order)
-                            VALUES (:restaurant_id, :category_id, :name, :description, :price, :promo_price, :image, :video, :badges, :is_available, :hide_when_unavailable, :sort_order)";
+                    $sql = "INSERT INTO products (restaurant_id, category_id, name, description, price, promo_price, sizes_prices, image, video, badges, is_available, hide_when_unavailable, sort_order)
+                            VALUES (:restaurant_id, :category_id, :name, :description, :price, :promo_price, :sizes_prices, :image, :video, :badges, :is_available, :hide_when_unavailable, :sort_order)";
                     $params = [
                         'restaurant_id' => $restaurantId,
                         'category_id' => $categoryId,
@@ -94,6 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'description' => $description,
                         'price' => $price,
                         'promo_price' => $promoPrice,
+                        'sizes_prices' => $sizesPrices,
                         'image' => $image,
                         'video' => $video,
                         'badges' => $badges,
@@ -104,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $message = 'Prato criado com sucesso!';
                 } else {
                     $sql = "UPDATE products SET category_id = :category_id, name = :name, description = :description, 
-                            price = :price, promo_price = :promo_price, image = :image, video = :video, badges = :badges, 
+                            price = :price, promo_price = :promo_price, sizes_prices = :sizes_prices, image = :image, video = :video, badges = :badges, 
                             is_available = :is_available, hide_when_unavailable = :hide_when_unavailable, sort_order = :sort_order
                             WHERE id = :id AND restaurant_id = :restaurant_id";
                     $params = [
@@ -115,6 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'description' => $description,
                         'price' => $price,
                         'promo_price' => $promoPrice,
+                        'sizes_prices' => $sizesPrices,
                         'image' => $image,
                         'video' => $video,
                         'badges' => $badges,
