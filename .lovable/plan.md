@@ -141,9 +141,26 @@ No modal de detalhes, os tamanhos podem ser exibidos como botões/chips selecion
 
 ## Etapas de Implementação
 
-1. Criar migration SQL para adicionar coluna
-2. Atualizar formulário de produtos no admin
-3. Atualizar template Hero com exibição de tamanhos
-4. Replicar para demais templates (Appetite, Classic, Bold)
+1. ✅ Criar migration SQL para adicionar coluna `sizes_prices`
+2. ✅ Atualizar formulário de produtos no admin com toggle para tamanhos
+3. ✅ Atualizar template Hero com exibição de tamanhos
+4. ✅ Atualizar templates Appetite, Classic e Bold
 5. Testar com dados de pizzaria real
+
+## Alterações Realizadas
+
+### Arquivos Modificados:
+- `docs/database/schema.sql` - Adicionada coluna `sizes_prices` JSON
+- `docs/php/admin/products.php` - Formulário com toggle e campos dinâmicos
+- `docs/php/templates/hero/template.php` - Exibição de chips de tamanhos
+- `docs/php/templates/appetite/template.php` - Exibição de chips de tamanhos
+- `docs/php/templates/classic/template.php` - Exibição de chips de tamanhos  
+- `docs/php/templates/bold/template.php` - Exibição de chips de tamanhos
+
+### Migration SQL para aplicar no banco existente:
+```sql
+ALTER TABLE `products` 
+  ADD COLUMN `sizes_prices` JSON DEFAULT NULL 
+  COMMENT 'Preços por tamanho: [{"label": "P", "price": 29.90}, ...]';
+```
 
