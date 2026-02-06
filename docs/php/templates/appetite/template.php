@@ -406,6 +406,7 @@ $buttonTextColor = $restaurant['button_text_color'] ?? '#ffffff';
             align-items: center;
             gap: 8px;
             margin-top: 8px;
+            flex-wrap: wrap;
         }
         
         .price-old {
@@ -421,6 +422,28 @@ $buttonTextColor = $restaurant['button_text_color'] ?? '#ffffff';
         
         .price-promo {
             color: var(--promo);
+        }
+        
+        /* Sizes Prices */
+        .product-sizes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        
+        .size-price-chip {
+            background: rgba(249, 115, 22, 0.1);
+            border: 1px solid var(--primary);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .size-price-chip .size-label {
+            color: var(--secondary);
+            margin-right: 4px;
         }
         
         .product-image-container {
