@@ -1,289 +1,149 @@
 
-# Plano: Criar Template "Hero" (Estilo Hamburgeria)
 
-## Visao Geral
+# Plano: Suporte a Múltiplos Tamanhos/Preços para Pizzarias
 
-Criar um novo template chamado **Hero** com design escuro e impactante, inspirado na imagem de referencia. Caracteristicas principais:
+## Resumo
 
-- Hero section com banner de fundo e logo centralizado (aceita PNG transparente)
-- Navegacao horizontal de categorias estilo chips
-- Cards de produto com imagem grande, badges, e icone de play para video
-- Modal de detalhes ao clicar no produto com foto/video expandido
-- Tema escuro com acentos dourados/laranja
+Adicionar suporte a preços variáveis por tamanho (P/M/G) para produtos, ideal para pizzarias. A solução utiliza um campo JSON no banco de dados para armazenar os tamanhos e seus preços, mantendo compatibilidade total com produtos que usam preço único.
 
----
+## Abordagem
 
-## Estrutura Visual
+A estratégia de **mínimo impacto** utiliza:
+
+1. **Um novo campo JSON opcional** na tabela de produtos para armazenar tamanhos
+2. **Lógica condicional** nos templates: se existirem tamanhos, exibe-os; senão, mantém o comportamento atual
+3. **Formulário adaptável** no admin: toggle para ativar/desativar tamanhos por produto
 
 ```text
-+------------------------------------------+
-|                                          |
-|            [BANNER FUNDO]                |
-|                                          |
-|         [LOGO - PNG TRANSPARENTE]        |
-|                                          |
-+------------------------------------------+
-| [LANCHES] [COMBOS] [REFRIGERANTES] [...]  |
-+------------------------------------------+
-|                                          |
-|  Combos                                  |
-|  ========================================|
-|  +------------------------------------+  |
-|  |  [BADGE]              [PLAY ICON]  |  |
-|  |  Combo Premium                     |  |
-|  |  R$ 39,00                          |  |
-|  |                                    |  |
-|  +------------------------------------+  |
-|  +------------------------------------+  |
-|  |  [BADGE]              [PLAY ICON]  |  |
-|  |  Combo Vegano                      |  |
-|  |  R$ 39,00                          |  |
-|  +------------------------------------+  |
-|                                          |
-+------------------------------------------+
-
-        MODAL (ao clicar no prato)
-+------------------------------------------+
-|  [X]                                     |
-|  +------------------------------------+  |
-|  |                                    |  |
-|  |      [IMAGEM OU VIDEO GRANDE]      |  |
-|  |                                    |  |
-|  +------------------------------------+  |
-|                                          |
-|  Combo Premium                           |
-|  Hamburguer artesanal com queijo...      |
-|                                          |
-|  [BADGE] [BADGE]                         |
-|                                          |
-|  R$ 39,00                                |
-+------------------------------------------+
+┌─────────────────────────────────────────────────────────────┐
+│                    FLUXO DA SOLUÇÃO                         │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  BANCO DE DADOS                                             │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │ products.sizes_prices (JSON, nullable)              │    │
+│  │                                                     │    │
+│  │ NULL = preço único (campo price)                    │    │
+│  │ JSON = múltiplos tamanhos:                          │    │
+│  │   [                                                 │    │
+│  │     {"label": "Pequena", "price": 29.90},           │    │
+│  │     {"label": "Média", "price": 39.90},             │    │
+│  │     {"label": "Grande", "price": 49.90}             │    │
+│  │   ]                                                 │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                           │                                 │
+│                           ▼                                 │
+│  ADMIN DO RESTAURANTE                                       │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │ [ ] Produto com tamanhos variáveis                  │    │
+│  │                                                     │    │
+│  │ Se marcado:                                         │    │
+│  │ ┌─────────────┬─────────────┬─────────────┐         │    │
+│  │ │ Pequena     │ Média       │ Grande      │         │    │
+│  │ │ R$ [29.90]  │ R$ [39.90]  │ R$ [49.90]  │         │    │
+│  │ └─────────────┴─────────────┴─────────────┘         │    │
+│  │                                                     │    │
+│  │ Se desmarcado:                                      │    │
+│  │ Preço: R$ [_____] (comportamento atual)             │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                           │                                 │
+│                           ▼                                 │
+│  TEMPLATES (Cardápio)                                       │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │ Se sizes_prices existe:                             │    │
+│  │   "Pizza Margherita"                                │    │
+│  │   P: R$29,90 | M: R$39,90 | G: R$49,90              │    │
+│  │                                                     │    │
+│  │ Se sizes_prices é NULL:                             │    │
+│  │   "Hambúrguer Clássico"                             │    │
+│  │   R$38,90 (comportamento atual)                     │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
 ```
 
----
+## Detalhes Técnicos
 
-## Arquivos a Criar/Modificar
-
-### 1. Criar pasta e arquivo do template
-
-**Arquivo:** `docs/php/templates/hero/template.php`
-
-Template completo com:
-- Hero section com banner fullwidth e logo centralizado
-- Navegacao horizontal de categorias
-- Cards de produto estilo imagem grande
-- Modal de detalhes do produto
-- Suporte a video com icone de play
-
-### 2. Adicionar template ao banco de dados
-
-**Arquivo:** `docs/database/schema.sql`
-
-Adicionar INSERT do template "Hero" com cores padrao (escuro com dourado/laranja):
+### 1. Alteração no Banco de Dados
 
 ```sql
-INSERT INTO `templates` (...) VALUES
-('Hero', 'hero', 'Design impactante com hero banner - ideal para hamburgerias', 
- 2, 1, 1, 1, 1, 
- '{"primary": "#f59e0b", "secondary": "#fbbf24", "accent": "#f97316", 
-   "button": "#f59e0b", "buttonText": "#000000", "font": "#ffffff"}');
+ALTER TABLE `products` 
+  ADD COLUMN `sizes_prices` JSON DEFAULT NULL 
+  COMMENT 'Preços por tamanho: [{"label": "P", "price": 29.90}, ...]';
 ```
 
-### 3. Adicionar preset de cores no React
+### 2. Modificações no Admin de Produtos (`products.php`)
 
-**Arquivo:** `src/lib/templatePresets.ts`
+- Adicionar checkbox "Produto com tamanhos variáveis"
+- Campos dinâmicos para P/M/G que aparecem quando checkbox está marcado
+- Esconder campo de preço único quando tamanhos estão ativos
+- Processar e salvar como JSON no backend
 
-Adicionar entrada "hero" com cores:
-- Primary: Dourado (#f59e0b)
-- Secondary: Amarelo (#fbbf24)
-- Accent: Laranja (#f97316)
-- Background: Preto (#0a0a0a)
-- Font: Branco (#ffffff)
+### 3. Modificações nos Templates
 
-### 4. Atualizar referencia no Master Admin
-
-**Arquivo:** `docs/php/master/templates.php`
-
-Adicionar icone para o template "hero" no array de icones.
-
----
-
-## Secao Tecnica: Detalhes do Template
-
-### Hero Section
+Adicionar lógica condicional para exibir preços:
 
 ```php
-<section class="hero" style="background-image: url('<?= $restaurant['banner'] ?>')">
-    <div class="hero-overlay">
-        <?php if ($restaurant['logo']): ?>
-            <img src="<?= $restaurant['logo'] ?>" alt="..." class="hero-logo">
-        <?php endif; ?>
+<?php 
+$sizes = json_decode($product['sizes_prices'] ?? 'null', true);
+if ($sizes && is_array($sizes) && count($sizes) > 0): 
+?>
+    <div class="product-sizes">
+        <?php foreach ($sizes as $size): ?>
+            <span class="size-price">
+                <?= htmlspecialchars($size['label']) ?>: 
+                R$ <?= number_format($size['price'], 2, ',', '.') ?>
+            </span>
+        <?php endforeach; ?>
     </div>
-</section>
+<?php else: ?>
+    <!-- Preço único (código atual) -->
+    <span class="product-price">R$ <?= number_format($product['price'], 2, ',', '.') ?></span>
+<?php endif; ?>
 ```
 
-CSS do Hero:
-```css
-.hero {
-    height: 35vh;
-    min-height: 200px;
-    background-size: cover;
-    background-position: center;
-    position: relative;
-}
+### 4. Arquivos a Modificar
 
-.hero-overlay {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 50%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
+| Arquivo | Mudança |
+|---------|---------|
+| `docs/database/schema.sql` | Adicionar coluna `sizes_prices` |
+| `docs/php/admin/products.php` | Form e lógica para tamanhos |
+| `docs/php/templates/hero/template.php` | Exibição de preços por tamanho |
+| `docs/php/templates/appetite/template.php` | Exibição de preços por tamanho |
+| `docs/php/templates/classic/template.php` | Exibição de preços por tamanho |
+| `docs/php/templates/bold/template.php` | Exibição de preços por tamanho |
 
-.hero-logo {
-    max-width: 200px;
-    max-height: 150px;
-    object-fit: contain; /* PNG transparente sem crop */
-    filter: drop-shadow(0 4px 20px rgba(0,0,0,0.5));
-}
+### 5. Design Visual nos Cards
+
+```text
+┌─────────────────────────────────────────┐
+│  [Imagem da Pizza]                      │
+│                                         │
+│  Pizza 4 Queijos                        │
+│  Blend de mussarela, parmesão...        │
+│                                         │
+│  ┌─────────────────────────────────┐    │
+│  │  P R$29,90 │ M R$39,90 │ G R$49,90│  │
+│  └─────────────────────────────────┘    │
+└─────────────────────────────────────────┘
 ```
 
-### Cards de Produto
+### 6. Design Visual no Modal
 
-Cards fullwidth com imagem de fundo, informacoes sobrepostas:
+No modal de detalhes, os tamanhos podem ser exibidos como botões/chips selecionáveis para melhor UX, destacando visualmente as opções disponíveis.
 
-```css
-.product-card {
-    position: relative;
-    border-radius: 12px;
-    overflow: hidden;
-    border: 2px solid var(--accent);
-    background: rgba(0,0,0,0.6);
-    cursor: pointer;
-}
+## Vantagens desta Abordagem
 
-.product-card-bg {
-    width: 100%;
-    height: 120px;
-    object-fit: cover;
-}
+1. **Zero impacto** em produtos existentes (campo é opcional/nullable)
+2. **Flexível**: suporta qualquer quantidade de tamanhos (P/M/G, Individual/Família, etc.)
+3. **Labels customizáveis**: o restaurante define os nomes (Broto, Média, Grande, Gigante...)
+4. **Reutilizável**: não apenas pizzarias - serve para qualquer produto com variações
 
-.product-card-content {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 12px;
-    background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
-}
+## Etapas de Implementação
 
-.play-icon {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 40px;
-    height: 40px;
-    background: rgba(255,255,255,0.2);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-```
+1. Criar migration SQL para adicionar coluna
+2. Atualizar formulário de produtos no admin
+3. Atualizar template Hero com exibição de tamanhos
+4. Replicar para demais templates (Appetite, Classic, Bold)
+5. Testar com dados de pizzaria real
 
-### Modal de Detalhes
-
-```html
-<div id="productModal" class="modal hidden">
-    <div class="modal-overlay" onclick="closeModal()"></div>
-    <div class="modal-content">
-        <button class="modal-close" onclick="closeModal()">&times;</button>
-        
-        <div class="modal-media">
-            <img id="modalImage" src="" alt="">
-            <video id="modalVideo" controls style="display:none"></video>
-        </div>
-        
-        <div class="modal-info">
-            <h2 id="modalName"></h2>
-            <p id="modalDescription"></p>
-            <div id="modalBadges" class="modal-badges"></div>
-            <div id="modalPrice" class="modal-price"></div>
-        </div>
-    </div>
-</div>
-```
-
-JavaScript para abrir modal:
-```javascript
-function openProductModal(product) {
-    const modal = document.getElementById('productModal');
-    const img = document.getElementById('modalImage');
-    const video = document.getElementById('modalVideo');
-    
-    // Mostrar imagem ou video
-    if (product.video) {
-        img.style.display = 'none';
-        video.style.display = 'block';
-        video.src = product.video;
-    } else {
-        video.style.display = 'none';
-        img.style.display = 'block';
-        img.src = product.image;
-    }
-    
-    document.getElementById('modalName').textContent = product.name;
-    document.getElementById('modalDescription').textContent = product.description;
-    document.getElementById('modalPrice').textContent = 'R$ ' + product.price;
-    
-    modal.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-}
-
-function closeModal() {
-    const modal = document.getElementById('productModal');
-    const video = document.getElementById('modalVideo');
-    
-    modal.classList.add('hidden');
-    video.pause();
-    document.body.style.overflow = '';
-}
-```
-
-### Cores Padrao do Template
-
-| Variavel | Valor | Uso |
-|----------|-------|-----|
-| --background | #0a0a0a | Fundo principal |
-| --primary | #f59e0b | Titulos de categorias, linha |
-| --secondary | #fbbf24 | Preco, destaques |
-| --accent | #f97316 | Bordas dos cards |
-| --font | #ffffff | Texto geral |
-| --badge-promo | #dc2626 | Badge promocao |
-| --badge-chef | #3b82f6 | Badge sugestao do chef |
-
----
-
-## Ordem de Implementacao
-
-1. Criar arquivo `docs/php/templates/hero/template.php` com todo o HTML/CSS/JS
-2. Adicionar INSERT no `docs/database/schema.sql`
-3. Adicionar preset no `src/lib/templatePresets.ts`
-4. Atualizar icone no `docs/php/master/templates.php`
-
----
-
-## Features Incluidas
-
-- [x] Hero fullscreen com banner de fundo
-- [x] Logo PNG transparente sem corte circular
-- [x] Navegacao horizontal de categorias (scroll touch)
-- [x] Cards com imagem grande e overlay de informacoes
-- [x] Badge de promocao e sugestao do chef
-- [x] Icone de play para pratos com video
-- [x] Modal de detalhes ao clicar no produto
-- [x] Suporte a video no modal
-- [x] Linha dourada decorativa nos titulos de categoria
-- [x] Tema escuro por padrao
