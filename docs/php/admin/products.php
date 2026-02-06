@@ -350,17 +350,43 @@ $availableBadges = [
                                       class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2"></textarea>
                         </div>
                         
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm mb-1">Preço *</label>
-                                <input type="number" name="price" id="form-price" step="0.01" min="0" required
-                                       class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                        <!-- Toggle de Tamanhos -->
+                        <div class="bg-gray-700/50 p-3 rounded-lg">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="form-has-sizes" onchange="toggleSizesMode(this.checked)">
+                                <span class="text-sm font-medium">Produto com tamanhos variáveis (ex: P/M/G)</span>
+                            </label>
+                            <p class="text-xs text-gray-400 mt-1 ml-5">Ative para pizzas e produtos com múltiplos tamanhos</p>
+                        </div>
+                        
+                        <input type="hidden" name="has_sizes" id="form-has-sizes-hidden" value="0">
+                        
+                        <!-- Preço Único (padrão) -->
+                        <div id="single-price-section">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm mb-1">Preço *</label>
+                                    <input type="number" name="price" id="form-price" step="0.01" min="0"
+                                           class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                                </div>
+                                <div>
+                                    <label class="block text-sm mb-1">Preço Promocional</label>
+                                    <input type="number" name="promo_price" id="form-promo-price" step="0.01" min="0"
+                                           class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                                </div>
                             </div>
-                            <div>
-                                <label class="block text-sm mb-1">Preço Promocional</label>
-                                <input type="number" name="promo_price" id="form-promo-price" step="0.01" min="0"
-                                       class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                        </div>
+                        
+                        <!-- Tamanhos/Preços Múltiplos -->
+                        <div id="sizes-section" class="hidden">
+                            <label class="block text-sm mb-2">Tamanhos e Preços *</label>
+                            <div id="sizes-container" class="space-y-2">
+                                <!-- Linhas serão adicionadas via JavaScript -->
                             </div>
+                            <button type="button" onclick="addSizeRow()" 
+                                    class="mt-2 text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1">
+                                <span>+</span> Adicionar tamanho
+                            </button>
                         </div>
                         
                         <div>
