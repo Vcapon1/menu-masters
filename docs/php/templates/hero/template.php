@@ -869,6 +869,20 @@
                                                 R$ <?= number_format($product['price'], 2, ',', '.') ?>
                                             </span>
                                         <?php endif; ?>
+                                        
+                                        <?php if ($cartMode && $isOpen): ?>
+                                            <button class="product-order-btn" onclick="event.stopPropagation(); Cart.openVariationsModal(<?= htmlspecialchars(json_encode([
+                                                'id' => $product['id'],
+                                                'name' => $product['name'],
+                                                'price' => (float)$product['price'],
+                                                'promoPrice' => $hasPromo ? (float)$product['promo_price'] : null,
+                                                'image' => $product['image'],
+                                                'sizesPrices' => $sizesPrices
+                                            ])) ?>)">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/></svg>
+                                                Pedir
+                                            </button>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             </div>
@@ -1059,5 +1073,24 @@
             }).catch(() => {});
         }
     </script>
+
+    <?php if ($cartMode): ?>
+    <!-- Cart System -->
+    <link rel="stylesheet" href="/includes/cart-styles.css">
+    <script>
+        const CART_MODE = <?= json_encode($cartMode) ?>;
+        const RESTAURANT = <?= json_encode([
+            'id' => $restaurant['id'],
+            'name' => $restaurant['name'],
+            'slug' => $restaurant['slug'],
+            'whatsapp' => $restaurant['whatsapp'] ?? '',
+            'logo' => $restaurant['logo'] ?? ''
+        ]) ?>;
+        const TABLE_NUMBER = <?= json_encode($tableNumber) ?>;
+        const IS_OPEN = <?= json_encode($isOpen) ?>;
+        const PRODUCT_VARIATIONS = <?= json_encode($productVariations ?? []) ?>;
+    </script>
+    <script src="/includes/cart.js"></script>
+    <?php endif; ?>
 </body>
 </html>

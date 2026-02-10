@@ -243,6 +243,109 @@ CREATE TABLE IF NOT EXISTS `directory_restaurants` (
   INDEX `idx_city` (`city`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- =====================================================
+-- TABELA: cart_modes (Tipos de carrinho/pedido)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS `cart_modes` (
+  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(100) NOT NULL,
+  `slug` VARCHAR(50) NOT NULL UNIQUE,
+  `description` TEXT,
+  `min_plan_id` INT UNSIGNED NOT NULL DEFAULT 1,
+  `default_settings` JSON COMMENT 'Configurações padrão do modo',
+  `is_active` TINYINT(1) DEFAULT 1,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO `cart_modes` (`name`, `slug`, `description`, `min_plan_id`) VALUES
+('Pedido WhatsApp', 'whatsapp', 'Envia pedido formatado para WhatsApp do restaurante', 1),
+('Pedido Mesa', 'table', 'Cliente faz pedido vinculado a uma mesa', 2),
+('Pedido Entrega', 'delivery', 'Pedido com dados de contato, pagamento na entrega', 2),
+('Pedido Completo', 'full', 'Cadastro + pagamento online antes de confirmar', 3);
+
+-- =====================================================
+-- TABELA: restaurant_cart_modes (Modos ativos por restaurante)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS `restaurant_cart_modes` (
+  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `restaurant_id` INT UNSIGNED NOT NULL,
+  `cart_mode_id` INT UNSIGNED NOT NULL,
+  `is_active` TINYINT(1) DEFAULT 1,
+  `config` JSON COMMENT '{whatsapp_number, msg_header, estimated_times, etc}',
+  FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`cart_mode_id`) REFERENCES `cart_modes`(`id`) ON DELETE CASCADE,
+  UNIQUE KEY `uk_restaurant_mode` (`restaurant_id`, `cart_mode_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =====================================================
+-- TABELA: product_variations (Variações para pedido)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS `product_variations` (
+  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `product_id` INT UNSIGNED NOT NULL,
+  `group_name` VARCHAR(100) NOT NULL COMMENT 'Ex: Borda, Adicional, Ponto da Carne',
+  `is_required` TINYINT(1) DEFAULT 0 COMMENT 'Obrigatório selecionar?',
+  `max_selections` INT DEFAULT 1 COMMENT '1=seleção única (radio), >1=múltipla (checkbox)',
+  `sort_order` INT DEFAULT 0,
+  `options` JSON NOT NULL COMMENT '[{"label":"Catupiry","price":5.00},{"label":"Cheddar","price":5.00}]',
+  FOREIGN KEY (`product_id`) REFERENCES `products`(`id`) ON DELETE CASCADE,
+  INDEX `idx_product` (`product_id`, `sort_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =====================================================
+-- TABELA: orders (Pedidos)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS `orders` (
+  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `restaurant_id` INT UNSIGNED NOT NULL,
+  `token` VARCHAR(64) NOT NULL UNIQUE COMMENT 'Token público para acompanhamento',
+  `cart_mode` VARCHAR(50) NOT NULL,
+  `table_number` VARCHAR(20) DEFAULT NULL,
+  `customer_name` VARCHAR(200),
+  `customer_phone` VARCHAR(30),
+  `customer_address` TEXT,
+  `payment_method` VARCHAR(50) DEFAULT NULL,
+  `payment_status` ENUM('pending','paid','failed') DEFAULT NULL,
+  `status` ENUM('pending','confirmed','preparing','ready','delivering','delivered','cancelled') DEFAULT 'pending',
+  `subtotal` DECIMAL(10,2) DEFAULT 0,
+  `delivery_fee` DECIMAL(10,2) DEFAULT 0,
+  `total` DECIMAL(10,2) DEFAULT 0,
+  `notes` TEXT,
+  `status_history` JSON COMMENT '[{"status":"pending","at":"2025-01-01 12:00:00"},...]',
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants`(`id`) ON DELETE CASCADE,
+  INDEX `idx_restaurant_status` (`restaurant_id`, `status`),
+  INDEX `idx_token` (`token`),
+  INDEX `idx_created` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =====================================================
+-- TABELA: order_items (Itens do pedido)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS `order_items` (
+  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `order_id` INT UNSIGNED NOT NULL,
+  `product_id` INT UNSIGNED,
+  `product_name` VARCHAR(200) NOT NULL,
+  `quantity` INT DEFAULT 1,
+  `size_selected` VARCHAR(50) DEFAULT NULL,
+  `size_price` DECIMAL(10,2) DEFAULT NULL,
+  `variations_selected` JSON COMMENT '[{"group":"Borda","option":"Catupiry","price":5.00}]',
+  `unit_price` DECIMAL(10,2) NOT NULL,
+  `subtotal` DECIMAL(10,2) NOT NULL,
+  `notes` VARCHAR(500),
+  FOREIGN KEY (`order_id`) REFERENCES `orders`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`product_id`) REFERENCES `products`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =====================================================
+-- ALTER: restaurants (novos campos para pedidos)
+-- =====================================================
+ALTER TABLE `restaurants` 
+  ADD COLUMN `is_open` TINYINT(1) NOT NULL DEFAULT 1 COMMENT 'Restaurante aceitando pedidos agora',
+  ADD COLUMN `order_time_limits` JSON DEFAULT NULL COMMENT '{"pending":5,"preparing":20,"ready":10} em minutos';
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- =====================================================

@@ -488,3 +488,149 @@ function verifyRestaurantLogin(string $username, string $password): ?array {
     
     return $restaurant;
 }
+
+// =====================================================
+// FUNÇÕES DE CARRINHO E PEDIDOS
+// =====================================================
+
+/**
+ * Busca modo de carrinho ativo para um restaurante
+ */
+function getRestaurantCartMode(int $restaurantId, string $modeSlug): ?array {
+    $sql = "SELECT cm.*, rcm.config, rcm.is_active AS mode_active
+            FROM cart_modes cm
+            JOIN restaurant_cart_modes rcm ON cm.id = rcm.cart_mode_id
+            WHERE rcm.restaurant_id = :restaurant_id 
+              AND cm.slug = :slug 
+              AND rcm.is_active = 1 
+              AND cm.is_active = 1";
+    $stmt = db()->prepare($sql);
+    $stmt->execute(['restaurant_id' => $restaurantId, 'slug' => $modeSlug]);
+    $result = $stmt->fetch();
+    if ($result && $result['config']) {
+        $result['config'] = json_decode($result['config'], true);
+    }
+    return $result ?: null;
+}
+
+/**
+ * Busca variações de um produto
+ */
+function getProductVariations(int $productId): array {
+    $sql = "SELECT * FROM product_variations WHERE product_id = :product_id ORDER BY sort_order ASC";
+    $stmt = db()->prepare($sql);
+    $stmt->execute(['product_id' => $productId]);
+    return $stmt->fetchAll();
+}
+
+/**
+ * Cria pedido no banco de dados
+ */
+function createOrder(array $data): array {
+    $token = generateOrderToken();
+    $items = $data['items'] ?? [];
+    
+    $total = 0;
+    foreach ($items as $item) {
+        $total += (float)($item['subtotal'] ?? 0);
+    }
+    
+    $sql = "INSERT INTO orders (restaurant_id, token, cart_mode, table_number, customer_name, customer_phone, customer_address, total, subtotal, notes, status_history)
+            VALUES (:rid, :token, :mode, :table_num, :name, :phone, :address, :total, :subtotal, :notes, :history)";
+    $stmt = db()->prepare($sql);
+    $stmt->execute([
+        'rid' => $data['restaurant_id'],
+        'token' => $token,
+        'mode' => $data['cart_mode'],
+        'table_num' => $data['table_number'] ?: null,
+        'name' => $data['customer_name'] ?: null,
+        'phone' => $data['customer_phone'] ?: null,
+        'address' => $data['customer_address'] ?: null,
+        'total' => $total,
+        'subtotal' => $total,
+        'notes' => $data['notes'] ?: null,
+        'history' => json_encode([['status' => 'pending', 'at' => date('Y-m-d H:i:s')]])
+    ]);
+    
+    $orderId = db()->lastInsertId();
+    
+    // Inserir itens
+    foreach ($items as $item) {
+        $sql = "INSERT INTO order_items (order_id, product_id, product_name, quantity, size_selected, size_price, variations_selected, unit_price, subtotal, notes)
+                VALUES (:oid, :pid, :pname, :qty, :size, :sprice, :vars, :uprice, :sub, :notes)";
+        $stmt = db()->prepare($sql);
+        $stmt->execute([
+            'oid' => $orderId,
+            'pid' => $item['product_id'] ?? null,
+            'pname' => $item['product_name'],
+            'qty' => $item['quantity'] ?? 1,
+            'size' => $item['size_selected'] ?? null,
+            'sprice' => $item['size_price'] ?? null,
+            'vars' => !empty($item['variations_selected']) ? json_encode($item['variations_selected']) : null,
+            'uprice' => $item['unit_price'],
+            'sub' => $item['subtotal'],
+            'notes' => $item['notes'] ?? null
+        ]);
+    }
+    
+    return ['id' => $orderId, 'token' => $token, 'status' => 'pending'];
+}
+
+/**
+ * Busca pedido por token público
+ */
+function getOrderByToken(string $token): ?array {
+    $sql = "SELECT * FROM orders WHERE token = :token";
+    $stmt = db()->prepare($sql);
+    $stmt->execute(['token' => $token]);
+    return $stmt->fetch() ?: null;
+}
+
+/**
+ * Atualiza status do pedido com histórico
+ */
+function updateOrderStatus(int $orderId, string $newStatus): void {
+    $sql = "SELECT status_history FROM orders WHERE id = :id";
+    $stmt = db()->prepare($sql);
+    $stmt->execute(['id' => $orderId]);
+    $order = $stmt->fetch();
+    
+    $history = json_decode($order['status_history'] ?? '[]', true) ?: [];
+    $history[] = ['status' => $newStatus, 'at' => date('Y-m-d H:i:s')];
+    
+    $sql = "UPDATE orders SET status = :status, status_history = :history WHERE id = :id";
+    $stmt = db()->prepare($sql);
+    $stmt->execute(['status' => $newStatus, 'history' => json_encode($history), 'id' => $orderId]);
+}
+
+/**
+ * Lista pedidos do restaurante
+ */
+function getRestaurantOrders(int $restaurantId, ?string $status = null): array {
+    $sql = "SELECT * FROM orders WHERE restaurant_id = :rid";
+    $params = ['rid' => $restaurantId];
+    if ($status) {
+        $sql .= " AND status = :status";
+        $params['status'] = $status;
+    }
+    $sql .= " ORDER BY FIELD(status, 'pending','confirmed','preparing','ready','delivering','delivered','cancelled'), created_at DESC";
+    $stmt = db()->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll();
+}
+
+/**
+ * Toggle restaurante aberto/fechado
+ */
+function toggleRestaurantOpen(int $restaurantId, bool $isOpen): void {
+    $sql = "UPDATE restaurants SET is_open = :open WHERE id = :id";
+    $stmt = db()->prepare($sql);
+    $stmt->execute(['open' => $isOpen ? 1 : 0, 'id' => $restaurantId]);
+}
+
+/**
+ * Gera token único para acompanhamento de pedido
+ */
+function generateOrderToken(): string {
+    return bin2hex(random_bytes(16));
+}
