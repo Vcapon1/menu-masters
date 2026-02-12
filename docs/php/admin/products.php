@@ -3,6 +3,7 @@
  * PREMIUM MENU - Gerenciamento de Pratos
  * 
  * CRUD completo para pratos/produtos do restaurante.
+ * Inclui gerenciamento de variações para pedido (bordas, adicionais, etc.)
  */
 
 session_start();
@@ -53,7 +54,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     if (!empty($sizesArray)) {
                         $sizesPrices = json_encode($sizesArray);
-                        // Quando tem tamanhos, o preço principal é o menor dos tamanhos
                         $price = min(array_column($sizesArray, 'price'));
                     }
                 }
@@ -103,6 +103,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'sort_order' => $sortOrder,
                     ];
                     $message = 'Prato criado com sucesso!';
+                    
+                    $stmt = db()->prepare($sql);
+                    $stmt->execute($params);
+                    $id = db()->lastInsertId();
                 } else {
                     $sql = "UPDATE products SET category_id = :category_id, name = :name, description = :description, 
                             price = :price, promo_price = :promo_price, sizes_prices = :sizes_prices, image = :image, video = :video, badges = :badges, 
@@ -125,10 +129,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'sort_order' => $sortOrder,
                     ];
                     $message = 'Prato atualizado com sucesso!';
+                    
+                    $stmt = db()->prepare($sql);
+                    $stmt->execute($params);
                 }
                 
-                $stmt = db()->prepare($sql);
-                $stmt->execute($params);
+                // === SALVAR VARIAÇÕES ===
+                if ($id) {
+                    // Deletar variações antigas
+                    $delStmt = db()->prepare("DELETE FROM product_variations WHERE product_id = :pid");
+                    $delStmt->execute(['pid' => $id]);
+                    
+                    // Inserir novas variações
+                    $variationGroups = $_POST['variation_group_name'] ?? [];
+                    $variationRequired = $_POST['variation_is_required'] ?? [];
+                    $variationMax = $_POST['variation_max_selections'] ?? [];
+                    $variationOptions = $_POST['variation_options'] ?? [];
+                    
+                    if (!empty($variationGroups)) {
+                        $insertVar = db()->prepare(
+                            "INSERT INTO product_variations (product_id, group_name, is_required, max_selections, sort_order, options) 
+                             VALUES (:pid, :gname, :req, :maxs, :sort, :opts)"
+                        );
+                        
+                        foreach ($variationGroups as $gi => $groupName) {
+                            $groupName = trim($groupName);
+                            if (empty($groupName)) continue;
+                            
+                            $isRequired = isset($variationRequired[$gi]) ? 1 : 0;
+                            $maxSel = max(1, (int)($variationMax[$gi] ?? 1));
+                            $optionsJson = $variationOptions[$gi] ?? '[]';
+                            
+                            // Validar que o JSON de opções é válido e tem conteúdo
+                            $optsParsed = json_decode($optionsJson, true);
+                            if (empty($optsParsed)) continue;
+                            
+                            $insertVar->execute([
+                                'pid' => $id,
+                                'gname' => $groupName,
+                                'req' => $isRequired,
+                                'maxs' => $maxSel,
+                                'sort' => $gi,
+                                'opts' => $optionsJson,
+                            ]);
+                        }
+                    }
+                }
                 break;
                 
             case 'delete':
@@ -161,6 +207,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Buscar produtos
 $products = getProducts($restaurantId, true);
 
+// Buscar variações de cada produto para exibir na edição
+$productVariations = [];
+foreach ($products as $p) {
+    $vars = getProductVariations($p['id']);
+    if (!empty($vars)) {
+        $productVariations[$p['id']] = $vars;
+    }
+}
+
 // Badges disponíveis
 $availableBadges = [
     'promo' => 'Promoção',
@@ -179,6 +234,84 @@ $availableBadges = [
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pratos - <?= htmlspecialchars($restaurant['name']) ?></title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .modal-container {
+            display: flex;
+            flex-direction: column;
+            max-height: 90vh;
+        }
+        .modal-header {
+            flex-shrink: 0;
+            padding: 1.25rem;
+            border-bottom: 1px solid #374151;
+        }
+        .modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+        .modal-footer {
+            flex-shrink: 0;
+            padding: 1rem 1.5rem;
+            border-top: 1px solid #374151;
+        }
+        /* Variações - estilo iFood admin */
+        .variation-group {
+            border: 1px solid #4b5563;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            background: #1f2937;
+        }
+        .variation-group-header {
+            background: #111827;
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: grab;
+        }
+        .variation-group-header:active { cursor: grabbing; }
+        .variation-group-body { padding: 1rem; }
+        .variation-option-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #374151;
+        }
+        .variation-option-row:last-child { border-bottom: none; }
+        .badge-required {
+            background: #7c3aed;
+            color: white;
+            font-size: 0.65rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 0.25rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .badge-optional {
+            background: #374151;
+            color: #9ca3af;
+            font-size: 0.65rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 0.25rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .variation-count-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #6366f1;
+            color: white;
+            font-size: 0.7rem;
+            width: 1.25rem;
+            height: 1.25rem;
+            border-radius: 9999px;
+            font-weight: 700;
+        }
+    </style>
 </head>
 <body class="bg-gray-900 text-white min-h-screen">
     <nav class="bg-gray-800 border-b border-gray-700">
@@ -211,6 +344,7 @@ $availableBadges = [
             <div class="divide-y divide-gray-700" id="products-list">
                 <?php foreach ($products as $index => $product): 
                     $productBadges = json_decode($product['badges'] ?? '[]', true) ?: [];
+                    $hasVariations = isset($productVariations[$product['id']]);
                 ?>
                     <div class="p-4 flex items-center gap-4" data-id="<?= $product['id'] ?>">
                         <!-- Ordenação -->
@@ -249,6 +383,11 @@ $availableBadges = [
                                         <?= $availableBadges[$badge] ?? $badge ?>
                                     </span>
                                 <?php endforeach; ?>
+                                <?php if ($hasVariations): ?>
+                                    <span class="text-xs px-2 py-0.5 rounded bg-indigo-900 text-indigo-300">
+                                        📋 <?= count($productVariations[$product['id']]) ?> variação(ões)
+                                    </span>
+                                <?php endif; ?>
                             </div>
                         </div>
                         
@@ -292,30 +431,8 @@ $availableBadges = [
     </main>
     
     <!-- Modal de Edição -->
-    <style>
-        .modal-container {
-            display: flex;
-            flex-direction: column;
-            max-height: 90vh;
-        }
-        .modal-header {
-            flex-shrink: 0;
-            padding: 1.25rem;
-            border-bottom: 1px solid #374151;
-        }
-        .modal-body {
-            flex: 1;
-            overflow-y: auto;
-            padding: 1.5rem;
-        }
-        .modal-footer {
-            flex-shrink: 0;
-            padding: 1rem 1.5rem;
-            border-top: 1px solid #374151;
-        }
-    </style>
     <div id="modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
-        <div class="bg-gray-800 rounded-lg max-w-lg w-full mx-4 modal-container">
+        <div class="bg-gray-800 rounded-lg max-w-2xl w-full mx-4 modal-container">
             <div class="modal-header">
                 <h2 id="modal-title" class="text-xl font-bold">Novo Prato</h2>
             </div>
@@ -380,9 +497,7 @@ $availableBadges = [
                         <!-- Tamanhos/Preços Múltiplos -->
                         <div id="sizes-section" class="hidden">
                             <label class="block text-sm mb-2">Tamanhos e Preços *</label>
-                            <div id="sizes-container" class="space-y-2">
-                                <!-- Linhas serão adicionadas via JavaScript -->
-                            </div>
+                            <div id="sizes-container" class="space-y-2"></div>
                             <button type="button" onclick="addSizeRow()" 
                                     class="mt-2 text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1">
                                 <span>+</span> Adicionar tamanho
@@ -436,6 +551,36 @@ $availableBadges = [
                             </label>
                         </div>
                         
+                        <!-- ============================================= -->
+                        <!-- VARIAÇÕES PARA PEDIDO (estilo iFood) -->
+                        <!-- ============================================= -->
+                        <div class="border-t border-gray-600 pt-4 mt-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <div>
+                                    <h3 class="font-bold text-base">📋 Variações para Pedido</h3>
+                                    <p class="text-xs text-gray-400 mt-0.5">Configure as opções que o cliente escolhe ao pedir (tipo de pão, adicionais, ponto da carne, etc.)</p>
+                                </div>
+                                <button type="button" onclick="addVariationGroup()" 
+                                        class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-1.5 rounded-lg font-medium flex items-center gap-1">
+                                    <span class="text-base leading-none">+</span> Grupo
+                                </button>
+                            </div>
+                            
+                            <!-- Dica visual -->
+                            <div id="variations-empty-hint" class="bg-gray-700/30 border border-dashed border-gray-600 rounded-lg p-4 text-center">
+                                <p class="text-gray-400 text-sm">Nenhuma variação configurada.</p>
+                                <p class="text-gray-500 text-xs mt-1">Exemplos: "Escolha seu pão", "Adicionais", "Ponto da carne"</p>
+                                <button type="button" onclick="addVariationGroup()" 
+                                        class="mt-3 text-indigo-400 hover:text-indigo-300 text-sm font-medium">
+                                    + Adicionar primeiro grupo
+                                </button>
+                            </div>
+                            
+                            <div id="variations-container" class="space-y-4">
+                                <!-- Grupos de variação inseridos via JS -->
+                            </div>
+                        </div>
+                        
                         <input type="hidden" name="sort_order" id="form-sort" value="0">
                     </div>
                 </div>
@@ -452,19 +597,22 @@ $availableBadges = [
         </div>
     </div>
     
+    <!-- Dados das variações existentes (para edição) -->
     <script>
-        // Funções de Tamanhos
+        const productVariationsData = <?= json_encode($productVariations) ?>;
+    </script>
+    
+    <script>
+        // =====================================================
+        // TAMANHOS
+        // =====================================================
         function toggleSizesMode(hasSizes) {
             document.getElementById('form-has-sizes-hidden').value = hasSizes ? '1' : '0';
             document.getElementById('single-price-section').classList.toggle('hidden', hasSizes);
             document.getElementById('sizes-section').classList.toggle('hidden', !hasSizes);
-            
-            // Ajustar required
-            const priceInput = document.getElementById('form-price');
-            priceInput.required = !hasSizes;
+            document.getElementById('form-price').required = !hasSizes;
             
             if (hasSizes && document.querySelectorAll('.size-row').length === 0) {
-                // Adicionar 3 tamanhos padrão
                 addSizeRow('Pequena', '');
                 addSizeRow('Média', '');
                 addSizeRow('Grande', '');
@@ -473,8 +621,6 @@ $availableBadges = [
         
         function addSizeRow(label = '', price = '') {
             const container = document.getElementById('sizes-container');
-            const index = container.children.length;
-            
             const row = document.createElement('div');
             row.className = 'size-row flex gap-2 items-center';
             row.innerHTML = `
@@ -496,7 +642,184 @@ $availableBadges = [
                 btn.closest('.size-row').remove();
             }
         }
-        
+
+        // =====================================================
+        // VARIAÇÕES PARA PEDIDO
+        // =====================================================
+        let variationGroupIndex = 0;
+
+        function updateVariationsEmptyHint() {
+            const container = document.getElementById('variations-container');
+            const hint = document.getElementById('variations-empty-hint');
+            hint.style.display = container.children.length === 0 ? 'block' : 'none';
+        }
+
+        function addVariationGroup(data = null) {
+            const gi = variationGroupIndex++;
+            const container = document.getElementById('variations-container');
+            
+            const groupName = data ? data.group_name : '';
+            const isRequired = data ? data.is_required : false;
+            const maxSelections = data ? data.max_selections : 1;
+            const options = data ? (typeof data.options === 'string' ? JSON.parse(data.options) : data.options) : [];
+            
+            const group = document.createElement('div');
+            group.className = 'variation-group';
+            group.dataset.gi = gi;
+            
+            group.innerHTML = `
+                <div class="variation-group-header">
+                    <span class="text-gray-500 cursor-grab text-lg">⠿</span>
+                    <div class="flex-1 flex items-center gap-2">
+                        <input type="text" name="variation_group_name[${gi}]" value="${escHtml(groupName)}" 
+                               placeholder="Nome do grupo (ex: Escolha seu pão)" 
+                               class="flex-1 bg-transparent border-b border-gray-600 focus:border-indigo-400 outline-none px-1 py-0.5 text-sm font-semibold text-white placeholder-gray-500">
+                        <span class="var-badge ${isRequired ? 'badge-required' : 'badge-optional'}" id="var-badge-${gi}">
+                            ${isRequired ? 'OBRIGATÓRIO' : 'OPCIONAL'}
+                        </span>
+                    </div>
+                    <button type="button" onclick="removeVariationGroup(this)" class="text-red-400 hover:text-red-300 text-lg ml-2" title="Remover grupo">✕</button>
+                </div>
+                <div class="variation-group-body">
+                    <!-- Configurações do grupo -->
+                    <div class="flex flex-wrap items-center gap-4 mb-3 pb-3 border-b border-gray-700">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="variation_is_required[${gi}]" value="1" ${isRequired ? 'checked' : ''} 
+                                   onchange="toggleRequiredBadge(${gi}, this.checked)"
+                                   class="w-4 h-4 rounded border-gray-600 text-indigo-500 focus:ring-indigo-500">
+                            <span class="text-sm">Obrigatório</span>
+                        </label>
+                        <div class="flex items-center gap-2">
+                            <label class="text-sm text-gray-400">Máx. seleções:</label>
+                            <select name="variation_max_selections[${gi}]" 
+                                    class="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm w-16"
+                                    onchange="updateSelectionHint(${gi}, this.value)">
+                                <option value="1" ${maxSelections == 1 ? 'selected' : ''}>1</option>
+                                <option value="2" ${maxSelections == 2 ? 'selected' : ''}>2</option>
+                                <option value="3" ${maxSelections == 3 ? 'selected' : ''}>3</option>
+                                <option value="5" ${maxSelections == 5 ? 'selected' : ''}>5</option>
+                                <option value="10" ${maxSelections == 10 ? 'selected' : ''}>10</option>
+                            </select>
+                        </div>
+                        <span class="text-xs text-gray-500" id="var-selection-hint-${gi}">
+                            ${maxSelections == 1 ? '→ Cliente escolhe 1 opção (rádio)' : '→ Cliente escolhe até ' + maxSelections + ' opções (checkbox)'}
+                        </span>
+                    </div>
+                    
+                    <!-- Lista de opções -->
+                    <div class="space-y-0" id="var-options-${gi}">
+                        <!-- Opções inseridas via JS -->
+                    </div>
+                    
+                    <button type="button" onclick="addVariationOption(${gi})" 
+                            class="mt-3 text-sm text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1">
+                        <span class="text-lg leading-none">+</span> Adicionar opção
+                    </button>
+                </div>
+                <!-- Hidden field para JSON das opções -->
+                <input type="hidden" name="variation_options[${gi}]" id="var-options-json-${gi}" value="[]">
+            `;
+            
+            container.appendChild(group);
+            
+            // Adicionar opções existentes ou uma vazia
+            if (options.length > 0) {
+                options.forEach(opt => addVariationOption(gi, opt));
+            } else {
+                addVariationOption(gi);
+            }
+            
+            updateVariationsEmptyHint();
+            syncVariationOptions(gi);
+        }
+
+        function removeVariationGroup(btn) {
+            if (confirm('Remover este grupo de variação?')) {
+                btn.closest('.variation-group').remove();
+                updateVariationsEmptyHint();
+            }
+        }
+
+        function toggleRequiredBadge(gi, isRequired) {
+            const badge = document.getElementById(`var-badge-${gi}`);
+            badge.className = 'var-badge ' + (isRequired ? 'badge-required' : 'badge-optional');
+            badge.textContent = isRequired ? 'OBRIGATÓRIO' : 'OPCIONAL';
+        }
+
+        function updateSelectionHint(gi, max) {
+            const hint = document.getElementById(`var-selection-hint-${gi}`);
+            hint.textContent = max == 1 
+                ? '→ Cliente escolhe 1 opção (rádio)' 
+                : '→ Cliente escolhe até ' + max + ' opções (checkbox)';
+        }
+
+        function addVariationOption(gi, data = null) {
+            const container = document.getElementById(`var-options-${gi}`);
+            const label = data ? data.label : '';
+            const description = data ? (data.description || '') : '';
+            const price = data ? (data.price || 0) : 0;
+            const priceDisplay = price > 0 ? price : '';
+            
+            const row = document.createElement('div');
+            row.className = 'variation-option-row';
+            row.innerHTML = `
+                <div class="flex-1">
+                    <input type="text" value="${escHtml(label)}" placeholder="Nome da opção (ex: Pão brioche)" 
+                           class="var-opt-label w-full bg-transparent border-b border-gray-700 focus:border-indigo-400 outline-none px-1 py-0.5 text-sm text-white placeholder-gray-500"
+                           onchange="syncVariationOptions(${gi})" onkeyup="syncVariationOptions(${gi})">
+                    <input type="text" value="${escHtml(description)}" placeholder="Descrição curta (opcional)" 
+                           class="var-opt-desc w-full bg-transparent outline-none px-1 py-0.5 text-xs text-gray-400 placeholder-gray-600 mt-0.5"
+                           onchange="syncVariationOptions(${gi})">
+                </div>
+                <div class="flex items-center gap-1 flex-shrink-0">
+                    <span class="text-xs text-gray-500">+ R$</span>
+                    <input type="number" value="${priceDisplay}" step="0.01" min="0" placeholder="0,00"
+                           class="var-opt-price w-20 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-right"
+                           onchange="syncVariationOptions(${gi})">
+                </div>
+                <button type="button" onclick="removeVariationOption(this, ${gi})" 
+                        class="text-red-400 hover:text-red-300 p-1 flex-shrink-0" title="Remover opção">✕</button>
+            `;
+            container.appendChild(row);
+            syncVariationOptions(gi);
+        }
+
+        function removeVariationOption(btn, gi) {
+            const container = document.getElementById(`var-options-${gi}`);
+            if (container.children.length > 1) {
+                btn.closest('.variation-option-row').remove();
+                syncVariationOptions(gi);
+            }
+        }
+
+        function syncVariationOptions(gi) {
+            const container = document.getElementById(`var-options-${gi}`);
+            const rows = container.querySelectorAll('.variation-option-row');
+            const options = [];
+            
+            rows.forEach(row => {
+                const label = row.querySelector('.var-opt-label').value.trim();
+                const description = row.querySelector('.var-opt-desc').value.trim();
+                const price = parseFloat(row.querySelector('.var-opt-price').value) || 0;
+                
+                if (label) {
+                    const opt = { label, price };
+                    if (description) opt.description = description;
+                    options.push(opt);
+                }
+            });
+            
+            document.getElementById(`var-options-json-${gi}`).value = JSON.stringify(options);
+        }
+
+        function escHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        // =====================================================
+        // MODAL
+        // =====================================================
         function openModal() {
             document.getElementById('modal').classList.remove('hidden');
             document.getElementById('modal').classList.add('flex');
@@ -524,6 +847,11 @@ $availableBadges = [
             document.getElementById('current-image-preview').classList.add('hidden');
             const videoPreview = document.getElementById('current-video-preview');
             if (videoPreview) videoPreview.classList.add('hidden');
+            
+            // Reset variações
+            variationGroupIndex = 0;
+            document.getElementById('variations-container').innerHTML = '';
+            updateVariationsEmptyHint();
         }
         
         function closeModal() {
@@ -545,7 +873,7 @@ $availableBadges = [
             document.getElementById('form-current-video').value = product.video || '';
             document.getElementById('form-sort').value = product.sort_order || 0;
             
-            // Verificar se tem tamanhos
+            // Tamanhos
             const sizesPrices = product.sizes_prices ? JSON.parse(product.sizes_prices) : null;
             const hasSizes = sizesPrices && Array.isArray(sizesPrices) && sizesPrices.length > 0;
             
@@ -554,20 +882,16 @@ $availableBadges = [
             document.getElementById('single-price-section').classList.toggle('hidden', hasSizes);
             document.getElementById('sizes-section').classList.toggle('hidden', !hasSizes);
             document.getElementById('form-price').required = !hasSizes;
-            
-            // Limpar container de tamanhos
             document.getElementById('sizes-container').innerHTML = '';
             
             if (hasSizes) {
-                sizesPrices.forEach(size => {
-                    addSizeRow(size.label, size.price);
-                });
+                sizesPrices.forEach(size => addSizeRow(size.label, size.price));
             } else {
                 document.getElementById('form-price').value = product.price;
                 document.getElementById('form-promo-price').value = product.promo_price || '';
             }
             
-            // Preview de imagem atual
+            // Preview de imagem
             const imagePreview = document.getElementById('current-image-preview');
             const previewImg = document.getElementById('preview-img');
             if (product.image) {
@@ -577,7 +901,7 @@ $availableBadges = [
                 imagePreview.classList.add('hidden');
             }
             
-            // Preview de vídeo atual
+            // Preview de vídeo
             const videoPreview = document.getElementById('current-video-preview');
             const previewVideo = document.getElementById('preview-video');
             if (videoPreview && product.video) {
@@ -588,11 +912,18 @@ $availableBadges = [
                 videoPreview.classList.add('hidden');
             }
             
-            // Marcar badges
+            // Badges
             const badges = JSON.parse(product.badges || '[]');
             document.querySelectorAll('.badge-checkbox').forEach(cb => {
                 cb.checked = badges.includes(cb.value);
             });
+            
+            // === CARREGAR VARIAÇÕES EXISTENTES ===
+            variationGroupIndex = 0;
+            document.getElementById('variations-container').innerHTML = '';
+            const variations = productVariationsData[product.id] || [];
+            variations.forEach(v => addVariationGroup(v));
+            updateVariationsEmptyHint();
         }
         
         function moveProduct(id, direction) {
