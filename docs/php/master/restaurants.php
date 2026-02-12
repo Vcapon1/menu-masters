@@ -162,6 +162,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt->execute($data);
                     $message = 'Restaurante atualizado com sucesso!';
                 }
+                
+                // Salvar módulos de pedido
+                $restaurantIdForModes = ($action === 'create') ? db()->lastInsertId() : $id;
+                
+                // Salvar is_open
+                $isOpenVal = isset($_POST['is_open']) ? 1 : 0;
+                $openSql = "UPDATE restaurants SET is_open = :open WHERE id = :id";
+                $openStmt = db()->prepare($openSql);
+                $openStmt->execute(['open' => $isOpenVal, 'id' => $restaurantIdForModes]);
+                
+                // Salvar limites de tempo
+                $timeLimits = [
+                    'pending' => (int)($_POST['time_pending'] ?? 5),
+                    'preparing' => (int)($_POST['time_preparing'] ?? 20),
+                    'ready' => (int)($_POST['time_ready'] ?? 10),
+                ];
+                $timeSql = "UPDATE restaurants SET order_time_limits = :limits WHERE id = :id";
+                $timeStmt = db()->prepare($timeSql);
+                $timeStmt->execute(['limits' => json_encode($timeLimits), 'id' => $restaurantIdForModes]);
+                
+                // Limpar modos antigos e reinserir
+                $delModesSql = "DELETE FROM restaurant_cart_modes WHERE restaurant_id = :rid";
+                $delModesStmt = db()->prepare($delModesSql);
+                $delModesStmt->execute(['rid' => $restaurantIdForModes]);
+                
+                $activeModes = $_POST['cart_modes'] ?? [];
+                $modeConfigs = $_POST['cart_mode_config'] ?? [];
+                
+                foreach ($activeModes as $modeId) {
+                    $config = isset($modeConfigs[$modeId]) ? json_encode($modeConfigs[$modeId]) : null;
+                    $insSql = "INSERT INTO restaurant_cart_modes (restaurant_id, cart_mode_id, is_active, config) VALUES (:rid, :mid, 1, :cfg)";
+                    $insStmt = db()->prepare($insSql);
+                    $insStmt->execute(['rid' => $restaurantIdForModes, 'mid' => (int)$modeId, 'cfg' => $config]);
+                }
+                
                 break;
                 
             case 'delete':
@@ -365,6 +400,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Buscar dados
 $plans = getPlans();
 $restaurants = [];
+
+// Buscar modos de carrinho disponíveis
+$cartModesSql = "SELECT * FROM cart_modes WHERE is_active = 1 ORDER BY id ASC";
+$cartModesStmt = db()->query($cartModesSql);
+$allCartModes = $cartModesStmt->fetchAll();
+
+// Buscar modos ativos por restaurante (para edição)
+$restaurantCartModes = [];
+$rcmSql = "SELECT rcm.*, cm.slug AS mode_slug FROM restaurant_cart_modes rcm JOIN cart_modes cm ON rcm.cart_mode_id = cm.id";
+$rcmStmt = db()->query($rcmSql);
+foreach ($rcmStmt->fetchAll() as $rcm) {
+    $restaurantCartModes[$rcm['restaurant_id']][$rcm['mode_slug']] = $rcm;
+}
 
 $sql = "SELECT r.*, p.name AS plan_name, t.name AS template_name,
                DATEDIFF(r.expires_at, CURDATE()) AS days_left
@@ -822,6 +870,133 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
                                    class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
                         </div>
                         
+                        <!-- Módulos de Pedido -->
+                        <div class="col-span-2">
+                            <h3 class="text-sm font-medium text-gray-400 border-b border-gray-700 pb-2 mb-4 mt-4">🛒 Módulos de Pedido</h3>
+                        </div>
+                        
+                        <div class="col-span-2">
+                            <div class="flex items-center gap-3 mb-4 p-3 bg-gray-900 rounded-lg border border-gray-700">
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" name="is_open" id="form-is-open" value="1" checked
+                                           class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-600 peer-focus:ring-2 peer-focus:ring-green-500 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                                </label>
+                                <div>
+                                    <span class="font-medium">Restaurante Aberto</span>
+                                    <p class="text-xs text-gray-400">Quando fechado, o cardápio continua visível mas sem botões de pedir</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-span-2">
+                            <label class="block text-sm mb-2 font-medium">Modos de pedido ativos:</label>
+                            <div class="space-y-3" id="cart-modes-container">
+                                <?php foreach ($allCartModes as $cm): ?>
+                                <div class="bg-gray-900 rounded-lg border border-gray-700 overflow-hidden">
+                                    <div class="flex items-center gap-3 p-3">
+                                        <input type="checkbox" name="cart_modes[]" value="<?= $cm['id'] ?>" 
+                                               id="cart-mode-<?= $cm['id'] ?>" 
+                                               class="cart-mode-check rounded bg-gray-700 border-gray-600 text-purple-500 focus:ring-purple-500"
+                                               data-mode-slug="<?= htmlspecialchars($cm['slug']) ?>"
+                                               onchange="toggleModeConfig(<?= $cm['id'] ?>)">
+                                        <div class="flex-1">
+                                            <label for="cart-mode-<?= $cm['id'] ?>" class="font-medium cursor-pointer">
+                                                <?= htmlspecialchars($cm['name']) ?>
+                                            </label>
+                                            <p class="text-xs text-gray-400"><?= htmlspecialchars($cm['description'] ?? '') ?></p>
+                                            <?php if ($cm['min_plan_id'] > 1): ?>
+                                                <span class="text-xs text-yellow-500">Plano mínimo: <?= $cm['min_plan_id'] ?></span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Config específica do modo WhatsApp -->
+                                    <?php if ($cm['slug'] === 'whatsapp'): ?>
+                                    <div class="cart-mode-config hidden border-t border-gray-700 p-3 bg-gray-800" id="config-<?= $cm['id'] ?>">
+                                        <div class="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label class="block text-xs mb-1">Número WhatsApp *</label>
+                                                <input type="text" name="cart_mode_config[<?= $cm['id'] ?>][whatsapp_number]" 
+                                                       id="config-whatsapp-number-<?= $cm['id'] ?>"
+                                                       placeholder="5548999999999" 
+                                                       class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+                                                <p class="text-xs text-gray-500 mt-1">Com código do país (55) + DDD</p>
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs mb-1">Cabeçalho da mensagem</label>
+                                                <input type="text" name="cart_mode_config[<?= $cm['id'] ?>][msg_header]" 
+                                                       id="config-msg-header-<?= $cm['id'] ?>"
+                                                       placeholder="🍕 Novo Pedido!" value="🍕 Novo Pedido!"
+                                                       class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <?php endif; ?>
+                                    
+                                    <!-- Config genérica para modos com painel -->
+                                    <?php if (in_array($cm['slug'], ['table', 'delivery', 'full'])): ?>
+                                    <div class="cart-mode-config hidden border-t border-gray-700 p-3 bg-gray-800" id="config-<?= $cm['id'] ?>">
+                                        <div class="grid grid-cols-2 gap-3">
+                                            <?php if ($cm['slug'] === 'table'): ?>
+                                            <div>
+                                                <label class="block text-xs mb-1">Total de mesas</label>
+                                                <input type="number" name="cart_mode_config[<?= $cm['id'] ?>][total_tables]" 
+                                                       id="config-total-tables-<?= $cm['id'] ?>"
+                                                       placeholder="20" min="1" max="200"
+                                                       class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+                                            </div>
+                                            <?php endif; ?>
+                                            <?php if ($cm['slug'] === 'delivery'): ?>
+                                            <div>
+                                                <label class="block text-xs mb-1">Taxa de entrega (R$)</label>
+                                                <input type="number" step="0.01" name="cart_mode_config[<?= $cm['id'] ?>][delivery_fee]" 
+                                                       id="config-delivery-fee-<?= $cm['id'] ?>"
+                                                       placeholder="5.00" min="0"
+                                                       class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs mb-1">Pedido mínimo (R$)</label>
+                                                <input type="number" step="0.01" name="cart_mode_config[<?= $cm['id'] ?>][min_order]" 
+                                                       id="config-min-order-<?= $cm['id'] ?>"
+                                                       placeholder="20.00" min="0"
+                                                       class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+                                            </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                    <?php endif; ?>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                        
+                        <!-- Limites de tempo por etapa -->
+                        <div class="col-span-2">
+                            <label class="block text-sm mb-2 font-medium">⏱ Alertas de tempo (minutos):</label>
+                            <p class="text-xs text-gray-400 mb-3">Define após quantos minutos um pedido é considerado atrasado em cada etapa</p>
+                            <div class="grid grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-xs mb-1">Pendente</label>
+                                    <input type="number" name="time_pending" id="form-time-pending" value="5" min="1" max="60"
+                                           class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+                                    <p class="text-xs text-gray-500 mt-1">Aguardando aceitar</p>
+                                </div>
+                                <div>
+                                    <label class="block text-xs mb-1">Preparando</label>
+                                    <input type="number" name="time_preparing" id="form-time-preparing" value="20" min="1" max="120"
+                                           class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+                                    <p class="text-xs text-gray-500 mt-1">Em preparo na cozinha</p>
+                                </div>
+                                <div>
+                                    <label class="block text-xs mb-1">Pronto</label>
+                                    <input type="number" name="time_ready" id="form-time-ready" value="10" min="1" max="60"
+                                           class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+                                    <p class="text-xs text-gray-500 mt-1">Esperando retirada</p>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <!-- Cores -->
                         <div class="col-span-2">
                             <h3 class="text-sm font-medium text-gray-400 border-b border-gray-700 pb-2 mb-4 mt-4">Personalização de Cores</h3>
@@ -887,6 +1062,52 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
             }, [])
         ) ?>;
         
+        // Modos de carrinho por restaurante
+        const restaurantCartModes = <?= json_encode($restaurantCartModes) ?>;
+        
+        function toggleModeConfig(modeId) {
+            const checkbox = document.getElementById('cart-mode-' + modeId);
+            const config = document.getElementById('config-' + modeId);
+            if (config) {
+                config.classList.toggle('hidden', !checkbox.checked);
+            }
+        }
+        
+        function resetCartModes() {
+            document.querySelectorAll('.cart-mode-check').forEach(cb => {
+                cb.checked = false;
+            });
+            document.querySelectorAll('.cart-mode-config').forEach(cfg => {
+                cfg.classList.add('hidden');
+                cfg.querySelectorAll('input').forEach(inp => inp.value = '');
+            });
+            document.getElementById('form-is-open').checked = true;
+            document.getElementById('form-time-pending').value = '5';
+            document.getElementById('form-time-preparing').value = '20';
+            document.getElementById('form-time-ready').value = '10';
+        }
+        
+        function loadCartModes(restaurantId) {
+            const modes = restaurantCartModes[restaurantId] || {};
+            document.querySelectorAll('.cart-mode-check').forEach(cb => {
+                const slug = cb.dataset.modeSlug;
+                const modeData = modes[slug];
+                cb.checked = !!modeData;
+                toggleModeConfig(cb.value);
+                
+                if (modeData && modeData.config) {
+                    const config = typeof modeData.config === 'string' ? JSON.parse(modeData.config) : modeData.config;
+                    const configEl = document.getElementById('config-' + cb.value);
+                    if (configEl) {
+                        Object.keys(config).forEach(key => {
+                            const input = configEl.querySelector(`[name*="[${key}]"]`);
+                            if (input) input.value = config[key];
+                        });
+                    }
+                }
+            });
+        }
+        
         function openModal() {
             // Reset form
             document.getElementById('form-action').value = 'create';
@@ -924,6 +1145,8 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
             document.getElementById('preview-logo').classList.add('hidden');
             document.getElementById('preview-banner').classList.add('hidden');
             document.getElementById('preview-bg').classList.add('hidden');
+            
+            resetCartModes();
             
             document.getElementById('form-modal').classList.add('active');
         }
@@ -995,6 +1218,14 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
             setTimeout(() => {
                 document.getElementById('form-template').value = r.template_id || '';
             }, 100);
+            
+            // Carregar módulos de pedido
+            document.getElementById('form-is-open').checked = r.is_open == 1;
+            const timeLimits = r.order_time_limits ? (typeof r.order_time_limits === 'string' ? JSON.parse(r.order_time_limits) : r.order_time_limits) : {};
+            document.getElementById('form-time-pending').value = timeLimits.pending || 5;
+            document.getElementById('form-time-preparing').value = timeLimits.preparing || 20;
+            document.getElementById('form-time-ready').value = timeLimits.ready || 10;
+            loadCartModes(r.id);
             
             document.getElementById('form-modal').classList.add('active');
         }
