@@ -336,6 +336,13 @@ $modeLabels = [
                 const data = await res.json();
 
                 if (data.success && data.order) {
+                    // Salvar token do pedido para rastreamento passivo no cardápio
+                    localStorage.setItem('active_order_' + RESTAURANT_ID, JSON.stringify({
+                        token: data.order.token,
+                        orderId: data.order.id,
+                        createdAt: new Date().toISOString()
+                    }));
+
                     // Limpar carrinho
                     localStorage.removeItem('checkout_data');
                     localStorage.removeItem('cart_' + RESTAURANT_ID);

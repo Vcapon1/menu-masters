@@ -22,6 +22,7 @@ const Cart = {
         if (!IS_OPEN && CART_MODE) {
             this.showClosedBanner();
         }
+        OrderTracker.init();
     },
 
     load() {
@@ -534,6 +535,130 @@ const Cart = {
 
         localStorage.setItem('checkout_data', JSON.stringify(checkoutData));
         window.location.href = `/checkout.php?restaurant=${RESTAURANT.slug}&mode=${mode}`;
+    }
+};
+
+// ========== OrderTracker: Barra de Status do Pedido ==========
+const OrderTracker = {
+    _interval: null,
+    _bar: null,
+    _data: null,
+
+    statusMap: {
+        pending:    { label: 'Recebido',    color: '#eab308', pulse: true },
+        confirmed:  { label: 'Confirmado',  color: '#eab308', pulse: true },
+        preparing:  { label: 'Preparando',  color: '#f97316', pulse: true },
+        ready:      { label: 'Pronto!',     color: '#22c55e', pulse: false },
+        delivering: { label: 'Saiu p/ entrega', color: '#3b82f6', pulse: true },
+        delivered:  { label: 'Entregue',    color: '#22c55e', pulse: false },
+        cancelled:  { label: 'Cancelado',   color: '#ef4444', pulse: false }
+    },
+
+    init() {
+        const key = 'active_order_' + (RESTAURANT?.id || 'default');
+        try {
+            const raw = localStorage.getItem(key);
+            if (!raw) return;
+            this._data = JSON.parse(raw);
+
+            // Expirar após 4 horas
+            const created = new Date(this._data.createdAt);
+            if (Date.now() - created.getTime() > 4 * 60 * 60 * 1000) {
+                localStorage.removeItem(key);
+                return;
+            }
+
+            this.show();
+            this.poll();
+            this._interval = setInterval(() => this.poll(), 15000);
+        } catch (e) {
+            // silently ignore
+        }
+    },
+
+    show(status = 'pending') {
+        if (this._bar) return;
+
+        const bar = document.createElement('div');
+        bar.id = 'order-tracker-bar';
+        bar.className = 'order-tracker-bar order-tracker-enter';
+        bar.innerHTML = this._buildHTML(status);
+        document.body.prepend(bar);
+        document.body.classList.add('has-order-tracker');
+        this._bar = bar;
+
+        requestAnimationFrame(() => {
+            bar.classList.remove('order-tracker-enter');
+        });
+    },
+
+    _buildHTML(status) {
+        const s = this.statusMap[status] || this.statusMap.pending;
+        const orderId = this._data?.orderId || '';
+        const token = this._data?.token || '';
+
+        return `
+            <div class="order-tracker-inner">
+                <span class="order-tracker-info">
+                    <strong>Pedido #${orderId}</strong>
+                    <span class="order-tracker-dot${s.pulse ? ' pulse' : ''}" style="background:${s.color}"></span>
+                    <span class="order-tracker-status">${s.label}</span>
+                </span>
+                <span class="order-tracker-actions">
+                    <a href="/pedido/${token}" target="_blank" class="order-tracker-link">Acompanhar →</a>
+                    <button onclick="OrderTracker.dismiss(event)" class="order-tracker-dismiss" title="Fechar">&times;</button>
+                </span>
+            </div>
+        `;
+    },
+
+    async poll() {
+        if (!this._data?.token) return;
+
+        try {
+            const res = await fetch('/api/orders.php?action=status&token=' + encodeURIComponent(this._data.token));
+            const json = await res.json();
+
+            if (json.success && json.order) {
+                const status = json.order.status || 'pending';
+                if (this._bar) {
+                    this._bar.innerHTML = this._buildHTML(status);
+                }
+
+                // Status final: limpar após 30s
+                if (status === 'delivered' || status === 'cancelled') {
+                    clearInterval(this._interval);
+                    setTimeout(() => {
+                        this.remove();
+                        const key = 'active_order_' + (RESTAURANT?.id || 'default');
+                        localStorage.removeItem(key);
+                    }, 30000);
+                }
+            }
+        } catch (e) {
+            // silently ignore network errors
+        }
+    },
+
+    dismiss(event) {
+        // Shift+click = encerrar completamente
+        if (event && event.shiftKey) {
+            const key = 'active_order_' + (RESTAURANT?.id || 'default');
+            localStorage.removeItem(key);
+            clearInterval(this._interval);
+        }
+        this.remove();
+    },
+
+    remove() {
+        if (this._bar) {
+            this._bar.classList.add('order-tracker-exit');
+            setTimeout(() => {
+                this._bar?.remove();
+                this._bar = null;
+                document.body.classList.remove('has-order-tracker');
+            }, 300);
+        }
     }
 };
 
