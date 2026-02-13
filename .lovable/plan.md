@@ -1,90 +1,129 @@
 
-# Plano: Link de Pedidos + QR Code + Mesa informada pelo cliente
+# Plano: Barra de Status do Pedido no Topo do Cardapio
 
-## Mudança de Lógica da Mesa
+## Conceito
 
-O número da mesa **não será mais embutido no QR Code**. Em vez disso:
-- O QR Code do modo Mesa gera apenas `/{slug}?cart=table` (sem `&mesa=`)
-- O cliente informa o número da mesa no **drawer do carrinho** ou na **página de checkout**, antes de enviar o pedido
-- Isso significa **um único QR Code** para todas as mesas do restaurante
+Apos o cliente finalizar um pedido, o token do pedido e salvo no `localStorage`. Ao navegar no cardapio, o sistema detecta esse token e exibe uma barra fixa e compacta no topo da pagina com o status atual do pedido, atualizada automaticamente via polling. O cliente acompanha o pedido de forma passiva sem sair do cardapio.
 
-## Alterações
-
-### 1. `docs/php/admin/index.php` - Adicionar botão "Pedidos"
-
-Na seção Quick Actions, adicionar um botão vermelho para `orders.php`:
-- Texto: "Pedidos"
-- Cor: `bg-red-600`
-- Link: `orders.php`
-
-### 2. `docs/php/admin/qrcode.php` - Reescrever com seletor de modo
-
-A página será reescrita para gerar QR Codes com o parâmetro `?cart=` correto:
-
-**Dados PHP:**
-- Buscar modos habilitados do restaurante via `restaurant_cart_modes` JOIN `cart_modes`
-
-**Interface:**
+## Fluxo
 
 ```text
-TIPO DE LINK
-( ) Apenas cardápio (sem pedidos)
-( ) WhatsApp
-( ) Mesa
-( ) Entrega
-( ) Completo
-(Somente modos habilitados aparecem)
-
-URL GERADA
-[ https://site.com/slug?cart=table        ] [Copiar]
-
-        [QR CODE 400x400]
-
-[Baixar PNG]  [Baixar SVG]
-
-Dicas de uso
+Cliente faz pedido
+    |
+    v
+checkout.php salva token no localStorage
+    |
+    v
+Cliente volta ao cardapio (/{slug}?cart=...)
+    |
+    v
+cart.js detecta token salvo no localStorage
+    |
+    v
+Exibe barra fixa no topo com status do pedido
+    |
+    v
+Polling a cada 15s atualiza o status via API
+    |
+    v
+Quando status = "delivered" ou "cancelled"
+    -> Barra some apos 30 segundos
+    -> Remove token do localStorage
 ```
 
-**Sem geração em lote** - como a mesa é informada pelo cliente, basta um QR Code por modo.
+## Alteracoes
 
-**URLs geradas por modo:**
-- Sem pedidos: `/{slug}`
-- WhatsApp: `/{slug}?cart=whatsapp`
-- Mesa: `/{slug}?cart=table` (sem mesa no link)
-- Entrega: `/{slug}?cart=delivery`
-- Completo: `/{slug}?cart=full`
+### 1. `docs/php/checkout.php` - Salvar token do pedido
 
-**JavaScript:**
-- `updateQRCode()`: Atualiza preview e URL quando o radio muda
-- `copyUrl()`: Copia URL para clipboard
+Apos o pedido ser criado com sucesso (linha 338-348), salvar o token retornado no localStorage:
 
-### 3. `docs/php/includes/cart.js` - Campo de mesa no carrinho
+```javascript
+// Apos data.success
+localStorage.setItem('active_order_' + RESTAURANT_ID, JSON.stringify({
+    token: data.order.token,
+    orderId: data.order.id,
+    createdAt: new Date().toISOString()
+}));
+```
 
-No drawer do carrinho, quando o modo for `table`:
-- Exibir um campo de input "Qual sua mesa?" no topo do carrinho
-- Campo obrigatório antes de prosseguir para o checkout
-- Salvar o valor no `localStorage` junto com os dados do checkout
+### 2. `docs/php/includes/cart.js` - Barra de status no cardapio
 
-### 4. `docs/php/checkout.php` - Mesa informada pelo cliente
+Adicionar ao objeto `Cart` um novo modulo `OrderTracker` com as seguintes funcoes:
 
-No modo `table`, o campo de mesa deixa de ser `readonly` com valor do URL:
-- Remove o `readonly` do input de mesa
-- Preenche com o valor salvo no localStorage (se houver)
-- Torna obrigatório na validação antes de enviar
+**`OrderTracker.init()`** - Chamado no `Cart.init()`:
+- Verifica se existe `active_order_{restaurantId}` no localStorage
+- Se existir, chama `OrderTracker.show()`
 
-### 5. `docs/php/index.php` - Remover dependência do parâmetro mesa
+**`OrderTracker.show()`**:
+- Cria um elemento fixo no topo da pagina (acima do header sticky)
+- Layout compacto (altura ~48px):
 
-- O roteador deixa de exigir `?mesa=` na URL
-- O parâmetro `mesa` no GET continua funcionando como fallback (retrocompatibilidade), mas não é mais obrigatório
+```text
+┌──────────────────────────────────────────────────┐
+│  Pedido #42  ●  Preparando       [Acompanhar ->] │
+└──────────────────────────────────────────────────┘
+```
+
+- Fundo escuro com borda sutil (`background: rgba(30,30,30,0.95)`)
+- Dot colorido animado conforme status:
+  - pending/confirmed: amarelo (pulsando)
+  - preparing: laranja (pulsando)
+  - ready: verde
+  - delivering: azul
+  - delivered: verde (fixo)
+  - cancelled: vermelho
+- Texto do status traduzido (Recebido, Preparando, Pronto, etc.)
+- Link "Acompanhar" que abre a pagina `/pedido/{token}` em nova aba
+- Botao "X" discreto para fechar/minimizar a barra
+
+**`OrderTracker.poll()`**:
+- Faz requisicao GET para `/api/orders.php?action=status&token={token}` a cada 15 segundos
+- Atualiza o texto do status e a cor do dot
+- Se status for `delivered` ou `cancelled`:
+  - Mostra mensagem final ("Pedido entregue!" ou "Pedido cancelado")
+  - Apos 30 segundos, remove a barra e limpa o localStorage
+
+**`OrderTracker.dismiss()`**:
+- Remove a barra do DOM
+- Nao remove do localStorage (o pedido continua ativo, a barra reaparece ao recarregar)
+- Se o usuario clicar segurando Shift ou clicar num botao "Encerrar", ai sim limpa o localStorage
+
+### 3. `docs/php/includes/cart-styles.css` - Estilos da barra
+
+Adicionar estilos para:
+- `.order-tracker-bar`: barra fixa no topo (`position: fixed; top: 0; z-index: 9999`)
+- `.order-tracker-dot`: bolinha de status com animacao pulse
+- `.order-tracker-dismiss`: botao de fechar discreto
+- Transicao de entrada (slide-down) e saida (slide-up)
+- Ajustar `body` com `padding-top` quando a barra esta visivel para nao sobrepor o header
+
+### 4. `docs/php/index.php` - Nenhuma alteracao necessaria
+
+O `cart.js` ja e carregado quando `$cartMode` esta ativo. O tracker roda automaticamente dentro do `Cart.init()`.
+
+## Detalhes Tecnicos
+
+**Chave do localStorage:**
+- `active_order_{restaurantId}` - garante que cada restaurante tem sua propria sessao de pedido
+- Contem: `{ token, orderId, createdAt }`
+- Expira automaticamente apos 4 horas (fallback de seguranca caso o polling falhe)
+
+**Polling:**
+- Intervalo: 15 segundos (mesmo da pagina de rastreamento)
+- Usa a mesma API existente: `/api/orders.php?action=status&token=xxx`
+- Para automaticamente quando status e final (delivered/cancelled) ou apos 4 horas
+
+**Z-index:**
+- Barra: `z-index: 9999` (acima de tudo)
+- Header do template: geralmente `z-index: 40-50`
+- O body recebe `padding-top: 48px` dinamicamente quando a barra aparece
 
 ## Arquivos Modificados
 
 | Arquivo | Acao | Detalhes |
 |---------|------|---------|
-| `docs/php/admin/index.php` | Modificar | Adicionar botao "Pedidos" |
-| `docs/php/admin/qrcode.php` | Reescrever | Seletor de modo, QR dinamico, sem lote |
-| `docs/php/includes/cart.js` | Modificar | Campo "Qual sua mesa?" no drawer |
-| `docs/php/checkout.php` | Modificar | Campo mesa editavel pelo cliente |
-| `docs/php/index.php` | Modificar | Remover obrigatoriedade do parametro mesa |
+| `docs/php/checkout.php` | Modificar | Salvar token no localStorage apos sucesso |
+| `docs/php/includes/cart.js` | Modificar | Adicionar modulo OrderTracker com barra e polling |
+| `docs/php/includes/cart-styles.css` | Modificar | Estilos da barra de status |
 
-Nenhum arquivo React sera alterado. Todas as mudancas sao exclusivamente PHP.
+Somente arquivos PHP/JS/CSS. Nenhum arquivo React sera alterado.
