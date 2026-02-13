@@ -134,6 +134,18 @@ try {
             echo json_encode(['success' => true]);
             break;
             
+        case 'restaurant_status':
+            $restaurantId = (int)($_GET['restaurant_id'] ?? 0);
+            if ($restaurantId === 0) {
+                throw new Exception('restaurant_id obrigatório');
+            }
+            $restaurant = getRestaurantById($restaurantId);
+            if (!$restaurant) {
+                throw new Exception('Restaurante não encontrado');
+            }
+            echo json_encode(['success' => true, 'is_open' => (bool)($restaurant['is_open'] ?? false)]);
+            break;
+
         case 'toggle_open':
             session_start();
             if (!isset($_SESSION['restaurant_id'])) {

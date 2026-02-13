@@ -22,7 +22,37 @@ const Cart = {
         if (!IS_OPEN && CART_MODE) {
             this.showClosedBanner();
         }
+        this.startStatusPolling();
         OrderTracker.init();
+    },
+
+    // ========== Polling: Status Aberto/Fechado ==========
+    startStatusPolling() {
+        if (!CART_MODE || !RESTAURANT?.id) return;
+
+        setInterval(async () => {
+            try {
+                const res = await fetch('/api/orders.php?action=restaurant_status&restaurant_id=' + RESTAURANT.id);
+                const json = await res.json();
+                if (!json.success) return;
+
+                const wasOpen = IS_OPEN;
+                const nowOpen = json.is_open;
+
+                if (wasOpen && !nowOpen) {
+                    // Acabou de fechar
+                    IS_OPEN = false;
+                    this.showClosedBanner();
+                } else if (!wasOpen && nowOpen) {
+                    // Acabou de abrir
+                    IS_OPEN = true;
+                    const banner = document.querySelector('.closed-banner');
+                    if (banner) banner.remove();
+                }
+            } catch (e) {
+                // silently ignore
+            }
+        }, 60000);
     },
 
     load() {
