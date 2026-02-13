@@ -92,7 +92,11 @@ $canAddCategories = $maxCategories === -1 || $totalCategories < $maxCategories;
         </div>
         
         <!-- Quick Actions -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+            <a href="orders.php" class="bg-red-600 hover:bg-red-700 rounded-lg p-4 text-center transition">
+                <span class="text-2xl">📋</span>
+                <p class="font-medium mt-2">Pedidos</p>
+            </a>
             <a href="products.php" class="bg-blue-600 hover:bg-blue-700 rounded-lg p-4 text-center transition">
                 <span class="text-2xl">🍽️</span>
                 <p class="font-medium mt-2">Pratos</p>

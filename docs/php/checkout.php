@@ -189,7 +189,8 @@ $modeLabels = [
         <?php if ($mode === 'table'): ?>
         <div class="checkout-section">
             <h3>Dados da Mesa</h3>
-            <input type="text" id="field-table" class="checkout-input" placeholder="Número da mesa" readonly>
+            <input type="number" id="field-table" class="checkout-input" placeholder="Número da mesa *" min="1" required>
+            <p style="font-size:0.75rem;color:rgba(255,255,255,0.4);margin-top:-8px;">Informe o número da sua mesa</p>
         </div>
         <?php endif; ?>
 
@@ -308,6 +309,15 @@ $modeLabels = [
             };
 
             // Validação básica
+            if (MODE === 'table') {
+                if (!payload.table_number) {
+                    alert('Informe o número da mesa');
+                    document.getElementById('field-table')?.focus();
+                    btn.disabled = false;
+                    btn.textContent = '📦 Enviar Pedido';
+                    return;
+                }
+            }
             if (MODE === 'delivery' || MODE === 'full') {
                 if (!payload.customer_name || !payload.customer_phone) {
                     alert('Preencha os campos obrigatórios');

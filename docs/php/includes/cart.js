@@ -388,6 +388,15 @@ const Cart = {
                     <button onclick="Cart.closeDrawer()" class="cart-drawer-close">&times;</button>
                 </div>
                 <div class="cart-drawer-body">
+                    ${CART_MODE?.slug === 'table' ? `
+                    <div class="cart-table-field" style="padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.1);">
+                        <label style="font-size:0.85rem;color:rgba(255,255,255,0.6);display:block;margin-bottom:6px;">📍 Qual sua mesa? *</label>
+                        <input type="number" id="cart-table-number" min="1" placeholder="Número da mesa" 
+                               value="${this._tableNumber || ''}"
+                               style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 14px;color:#fff;font-size:0.95rem;"
+                               oninput="Cart._tableNumber = this.value">
+                    </div>
+                    ` : ''}
                     ${itemsHtml}
                 </div>
                 ${this.items.length > 0 ? `
@@ -431,6 +440,19 @@ const Cart = {
         if (this.items.length === 0) {
             this.showToast('Carrinho vazio');
             return;
+        }
+
+        // Validar mesa obrigatória no modo table
+        if (CART_MODE?.slug === 'table') {
+            const tableInput = document.getElementById('cart-table-number');
+            const tableNum = tableInput?.value?.trim();
+            if (!tableNum) {
+                this.showToast('Informe o número da mesa');
+                tableInput?.focus();
+                tableInput?.style && (tableInput.style.borderColor = '#f87171');
+                return;
+            }
+            this._tableNumber = tableNum;
         }
 
         const generalNotes = document.getElementById('cart-general-notes')?.value || '';
@@ -504,7 +526,7 @@ const Cart = {
         const checkoutData = {
             items: this.items,
             mode: mode,
-            tableNumber: TABLE_NUMBER,
+            tableNumber: this._tableNumber || TABLE_NUMBER || '',
             generalNotes: generalNotes,
             restaurantId: RESTAURANT.id,
             total: this.getTotal()
