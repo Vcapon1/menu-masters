@@ -90,6 +90,18 @@ const Cart = {
         this.save();
     },
 
+    _getSavedTableNumber() {
+        try {
+            return localStorage.getItem('saved_table_' + (RESTAURANT?.id || 'default')) || '';
+        } catch (e) { return ''; }
+    },
+
+    _saveTableNumber(num) {
+        try {
+            if (num) localStorage.setItem('saved_table_' + (RESTAURANT?.id || 'default'), num);
+        } catch (e) {}
+    },
+
     // ========== UI: Botão Flutuante ==========
     renderFloatingButton() {
         if (!CART_MODE) return;
@@ -226,10 +238,6 @@ const Cart = {
                 <div class="variations-body">
                     ${sizesHtml}
                     ${variationsHtml}
-                    <div class="var-group">
-                        <h4 class="var-group-title">Observações</h4>
-                        <textarea id="var-notes" class="var-notes" placeholder="Ex: Sem cebola, bem passado..." rows="2"></textarea>
-                    </div>
                 </div>
                 <div class="variations-footer">
                     <div class="qty-control">
@@ -393,7 +401,7 @@ const Cart = {
                     <div class="cart-table-field" style="padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.1);">
                         <label style="font-size:0.85rem;color:rgba(255,255,255,0.6);display:block;margin-bottom:6px;">📍 Qual sua mesa? *</label>
                         <input type="number" id="cart-table-number" min="1" placeholder="Número da mesa" 
-                               value="${this._tableNumber || ''}"
+                         value="${this._tableNumber || Cart._getSavedTableNumber() || ''}"
                                style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 14px;color:#fff;font-size:0.95rem;"
                                oninput="Cart._tableNumber = this.value">
                     </div>
@@ -406,9 +414,11 @@ const Cart = {
                         <span>Total</span>
                         <strong>R$ ${total.toFixed(2).replace('.', ',')}</strong>
                     </div>
+                    ${CART_MODE?.slug === 'whatsapp' ? `
                     <div class="cart-drawer-notes">
                         <textarea id="cart-general-notes" placeholder="Observações gerais do pedido..." rows="2" class="var-notes">${this._generalNotes || ''}</textarea>
                     </div>
+                    ` : ''}
                     <button onclick="Cart.finalize()" class="cart-finalize-btn">
                         Finalizar Pedido
                     </button>
@@ -454,6 +464,7 @@ const Cart = {
                 return;
             }
             this._tableNumber = tableNum;
+            this._saveTableNumber(tableNum);
         }
 
         const generalNotes = document.getElementById('cart-general-notes')?.value || '';
