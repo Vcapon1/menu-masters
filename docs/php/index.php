@@ -59,7 +59,7 @@ $cartSlug = isset($_GET['cart']) ? sanitize($_GET['cart']) : '';
 if (!empty($cartSlug)) {
     $cartMode = getRestaurantCartMode($restaurant['id'], $cartSlug);
 }
-$tableNumber = isset($_GET['mesa']) ? sanitize($_GET['mesa']) : null;
+$tableNumber = isset($_GET['mesa']) ? sanitize($_GET['mesa']) : null; // Opcional - cliente informa no pedido
 $isOpen = (bool)($restaurant['is_open'] ?? 1);
 
 // Buscar variações dos produtos (para modal de pedido)
