@@ -57,7 +57,7 @@ $cartModes = getRestaurantCartModes($restaurantId);
                 <h3 class="text-sm text-gray-400 uppercase tracking-wide mb-3">Tipo de Link</h3>
                 <div class="space-y-2">
                     <label class="flex items-center gap-3 bg-gray-700 rounded-lg px-4 py-3 cursor-pointer hover:bg-gray-600 transition">
-                        <input type="radio" name="cart_mode" value="" checked onchange="updateQRCode()" class="text-blue-500">
+                        <input type="radio" name="cart_mode" value="" checked onchange="updateQRCode()" autocomplete="off" class="text-blue-500">
                         <div>
                             <span class="font-medium">Apenas cardápio</span>
                             <p class="text-xs text-gray-400">Sem sistema de pedidos</p>
@@ -65,7 +65,7 @@ $cartModes = getRestaurantCartModes($restaurantId);
                     </label>
                     <?php foreach ($cartModes as $cm): ?>
                     <label class="flex items-center gap-3 bg-gray-700 rounded-lg px-4 py-3 cursor-pointer hover:bg-gray-600 transition">
-                        <input type="radio" name="cart_mode" value="<?= htmlspecialchars($cm['slug']) ?>" onchange="updateQRCode()" class="text-blue-500">
+                        <input type="radio" name="cart_mode" value="<?= htmlspecialchars($cm['slug']) ?>" onchange="updateQRCode()" autocomplete="off" class="text-blue-500">
                         <div>
                             <span class="font-medium"><?= htmlspecialchars($cm['name']) ?></span>
                             <?php if ($cm['slug'] === 'table'): ?>
@@ -86,6 +86,7 @@ $cartModes = getRestaurantCartModes($restaurantId);
                         id="menuUrl"
                         value="<?= htmlspecialchars($menuUrl) ?>" 
                         readonly
+                        autocomplete="off"
                         class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-sm w-full"
                     >
                     <button 
