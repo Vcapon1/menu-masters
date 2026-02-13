@@ -747,9 +747,22 @@ $buttonTextColor = $restaurant['button_text_color'] ?? '#ffffff';
                                         </div>
                                         
                                         <?php if ($isAvailable): ?>
-                                            <button class="add-btn" onclick="addToCart('<?= $product['id'] ?>')">
-                                                <i class="lucide-plus"></i>
-                                            </button>
+                                            <?php if (isset($cartMode) && $cartMode): ?>
+                                                <button class="add-btn" onclick="event.stopPropagation(); Cart.openVariationsModal(<?= htmlspecialchars(json_encode([
+                                                    'id' => $product['id'],
+                                                    'name' => $product['name'],
+                                                    'price' => (float)$product['price'],
+                                                    'promoPrice' => $hasPromo ? (float)$product['promo_price'] : null,
+                                                    'image' => $product['image'],
+                                                    'sizesPrices' => $sizesPrices
+                                                ])) ?>)">
+                                                    <i class="lucide-plus"></i>
+                                                </button>
+                                            <?php else: ?>
+                                                <button class="add-btn" onclick="addToCart('<?= $product['id'] ?>')">
+                                                    <i class="lucide-plus"></i>
+                                                </button>
+                                            <?php endif; ?>
                                         <?php else: ?>
                                             <div class="unavailable-overlay">
                                                 <span class="unavailable-text">Indisponível</span>
@@ -858,10 +871,13 @@ $buttonTextColor = $restaurant['button_text_color'] ?? '#ffffff';
         
         sections.forEach(section => observer.observe(section));
         
-        // Add to Cart (placeholder)
+        // Add to Cart (fallback when Cart system is not loaded)
         function addToCart(productId) {
-            console.log('Add to cart:', productId);
-            // Implement cart functionality or WhatsApp integration
+            if (typeof Cart !== 'undefined') {
+                console.log('Use Cart system instead');
+            } else {
+                console.log('Add to cart:', productId);
+            }
         }
     </script>
 </body>
