@@ -43,7 +43,7 @@ RewriteRule ^([a-zA-Z0-9-]+)/?$ index.php?slug=$1 [L,QSA]
 # Bloquear acesso a diretórios de configuração
 <IfModule mod_alias.c>
     RedirectMatch 403 ^/config/
-    RedirectMatch 403 ^/includes/
+#   RedirectMatch 403 ^/includes/
 </IfModule>
 
 # Prevenir listagem de diretórios
