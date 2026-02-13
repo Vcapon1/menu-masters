@@ -276,9 +276,12 @@ $modeLabels = [
 
             document.getElementById('checkout-total').textContent = 'R$ ' + checkoutData.total.toFixed(2).replace('.', ',');
 
-            // Preencher mesa se disponível
-            if (MODE === 'table' && checkoutData.tableNumber) {
-                document.getElementById('field-table').value = checkoutData.tableNumber;
+            // Preencher mesa se disponível (do checkout_data ou localStorage)
+            if (MODE === 'table') {
+                const savedTable = checkoutData.tableNumber || localStorage.getItem('saved_table_' + RESTAURANT_ID) || '';
+                if (savedTable) {
+                    document.getElementById('field-table').value = savedTable;
+                }
             }
         }
 
@@ -342,6 +345,11 @@ $modeLabels = [
                         orderId: data.order.id,
                         createdAt: new Date().toISOString()
                     }));
+
+                    // Salvar número da mesa para próximos pedidos
+                    if (payload.table_number) {
+                        localStorage.setItem('saved_table_' + RESTAURANT_ID, payload.table_number);
+                    }
 
                     // Limpar carrinho
                     localStorage.removeItem('checkout_data');
