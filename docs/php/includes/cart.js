@@ -153,10 +153,15 @@ const Cart = {
 
     updateBadge() {
         const badge = document.getElementById('cart-badge');
+        const floatBtn = document.getElementById('cart-float');
         if (!badge) return;
         const count = this.getCount();
         badge.textContent = count;
         badge.style.display = count > 0 ? 'flex' : 'none';
+        // Esconder botão flutuante inteiro quando carrinho vazio
+        if (floatBtn) {
+            floatBtn.style.display = count > 0 ? 'block' : 'none';
+        }
     },
 
     showToast(message) {
@@ -345,7 +350,7 @@ const Cart = {
 
         const product = modal._product;
         const qty = modal._qty || 1;
-        const notes = document.getElementById('var-notes')?.value || '';
+        const notes = ''; // Observações removidas do modal de variações
 
         // Validate required groups
         const requiredGroups = modal.querySelectorAll('.var-group[data-required="true"]');
