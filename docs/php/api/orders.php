@@ -94,8 +94,9 @@ try {
             
             $restaurantId = $_SESSION['restaurant_id'];
             $status = sanitize($_GET['status'] ?? '');
+            $archived = isset($_GET['archived']) && $_GET['archived'] === '1';
             
-            $orders = getRestaurantOrders($restaurantId, $status ?: null);
+            $orders = getRestaurantOrders($restaurantId, $status ?: null, $archived);
             
             // Buscar itens de cada pedido
             foreach ($orders as &$order) {
@@ -132,6 +133,46 @@ try {
             
             updateOrderStatus($orderId, $newStatus);
             echo json_encode(['success' => true]);
+            break;
+
+        case 'archive':
+            session_start();
+            if (!isset($_SESSION['restaurant_id'])) {
+                throw new Exception('Não autorizado');
+            }
+            
+            $input = json_decode(file_get_contents('php://input'), true);
+            $orderId = (int)($input['order_id'] ?? 0);
+            $archive = (bool)($input['archive'] ?? true);
+            
+            if ($orderId === 0) {
+                throw new Exception('order_id obrigatório');
+            }
+            
+            // Verificar que o pedido pertence ao restaurante
+            $sql = "SELECT id FROM orders WHERE id = :id AND restaurant_id = :rid";
+            $stmt = db()->prepare($sql);
+            $stmt->execute(['id' => $orderId, 'rid' => $_SESSION['restaurant_id']]);
+            if (!$stmt->fetch()) {
+                throw new Exception('Pedido não encontrado');
+            }
+            
+            $sql = "UPDATE orders SET is_archived = :archived WHERE id = :id";
+            $stmt = db()->prepare($sql);
+            $stmt->execute(['archived' => $archive ? 1 : 0, 'id' => $orderId]);
+            echo json_encode(['success' => true]);
+            break;
+
+        case 'archive_delivered':
+            session_start();
+            if (!isset($_SESSION['restaurant_id'])) {
+                throw new Exception('Não autorizado');
+            }
+            
+            $sql = "UPDATE orders SET is_archived = 1 WHERE restaurant_id = :rid AND status IN ('delivered', 'cancelled') AND is_archived = 0";
+            $stmt = db()->prepare($sql);
+            $stmt->execute(['rid' => $_SESSION['restaurant_id']]);
+            echo json_encode(['success' => true, 'archived_count' => $stmt->rowCount()]);
             break;
             
         case 'restaurant_status':

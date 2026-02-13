@@ -114,6 +114,16 @@ $timeLimits = json_decode($restaurant['order_time_limits'] ?? '{}', true) ?: [
                 Cancelado
             </button>
         </div>
+        <div class="flex gap-2 mt-2">
+            <button id="btn-archive-all" onclick="archiveAllDelivered()" 
+                    class="px-3 py-1.5 rounded-full border border-yellow-600 text-yellow-400 text-sm hover:bg-yellow-900/30 transition-colors whitespace-nowrap">
+                📦 Arquivar Entregues/Cancelados
+            </button>
+            <button id="btn-view-archived" onclick="toggleArchivedView()" 
+                    class="px-3 py-1.5 rounded-full border border-gray-600 text-gray-400 text-sm hover:bg-gray-700 transition-colors whitespace-nowrap">
+                📁 Ver Arquivados
+            </button>
+        </div>
     </div>
 
     <!-- Lista de Pedidos -->
@@ -136,6 +146,7 @@ $timeLimits = json_decode($restaurant['order_time_limits'] ?? '{}', true) ?: [
         let currentFilter = '';
         let lastOrderCount = 0;
         let isOpen = <?= $restaurant['is_open'] ? 'true' : 'false' ?>;
+        let viewingArchived = false;
 
         async function toggleOpen() {
             isOpen = !isOpen;
@@ -168,7 +179,7 @@ $timeLimits = json_decode($restaurant['order_time_limits'] ?? '{}', true) ?: [
 
         async function loadOrders() {
             try {
-                const url = '/api/orders.php?action=list' + (currentFilter ? '&status=' + currentFilter : '');
+                const url = '/api/orders.php?action=list' + (currentFilter ? '&status=' + currentFilter : '') + (viewingArchived ? '&archived=1' : '');
                 const res = await fetch(url);
                 const data = await res.json();
                 
@@ -267,7 +278,15 @@ $timeLimits = json_decode($restaurant['order_time_limits'] ?? '{}', true) ?: [
                     
                     <div class="flex justify-between items-center mt-3 pt-2 border-t border-gray-700">
                         <span class="text-sm text-gray-400">Total</span>
-                        <span class="font-bold text-yellow-400">R$ ${parseFloat(order.total).toFixed(2).replace('.', ',')}</span>
+                        <div class="flex items-center gap-3">
+                            ${(order.status === 'delivered' || order.status === 'cancelled') && !viewingArchived ? `
+                                <button onclick="archiveOrder(${order.id})" class="text-xs text-gray-500 hover:text-yellow-400 transition-colors" title="Arquivar">📦 Arquivar</button>
+                            ` : ''}
+                            ${viewingArchived ? `
+                                <button onclick="unarchiveOrder(${order.id})" class="text-xs text-gray-500 hover:text-blue-400 transition-colors" title="Desarquivar">↩ Restaurar</button>
+                            ` : ''}
+                            <span class="font-bold text-yellow-400">R$ ${parseFloat(order.total).toFixed(2).replace('.', ',')}</span>
+                        </div>
                     </div>
                     
                     ${isOverdue ? `
@@ -289,6 +308,50 @@ $timeLimits = json_decode($restaurant['order_time_limits'] ?? '{}', true) ?: [
             } catch (e) {
                 console.error(e);
             }
+        }
+
+        async function archiveOrder(orderId) {
+            try {
+                await fetch('/api/orders.php?action=archive', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({order_id: orderId, archive: true})
+                });
+                loadOrders();
+            } catch (e) { console.error(e); }
+        }
+
+        async function unarchiveOrder(orderId) {
+            try {
+                await fetch('/api/orders.php?action=archive', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({order_id: orderId, archive: false})
+                });
+                loadOrders();
+            } catch (e) { console.error(e); }
+        }
+
+        async function archiveAllDelivered() {
+            if (!confirm('Arquivar todos os pedidos entregues e cancelados?')) return;
+            try {
+                await fetch('/api/orders.php?action=archive_delivered', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                });
+                loadOrders();
+            } catch (e) { console.error(e); }
+        }
+
+        function toggleArchivedView() {
+            viewingArchived = !viewingArchived;
+            const btn = document.getElementById('btn-view-archived');
+            if (btn) {
+                btn.textContent = viewingArchived ? '← Voltar aos Ativos' : '📁 Ver Arquivados';
+                btn.classList.toggle('border-blue-500', viewingArchived);
+                btn.classList.toggle('text-blue-400', viewingArchived);
+            }
+            loadOrders();
         }
 
         // Carregar pedidos inicialmente e polling a cada 10 segundos

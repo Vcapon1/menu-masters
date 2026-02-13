@@ -312,6 +312,7 @@ CREATE TABLE IF NOT EXISTS `orders` (
   `total` DECIMAL(10,2) DEFAULT 0,
   `notes` TEXT,
   `status_history` JSON COMMENT '[{"status":"pending","at":"2025-01-01 12:00:00"},...]',
+  `is_archived` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Pedido arquivado pelo admin',
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants`(`id`) ON DELETE CASCADE,

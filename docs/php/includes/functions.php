@@ -628,9 +628,9 @@ function updateOrderStatus(int $orderId, string $newStatus): void {
 /**
  * Lista pedidos do restaurante
  */
-function getRestaurantOrders(int $restaurantId, ?string $status = null): array {
-    $sql = "SELECT * FROM orders WHERE restaurant_id = :rid";
-    $params = ['rid' => $restaurantId];
+function getRestaurantOrders(int $restaurantId, ?string $status = null, bool $archived = false): array {
+    $sql = "SELECT * FROM orders WHERE restaurant_id = :rid AND is_archived = :archived";
+    $params = ['rid' => $restaurantId, 'archived' => $archived ? 1 : 0];
     if ($status) {
         $sql .= " AND status = :status";
         $params['status'] = $status;

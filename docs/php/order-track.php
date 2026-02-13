@@ -277,6 +277,13 @@ $currentStatusIndex = array_search($order['status'], $statusFlow);
             </div>
         </div>
 
+        <div style="text-align:center; margin-top:20px;">
+            <a href="/<?= htmlspecialchars($restaurant['slug']) ?>" 
+               style="display:inline-flex;align-items:center;gap:8px;color:rgba(255,255,255,0.6);text-decoration:none;font-size:0.9rem;padding:12px 24px;border:1px solid rgba(255,255,255,0.15);border-radius:50px;transition:all 0.2s;">
+                ← Voltar ao Cardápio
+            </a>
+        </div>
+
         <div class="update-time" id="update-time">
             Atualiza automaticamente a cada 15 segundos
         </div>
