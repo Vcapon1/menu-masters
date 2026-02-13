@@ -91,7 +91,7 @@ function getRestaurantById(int $id): ?array {
             FROM restaurants r
             JOIN plans p ON r.plan_id = p.id
             JOIN templates t ON r.template_id = t.id
-            WHERE r.id = :id;
+            WHERE r.id = :id";
     
     $stmt = db()->prepare($sql);
     $stmt->execute(['id' => $id]);
