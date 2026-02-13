@@ -514,6 +514,28 @@ function getRestaurantCartMode(int $restaurantId, string $modeSlug): ?array {
 }
 
 /**
+ * Busca todos os modos de carrinho habilitados para um restaurante
+ */
+function getRestaurantCartModes(int $restaurantId): array {
+    $sql = "SELECT cm.*, rcm.config, rcm.is_active AS mode_active
+            FROM cart_modes cm
+            JOIN restaurant_cart_modes rcm ON cm.id = rcm.cart_mode_id
+            WHERE rcm.restaurant_id = :restaurant_id 
+              AND rcm.is_active = 1 
+              AND cm.is_active = 1
+            ORDER BY cm.id ASC";
+    $stmt = db()->prepare($sql);
+    $stmt->execute(['restaurant_id' => $restaurantId]);
+    $results = $stmt->fetchAll();
+    foreach ($results as &$row) {
+        if ($row['config']) {
+            $row['config'] = json_decode($row['config'], true);
+        }
+    }
+    return $results;
+}
+
+/**
  * Busca variações de um produto
  */
 function getProductVariations(int $productId): array {
