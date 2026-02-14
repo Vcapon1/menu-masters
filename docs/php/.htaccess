@@ -15,23 +15,21 @@ RewriteBase /
 # Servir landing.php na raiz (URL vazia)
 RewriteRule ^$ landing.php [L]
 
-# Não processar arquivos e diretórios existentes
+# Página de acompanhamento de pedido
+# Exemplo: /pedido/abc123token -> order-track.php?token=abc123token
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^pedido/([a-zA-Z0-9]+)/?$ order-track.php?token=$1 [L,QSA]
 
-# Ignorar diretórios específicos
+# Redirecionar URLs amigáveis para index.php
+# Exemplo: /pizzaria-bella -> index.php?slug=pizzaria-bella
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_URI} !^/admin
 RewriteCond %{REQUEST_URI} !^/master
 RewriteCond %{REQUEST_URI} !^/uploads/
 RewriteCond %{REQUEST_URI} !^/templates/
 RewriteCond %{REQUEST_URI} !^/assets/
-
-# Página de acompanhamento de pedido
-# Exemplo: /pedido/abc123token -> order-track.php?token=abc123token
-RewriteRule ^pedido/([a-zA-Z0-9]+)/?$ order-track.php?token=$1 [L,QSA]
-
-# Redirecionar URLs amigáveis para index.php
-# Exemplo: /pizzaria-bella -> index.php?slug=pizzaria-bella
 RewriteRule ^([a-zA-Z0-9-]+)/?$ index.php?slug=$1 [L,QSA]
 
 # =====================================================
