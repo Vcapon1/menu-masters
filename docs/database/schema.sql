@@ -347,6 +347,23 @@ ALTER TABLE `restaurants`
   ADD COLUMN `is_open` TINYINT(1) NOT NULL DEFAULT 1 COMMENT 'Restaurante aceitando pedidos agora',
   ADD COLUMN `order_time_limits` JSON DEFAULT NULL COMMENT '{"pending":5,"preparing":20,"ready":10} em minutos';
 
+-- =====================================================
+-- TABELA: stock_images (Banco de Imagens compartilhado)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS `stock_images` (
+  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `category` VARCHAR(50) NOT NULL COMMENT 'bebidas, sobremesas, acompanhamentos, diversos',
+  `name` VARCHAR(100) NOT NULL,
+  `filename` VARCHAR(200) NOT NULL COMMENT 'Caminho relativo: bebidas/coca-cola.webp',
+  `video_filename` VARCHAR(200) DEFAULT NULL COMMENT 'Caminho relativo do vídeo (NULL = sem vídeo)',
+  `tags` VARCHAR(500) DEFAULT NULL COMMENT 'Palavras-chave para busca',
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_category` (`category`),
+  INDEX `idx_active` (`is_active`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- =====================================================
