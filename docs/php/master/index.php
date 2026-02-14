@@ -174,9 +174,9 @@ $expiringRestaurants = $stmt->fetchAll();
                 <span class="text-2xl">📊</span>
                 <p class="font-medium mt-2">Relatórios</p>
             </a>
-            <a href="<?= APP_URL ?>" target="_blank" class="bg-green-600 hover:bg-green-700 rounded-lg p-4 text-center transition">
-                <span class="text-2xl">🌐</span>
-                <p class="font-medium mt-2">Ver Site</p>
+            <a href="stock-images.php" class="bg-green-600 hover:bg-green-700 rounded-lg p-4 text-center transition">
+                <span class="text-2xl">📸</span>
+                <p class="font-medium mt-2">Banco de Imagens</p>
             </a>
         </div>
     </main>
