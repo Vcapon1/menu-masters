@@ -1126,7 +1126,7 @@ $availableBadges = [
     </script>
     
     <!-- Modal do Banco de Imagens -->
-    <div id="stock-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[60]">
+    <div id="stock-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center" style="z-index: 60;">
         <div class="bg-gray-800 rounded-lg max-w-xl w-full mx-4 modal-container" style="max-height: 80vh;">
             <div class="modal-header flex items-center justify-between">
                 <h2 class="text-lg font-bold">📸 Banco de Imagens</h2>
