@@ -656,3 +656,53 @@ function toggleRestaurantOpen(int $restaurantId, bool $isOpen): void {
 function generateOrderToken(): string {
     return bin2hex(random_bytes(16));
 }
+
+// =====================================================
+// BANCO DE IMAGENS (Stock Images)
+// =====================================================
+
+/**
+ * Busca imagens do banco compartilhado
+ */
+function getStockImages(?string $category = null, ?string $search = null, bool $includeInactive = false): array {
+    $sql = "SELECT * FROM stock_images WHERE 1=1";
+    $params = [];
+    
+    if (!$includeInactive) {
+        $sql .= " AND is_active = 1";
+    }
+    
+    if ($category) {
+        $sql .= " AND category = :category";
+        $params['category'] = $category;
+    }
+    
+    if ($search) {
+        $sql .= " AND (name LIKE :search1 OR tags LIKE :search2)";
+        $params['search1'] = "%{$search}%";
+        $params['search2'] = "%{$search}%";
+    }
+    
+    $sql .= " ORDER BY category ASC, sort_order ASC, name ASC";
+    
+    $stmt = db()->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll();
+}
+
+/**
+ * Retorna categorias distintas do banco de imagens
+ */
+function getStockCategories(): array {
+    $sql = "SELECT DISTINCT category FROM stock_images WHERE is_active = 1 ORDER BY category ASC";
+    $stmt = db()->query($sql);
+    return array_column($stmt->fetchAll(), 'category');
+}
+
+/**
+ * Verifica se uma URL de imagem pertence ao banco de imagens
+ */
+function isStockImage(?string $url): bool {
+    if (empty($url)) return false;
+    return strpos($url, 'stock-images/') !== false;
+}

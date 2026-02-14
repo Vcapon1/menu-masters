@@ -311,6 +311,18 @@ $availableBadges = [
             border-radius: 9999px;
             font-weight: 700;
         }
+        /* Stock Images Modal */
+        .stock-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+        @media (min-width: 640px) { .stock-grid { grid-template-columns: repeat(4, 1fr); } }
+        .stock-thumb { cursor: pointer; border: 2px solid transparent; border-radius: 0.5rem; overflow: hidden; transition: all 0.15s; position: relative; }
+        .stock-thumb:hover { border-color: #7c3aed; transform: scale(1.03); }
+        .stock-thumb.selected { border-color: #7c3aed; box-shadow: 0 0 0 2px rgba(124,58,237,0.4); }
+        .stock-thumb img { width: 100%; height: 80px; object-fit: cover; }
+        .stock-video-icon { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.7); padding: 1px 5px; border-radius: 3px; font-size: 0.65rem; color: #4ade80; }
+        .stock-tab { padding: 0.35rem 0.75rem; border-radius: 9999px; font-size: 0.8rem; cursor: pointer; transition: all 0.15s; text-transform: capitalize; }
+        .stock-tab.active { background: #7c3aed; color: white; }
+        .stock-tab:not(.active) { background: #374151; color: #9ca3af; }
+        .stock-tab:not(.active):hover { background: #4b5563; }
     </style>
 </head>
 <body class="bg-gray-900 text-white min-h-screen">
@@ -506,12 +518,24 @@ $availableBadges = [
                         
                         <div>
                             <label class="block text-sm mb-1">Imagem</label>
-                            <div id="current-image-preview" class="mb-2 hidden flex items-center gap-2">
-                                <img id="preview-img" src="" class="w-16 h-16 rounded object-cover border border-gray-600">
-                                <span class="text-xs text-gray-400">Imagem atual</span>
+                            <div id="current-image-preview" class="mb-2 hidden">
+                                <div class="flex items-center gap-2">
+                                    <img id="preview-img" src="" class="w-16 h-16 rounded object-cover border border-gray-600">
+                                    <div>
+                                        <span id="stock-badge" class="hidden text-xs bg-purple-600 px-2 py-0.5 rounded font-medium">📸 Banco de Imagens</span>
+                                        <span id="upload-badge" class="hidden text-xs bg-gray-600 px-2 py-0.5 rounded">Upload próprio</span>
+                                    </div>
+                                </div>
                             </div>
-                            <input type="file" name="image" accept="image/*"
-                                   class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                            <div class="flex gap-2">
+                                <input type="file" name="image" accept="image/*"
+                                       class="flex-1 bg-gray-700 border border-gray-600 rounded px-3 py-2" 
+                                       onchange="onFileImageSelected()">
+                                <button type="button" onclick="openStockModal()" 
+                                        class="bg-purple-600 hover:bg-purple-700 px-3 py-2 rounded text-sm font-medium whitespace-nowrap flex items-center gap-1">
+                                    📸 Banco
+                                </button>
+                            </div>
                         </div>
                         
                         <?php if ($restaurant['supports_video']): ?>
@@ -843,8 +867,10 @@ $availableBadges = [
             document.getElementById('sizes-container').innerHTML = '';
             document.getElementById('form-price').required = true;
             
-            // Esconder previews
+            // Esconder previews e badges
             document.getElementById('current-image-preview').classList.add('hidden');
+            document.getElementById('stock-badge').classList.add('hidden');
+            document.getElementById('upload-badge').classList.add('hidden');
             const videoPreview = document.getElementById('current-video-preview');
             if (videoPreview) videoPreview.classList.add('hidden');
             
@@ -894,11 +920,23 @@ $availableBadges = [
             // Preview de imagem
             const imagePreview = document.getElementById('current-image-preview');
             const previewImg = document.getElementById('preview-img');
+            const stockBadge = document.getElementById('stock-badge');
+            const uploadBadge = document.getElementById('upload-badge');
             if (product.image) {
                 previewImg.src = product.image;
                 imagePreview.classList.remove('hidden');
+                // Detect stock image
+                if (product.image.indexOf('stock-images/') !== -1) {
+                    stockBadge.classList.remove('hidden');
+                    uploadBadge.classList.add('hidden');
+                } else {
+                    stockBadge.classList.add('hidden');
+                    uploadBadge.classList.remove('hidden');
+                }
             } else {
                 imagePreview.classList.add('hidden');
+                stockBadge.classList.add('hidden');
+                uploadBadge.classList.add('hidden');
             }
             
             // Preview de vídeo
@@ -957,6 +995,156 @@ $availableBadges = [
             document.body.appendChild(form);
             form.submit();
         }
+        // =====================================================
+        // BANCO DE IMAGENS (Stock)
+        // =====================================================
+        let stockImagesCache = null;
+        let stockCategoriesCache = null;
+        
+        function openStockModal() {
+            document.getElementById('stock-modal').classList.remove('hidden');
+            document.getElementById('stock-modal').classList.add('flex');
+            loadStockImages();
+        }
+        
+        function closeStockModal() {
+            document.getElementById('stock-modal').classList.add('hidden');
+            document.getElementById('stock-modal').classList.remove('flex');
+        }
+        
+        async function loadStockImages(category = '', search = '') {
+            const grid = document.getElementById('stock-grid');
+            grid.innerHTML = '<p class="col-span-full text-center text-gray-400 py-8">Carregando...</p>';
+            
+            try {
+                let url = 'stock-images.php';
+                // Use API endpoint
+                url = '../api/stock-images.php';
+                const params = new URLSearchParams();
+                if (category) params.set('category', category);
+                if (search) params.set('search', search);
+                if (params.toString()) url += '?' + params.toString();
+                
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                if (!data.success) throw new Error(data.error || 'Erro');
+                
+                stockImagesCache = data.images;
+                stockCategoriesCache = data.categories;
+                
+                // Render tabs
+                renderStockTabs(data.categories, category);
+                
+                // Render grid
+                if (data.images.length === 0) {
+                    grid.innerHTML = '<p class="col-span-full text-center text-gray-400 py-8">Nenhuma imagem encontrada.</p>';
+                    return;
+                }
+                
+                grid.innerHTML = data.images.map(img => `
+                    <div class="stock-thumb" onclick="selectStockImage(${img.id})" data-id="${img.id}">
+                        <img src="${img.image_url}" alt="${escHtml(img.name)}" loading="lazy">
+                        ${img.has_video ? '<span class="stock-video-icon">🎬</span>' : ''}
+                        <p class="text-xs text-center py-1 px-1 truncate text-gray-300">${escHtml(img.name)}</p>
+                    </div>
+                `).join('');
+                
+            } catch (err) {
+                grid.innerHTML = `<p class="col-span-full text-center text-red-400 py-8">Erro: ${err.message}</p>`;
+            }
+        }
+        
+        function renderStockTabs(categories, active) {
+            const container = document.getElementById('stock-tabs');
+            let html = `<span class="stock-tab ${!active ? 'active' : ''}" onclick="filterStockCategory('')">Todas</span>`;
+            categories.forEach(cat => {
+                html += `<span class="stock-tab ${active === cat ? 'active' : ''}" onclick="filterStockCategory('${cat}')">${cat}</span>`;
+            });
+            container.innerHTML = html;
+        }
+        
+        function filterStockCategory(cat) {
+            const search = document.getElementById('stock-search').value;
+            loadStockImages(cat, search);
+        }
+        
+        function searchStock() {
+            const search = document.getElementById('stock-search').value;
+            // Get active tab
+            const activeTab = document.querySelector('.stock-tab.active');
+            const cat = activeTab ? (activeTab.textContent.trim().toLowerCase() === 'todas' ? '' : activeTab.textContent.trim().toLowerCase()) : '';
+            loadStockImages(cat, search);
+        }
+        
+        function selectStockImage(id) {
+            const img = stockImagesCache.find(i => i.id === id);
+            if (!img) return;
+            
+            // Set image
+            document.getElementById('form-current-image').value = img.image_url;
+            document.getElementById('preview-img').src = img.image_url;
+            document.getElementById('current-image-preview').classList.remove('hidden');
+            
+            // Show stock badge
+            document.getElementById('stock-badge').classList.remove('hidden');
+            document.getElementById('upload-badge').classList.add('hidden');
+            
+            // Set video if available
+            if (img.has_video && img.video_url) {
+                document.getElementById('form-current-video').value = img.video_url;
+                const videoPreview = document.getElementById('current-video-preview');
+                const previewVideo = document.getElementById('preview-video');
+                if (videoPreview && previewVideo) {
+                    previewVideo.querySelector('source').src = img.video_url;
+                    previewVideo.load();
+                    videoPreview.classList.remove('hidden');
+                }
+            }
+            
+            closeStockModal();
+        }
+        
+        function onFileImageSelected() {
+            // When user selects a file upload, clear stock badges
+            document.getElementById('stock-badge').classList.add('hidden');
+            document.getElementById('upload-badge').classList.remove('hidden');
+            document.getElementById('form-current-image').value = '';
+        }
+        
+        // Debounce for search
+        let stockSearchTimeout;
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchInput = document.getElementById('stock-search');
+            if (searchInput) {
+                searchInput.addEventListener('input', () => {
+                    clearTimeout(stockSearchTimeout);
+                    stockSearchTimeout = setTimeout(searchStock, 300);
+                });
+            }
+        });
     </script>
+    
+    <!-- Modal do Banco de Imagens -->
+    <div id="stock-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[60]">
+        <div class="bg-gray-800 rounded-lg max-w-xl w-full mx-4 modal-container" style="max-height: 80vh;">
+            <div class="modal-header flex items-center justify-between">
+                <h2 class="text-lg font-bold">📸 Banco de Imagens</h2>
+                <button type="button" onclick="closeStockModal()" class="text-gray-400 hover:text-white text-xl">✕</button>
+            </div>
+            <div class="px-4 py-3 border-b border-gray-700">
+                <input type="text" id="stock-search" placeholder="Buscar por nome ou tag..."
+                       class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm mb-2">
+                <div id="stock-tabs" class="flex flex-wrap gap-1.5">
+                    <!-- Tabs renderizadas via JS -->
+                </div>
+            </div>
+            <div class="p-4 overflow-y-auto flex-1">
+                <div id="stock-grid" class="stock-grid">
+                    <!-- Grid renderizado via JS -->
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
