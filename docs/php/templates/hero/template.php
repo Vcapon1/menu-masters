@@ -74,8 +74,8 @@
         /* Hero Section - Parallax Mobile */
         .hero {
             position: relative;
-            height: 45vh;
-            min-height: 300px;
+            height: 35vh;
+            min-height: 250px;
             max-height: 450px;
             overflow: hidden;
         }
@@ -118,8 +118,8 @@
         }
         
         .hero-logo {
-            max-width: 200px;
-            max-height: 150px;
+            max-width: 70%;
+            max-height: 200px;
             width: auto;
             height: auto;
             object-fit: contain;
@@ -137,8 +137,12 @@
         /* Social Bar */
         .social-bar {
             background: var(--card-bg);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            padding: 12px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 5px 16px;
+    position: fixed;
+    bottom: 0px;
+    width: 100%;
+    z-index: 1;
         }
         
         .social-bar-inner {
@@ -153,8 +157,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 44px;
-            height: 44px;
+            width: 33px;
+            height: 33px;
             border-radius: 50%;
             background: rgba(255, 255, 255, 0.08);
             color: var(--font);
@@ -169,8 +173,8 @@
         }
         
         .social-link svg {
-            width: 22px;
-            height: 22px;
+            width: 17px;
+            height: 17px;
             fill: currentColor;
         }
         
@@ -244,12 +248,12 @@
         
         .category-chip {
             flex-shrink: 0;
-            padding: 10px 20px;
+            padding: 6px 14px;
             background: transparent;
-            border: 2px solid var(--primary);
+            border: 1px solid var(--primary);
             border-radius: 50px;
             color: var(--primary);
-            font-size: 0.875rem;
+            font-size: 0.675rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
@@ -911,6 +915,14 @@
                         <span id="modalOldPrice" class="modal-price-old"></span>
                         <span id="modalPrice" class="modal-price"></span>
                     </div>
+                    <button id="modalOrderBtn" class="product-order-btn hidden" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                            <circle cx="9" cy="21" r="1"/>
+                            <circle cx="20" cy="21" r="1"/>
+                        </svg>
+                        Pedir
+                    </button>
                 </div>
                 <div class="modal-scrollable">
                     <p id="modalDescription" class="modal-description"></p>
@@ -945,6 +957,29 @@
         }, { passive: true });
         
         // Product Modal Functions
+        
+        let __scrollTopBeforeModal = 0;
+
+function lockPageScroll() {
+    __scrollTopBeforeModal = window.scrollY || document.documentElement.scrollTop;
+
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${__scrollTopBeforeModal}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.width = '100%';
+}
+
+function unlockPageScroll() {
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    document.body.style.width = '';
+
+    window.scrollTo(0, __scrollTopBeforeModal);
+}
+
         function openProductModal(product) {
             const modal = document.getElementById('productModal');
             const img = document.getElementById('modalImage');
@@ -999,7 +1034,7 @@
             
             // Show modal
             modal.classList.add('active');
-            document.body.style.overflow = 'hidden';
+           lockPageScroll();
             
             // Log product view
             logProductView(product.id);
@@ -1012,7 +1047,7 @@
             modal.classList.remove('active');
             video.pause();
             video.src = '';
-            document.body.style.overflow = '';
+            unlockPageScroll();
         }
         
         // Close modal on Escape key
@@ -1044,7 +1079,13 @@
                 }
             });
         }
-        
+        const __productModal = document.getElementById('productModal');
+
+__productModal.addEventListener('touchmove', function (e) {
+    // permite rolar somente dentro da área rolável do modal
+    const scrollable = e.target.closest('.modal-scrollable');
+    if (!scrollable) e.preventDefault();
+}, { passive: false });
         window.addEventListener('scroll', updateActiveCategory);
         updateActiveCategory();
         
