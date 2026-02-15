@@ -980,7 +980,10 @@ function unlockPageScroll() {
     window.scrollTo(0, __scrollTopBeforeModal);
 }
 
+        var __currentModalProduct = null;
+
         function openProductModal(product) {
+            __currentModalProduct = product;
             const modal = document.getElementById('productModal');
             const img = document.getElementById('modalImage');
             const video = document.getElementById('modalVideo');
@@ -1030,6 +1033,32 @@ function unlockPageScroll() {
             }
             if (product.badges && product.badges.includes('new')) {
                 badgesEl.innerHTML += '<span class="badge badge-new">Novo</span>';
+            }
+            
+            // Show/hide order button based on cart mode
+            const orderBtn = document.getElementById('modalOrderBtn');
+            if (orderBtn && typeof Cart !== 'undefined' && IS_OPEN) {
+                orderBtn.classList.remove('hidden');
+                orderBtn.onclick = function() {
+                    // Build cart-compatible product object
+                    const priceStr = (product.price || '').replace('.', '').replace(',', '.');
+                    const oldPriceStr = product.oldPrice ? product.oldPrice.replace('.', '').replace(',', '.') : null;
+                    const numPrice = parseFloat(priceStr) || 0;
+                    const numOldPrice = oldPriceStr ? parseFloat(oldPriceStr) : null;
+                    
+                    const cartProduct = {
+                        id: product.id,
+                        name: product.name,
+                        price: numOldPrice || numPrice,
+                        promoPrice: numOldPrice ? numPrice : null,
+                        image: product.image || '',
+                        sizesPrices: null
+                    };
+                    closeProductModal();
+                    Cart.openVariationsModal(cartProduct);
+                };
+            } else if (orderBtn) {
+                orderBtn.classList.add('hidden');
             }
             
             // Show modal
