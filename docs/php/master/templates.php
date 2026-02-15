@@ -108,7 +108,8 @@ $plans = getPlans();
                                 'modern' => '✨',
                                 'elegant' => '👔',
                                 'minimal' => '⚪',
-                                'dark' => '🌙'
+                                'dark' => '🌙',
+                                'zen' => '🏯'
                             ];
                             echo $icons[$template['slug']] ?? '📄';
                             ?>

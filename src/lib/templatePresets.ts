@@ -115,6 +115,17 @@ export const templatePresets: Record<string, TemplatePreset> = {
     fontColor: "#1f2937",
     description: "Focado em imagens grandes - verde fresco",
   },
+  zen: {
+    id: "zen",
+    name: "Zen",
+    primaryColor: "#d4a574",
+    secondaryColor: "#a3845a",
+    accentColor: "#f59e0b",
+    buttonColor: "#d4a574",
+    buttonTextColor: "#0c0a09",
+    fontColor: "#fafaf9",
+    description: "Minimalista oriental - dourado elegante com fundo escuro",
+  },
 };
 
 export const getTemplatePreset = (templateId: string): TemplatePreset | undefined => {
