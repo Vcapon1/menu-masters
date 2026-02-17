@@ -126,6 +126,17 @@ export const templatePresets: Record<string, TemplatePreset> = {
     fontColor: "#fafaf9",
     description: "Minimalista oriental - dourado elegante com fundo escuro",
   },
+  pizzaria: {
+    id: "pizzaria",
+    name: "Pizzaria",
+    primaryColor: "#c0392b",
+    secondaryColor: "#d4a574",
+    accentColor: "#e74c3c",
+    buttonColor: "#c0392b",
+    buttonTextColor: "#ffffff",
+    fontColor: "#faf5f0",
+    description: "Tema quente para pizzarias - vermelho com dourado",
+  },
 };
 
 export const getTemplatePreset = (templateId: string): TemplatePreset | undefined => {

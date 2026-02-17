@@ -109,7 +109,8 @@ $plans = getPlans();
                                 'elegant' => '👔',
                                 'minimal' => '⚪',
                                 'dark' => '🌙',
-                                'zen' => '🏯'
+                                'zen' => '🏯',
+                                'pizzaria' => '🍕'
                             ];
                             echo $icons[$template['slug']] ?? '📄';
                             ?>

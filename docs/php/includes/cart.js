@@ -581,10 +581,213 @@ const Cart = {
 
         localStorage.setItem('checkout_data', JSON.stringify(checkoutData));
         window.location.href = `/checkout.php?restaurant=${RESTAURANT.slug}&mode=${mode}`;
-    }
-};
+    },
 
-// ========== OrderTracker: Barra de Status do Pedido ==========
+    // ========== Pizza Builder (Multi-Sabor) ==========
+    openPizzaBuilder(categoryId) {
+        if (!IS_OPEN) {
+            this.showToast('Restaurante fechado no momento');
+            return;
+        }
+
+        const catData = (typeof MULTI_FLAVOR_CATEGORIES !== 'undefined') ? MULTI_FLAVOR_CATEGORIES[categoryId] : null;
+        if (!catData || !catData.products || catData.products.length === 0) {
+            this.showToast('Nenhum sabor disponível');
+            return;
+        }
+
+        const flavorConfig = catData.flavorConfig || {};
+        const products = catData.products;
+
+        // Extrair tamanhos dos produtos
+        const sizesMap = {};
+        products.forEach(p => {
+            if (p.sizesPrices && Array.isArray(p.sizesPrices)) {
+                p.sizesPrices.forEach(sp => {
+                    if (!sizesMap[sp.label]) sizesMap[sp.label] = [];
+                    sizesMap[sp.label].push(parseFloat(sp.price));
+                });
+            }
+        });
+
+        const sizes = Object.keys(sizesMap);
+        if (sizes.length === 0) {
+            this.showToast('Nenhum tamanho configurado');
+            return;
+        }
+
+        const modal = document.createElement('div');
+        modal.id = 'pizza-builder-modal';
+        modal.className = 'variations-modal active';
+
+        const sizesHtml = sizes.map((s, i) => {
+            const minPrice = Math.min(...sizesMap[s]);
+            const maxFlavors = flavorConfig[s] || 1;
+            return `
+                <label class="var-option">
+                    <input type="radio" name="pb-size" value="${s}" data-max-flavors="${maxFlavors}" ${i === 0 ? 'checked' : ''}>
+                    <span class="var-option-label">
+                        ${s}
+                        <small style="display:block;font-size:0.7rem;color:rgba(255,255,255,0.4);margin-top:2px;">
+                            ${maxFlavors > 1 ? 'até ' + maxFlavors + ' sabores' : '1 sabor'}
+                        </small>
+                    </span>
+                    <span class="var-option-price">a partir de R$ ${minPrice.toFixed(2).replace('.', ',')}</span>
+                </label>
+            `;
+        }).join('');
+
+        modal.innerHTML = `
+            <div class="variations-overlay" onclick="Cart.closePizzaBuilder()"></div>
+            <div class="variations-content">
+                <div class="variations-header">
+                    <h3>🍕 Montar Pizza</h3>
+                    <button onclick="Cart.closePizzaBuilder()" class="variations-close">&times;</button>
+                </div>
+                <div class="variations-body">
+                    <div id="pb-step-size">
+                        <div class="var-group">
+                            <h4 class="var-group-title">Escolha o tamanho <span class="var-required">*obrigatório</span></h4>
+                            <div class="var-options">${sizesHtml}</div>
+                        </div>
+                    </div>
+                    <div id="pb-step-flavors" style="display:none;"></div>
+                </div>
+                <div class="variations-footer">
+                    <div id="pb-price-display" style="font-size:1.1rem;font-weight:700;color:var(--secondary, #fbbf24);"></div>
+                    <button id="pb-action-btn" onclick="Cart.pizzaBuilderAction()" class="var-add-btn">
+                        Escolher sabores
+                    </button>
+                </div>
+            </div>
+        `;
+
+        modal._categoryId = categoryId;
+        modal._catData = catData;
+        modal._step = 'size';
+        modal._selectedSize = sizes[0];
+
+        document.body.appendChild(modal);
+        document.body.style.overflow = 'hidden';
+
+        modal.querySelectorAll('input[name="pb-size"]').forEach(input => {
+            input.addEventListener('change', () => {
+                modal._selectedSize = input.value;
+                const maxF = parseInt(input.dataset.maxFlavors) || 1;
+                document.getElementById('pb-action-btn').textContent = maxF <= 1 ? 'Ver sabores' : 'Escolher sabores';
+            });
+        });
+
+        const firstMax = parseInt(modal.querySelector('input[name="pb-size"]:checked')?.dataset.maxFlavors) || 1;
+        document.getElementById('pb-action-btn').textContent = firstMax <= 1 ? 'Ver sabores' : 'Escolher sabores';
+    },
+
+    pizzaBuilderAction() {
+        const modal = document.getElementById('pizza-builder-modal');
+        if (!modal) return;
+
+        if (modal._step === 'size') {
+            const sizeInput = modal.querySelector('input[name="pb-size"]:checked');
+            if (!sizeInput) { this.showToast('Selecione um tamanho'); return; }
+
+            const selectedSize = sizeInput.value;
+            const maxFlavors = parseInt(sizeInput.dataset.maxFlavors) || 1;
+            modal._selectedSize = selectedSize;
+
+            if (maxFlavors <= 1) {
+                this.closePizzaBuilder();
+                this.showToast('Escolha seu sabor abaixo');
+                return;
+            }
+
+            modal._step = 'flavors';
+            modal._maxFlavors = maxFlavors;
+            const products = modal._catData.products;
+
+            let flavorsHtml = '';
+            products.forEach(p => {
+                let price = p.price;
+                if (p.sizesPrices && Array.isArray(p.sizesPrices)) {
+                    const sp = p.sizesPrices.find(s => s.label === selectedSize);
+                    if (sp) price = parseFloat(sp.price);
+                }
+                flavorsHtml += `
+                    <label class="var-option pb-flavor-option">
+                        <input type="checkbox" name="pb-flavor" value="${p.id}" data-name="${p.name}" data-price="${price}" data-image="${p.image || ''}">
+                        ${p.image ? '<img src="' + p.image + '" style="width:48px;height:48px;border-radius:8px;object-fit:cover;flex-shrink:0;">' : ''}
+                        <span class="var-option-label">${p.name}</span>
+                        <span class="var-option-price">R$ ${parseFloat(price).toFixed(2).replace('.', ',')}</span>
+                    </label>
+                `;
+            });
+
+            document.getElementById('pb-step-size').style.display = 'none';
+            const flavorsDiv = document.getElementById('pb-step-flavors');
+            flavorsDiv.style.display = 'block';
+            flavorsDiv.innerHTML = `
+                <div class="var-group">
+                    <h4 class="var-group-title">
+                        Escolha os sabores
+                        <span class="var-max" id="pb-flavor-counter">0/${maxFlavors}</span>
+                    </h4>
+                    <div class="var-options">${flavorsHtml}</div>
+                </div>
+            `;
+
+            document.getElementById('pb-action-btn').textContent = 'Adicionar ao carrinho';
+            this._updatePBPrice();
+
+            flavorsDiv.querySelectorAll('input[name="pb-flavor"]').forEach(cb => {
+                cb.addEventListener('change', () => {
+                    const checked = flavorsDiv.querySelectorAll('input[name="pb-flavor"]:checked');
+                    if (checked.length > maxFlavors) {
+                        cb.checked = false;
+                        this.showToast('Máximo ' + maxFlavors + ' sabores');
+                        return;
+                    }
+                    document.getElementById('pb-flavor-counter').textContent = checked.length + '/' + maxFlavors;
+                    this._updatePBPrice();
+                });
+            });
+
+        } else if (modal._step === 'flavors') {
+            const checked = document.getElementById('pb-step-flavors').querySelectorAll('input[name="pb-flavor"]:checked');
+            if (checked.length === 0) { this.showToast('Selecione pelo menos 1 sabor'); return; }
+
+            const selectedSize = modal._selectedSize;
+            let maxPrice = 0;
+            const variations = [];
+
+            checked.forEach((cb, idx) => {
+                const price = parseFloat(cb.dataset.price) || 0;
+                if (price > maxPrice) maxPrice = price;
+                variations.push({ group: 'Sabor ' + (idx + 1), option: cb.dataset.name, price: 0 });
+            });
+
+            const n = checked.length;
+            const productName = 'Pizza ' + selectedSize + ' (' + n + (n > 1 ? ' sabores' : ' sabor') + ')';
+
+            this.addItem(
+                { id: 'pizza_' + modal._categoryId + '_' + Date.now(), name: productName, price: maxPrice, promoPrice: null, image: checked[0]?.dataset.image || null },
+                1, selectedSize, maxPrice, variations, ''
+            );
+            this.closePizzaBuilder();
+        }
+    },
+
+    _updatePBPrice() {
+        const checked = document.querySelectorAll('#pb-step-flavors input[name="pb-flavor"]:checked');
+        let maxPrice = 0;
+        checked.forEach(cb => { const p = parseFloat(cb.dataset.price) || 0; if (p > maxPrice) maxPrice = p; });
+        const el = document.getElementById('pb-price-display');
+        if (el) el.textContent = checked.length > 0 ? 'R$ ' + maxPrice.toFixed(2).replace('.', ',') : '';
+    },
+
+    closePizzaBuilder() {
+        const modal = document.getElementById('pizza-builder-modal');
+        if (modal) { modal.remove(); document.body.style.overflow = ''; }
+    },
+};
 const OrderTracker = {
     _interval: null,
     _bar: null,
