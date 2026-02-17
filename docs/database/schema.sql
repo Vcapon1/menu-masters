@@ -64,7 +64,8 @@ INSERT INTO `templates` (`name`, `slug`, `description`, `min_plan_id`, `has_grid
 ('Hero', 'hero', 'Design impactante com hero banner - ideal para hamburgerias', 2, 1, 1, 1, 1, '{"primary": "#f59e0b", "secondary": "#fbbf24", "accent": "#f97316", "button": "#f59e0b", "buttonText": "#000000", "font": "#ffffff"}'),
 ('Elegante', 'elegant', 'Sofisticado - tons amadeirados e dourados', 3, 1, 1, 1, 1, '{"primary": "#b45309", "secondary": "#78350f", "accent": "#d97706", "button": "#b45309", "buttonText": "#ffffff", "font": "#292524"}'),
 ('Minimalista', 'minimal', 'Ultra clean - preto e branco sofisticado', 3, 0, 1, 1, 1, '{"primary": "#18181b", "secondary": "#71717a", "accent": "#3f3f46", "button": "#18181b", "buttonText": "#ffffff", "font": "#18181b"}'),
-('Dark Mode', 'dark', 'Tema escuro moderno - roxo sofisticado', 3, 1, 1, 1, 1, '{"primary": "#7c3aed", "secondary": "#a78bfa", "accent": "#8b5cf6", "button": "#7c3aed", "buttonText": "#ffffff", "font": "#f4f4f5"}');
+('Dark Mode', 'dark', 'Tema escuro moderno - roxo sofisticado', 3, 1, 1, 1, 1, '{"primary": "#7c3aed", "secondary": "#a78bfa", "accent": "#8b5cf6", "button": "#7c3aed", "buttonText": "#ffffff", "font": "#f4f4f5"}'),
+('Pizzaria', 'pizzaria', 'Tema quente para pizzarias - vermelho com dourado, Pizza Builder integrado', 1, 0, 1, 1, 1, '{"primary": "#c0392b", "secondary": "#d4a574", "accent": "#e74c3c", "button": "#c0392b", "buttonText": "#ffffff", "font": "#faf5f0"}');
 
 -- =====================================================
 -- TABELA: restaurants (Restaurantes/Clientes)
@@ -135,6 +136,8 @@ CREATE TABLE IF NOT EXISTS `categories` (
   `image` VARCHAR(500),
   `sort_order` INT NOT NULL DEFAULT 0,
   `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+  `allow_multi_flavor` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Habilita montagem multi-sabor (pizzas)',
+  `flavor_config` JSON DEFAULT NULL COMMENT 'Limite de sabores por tamanho: {"P": 1, "M": 2, "G": 3}',
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   

@@ -73,6 +73,31 @@ if ($cartMode) {
     }
 }
 
+// Coletar dados de categorias multi-sabor para Pizza Builder
+$multiFlavorCategories = [];
+foreach ($categories as $category) {
+    if (!empty($category['allow_multi_flavor'])) {
+        $flavorConfig = json_decode($category['flavor_config'] ?? '{}', true) ?: [];
+        $categoryProducts = $productsByCategory[$category['id']] ?? [];
+        $builderProducts = [];
+        foreach ($categoryProducts as $p) {
+            if (!$p['is_available']) continue;
+            $sp = json_decode($p['sizes_prices'] ?? 'null', true);
+            $builderProducts[] = [
+                'id' => $p['id'],
+                'name' => $p['name'],
+                'image' => $p['image'] ?? '',
+                'price' => (float)$p['price'],
+                'sizesPrices' => $sp ?: []
+            ];
+        }
+        $multiFlavorCategories[$category['id']] = [
+            'flavorConfig' => $flavorConfig,
+            'products' => $builderProducts
+        ];
+    }
+}
+
 // Gerar CSS customizado
 $customCss = generateCssVariables($restaurant);
 
