@@ -64,6 +64,14 @@
             --badge-vegan: #22c55e;
         }
         
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+
+        
         html { scroll-behavior: smooth; }
         
         body {
@@ -78,9 +86,7 @@
         /* ===== HERO - Minimal with subtle overlay ===== */
         .hero {
             position: relative;
-            height: 28vh;
-            min-height: 200px;
-            max-height: 350px;
+            height: 100px;
             overflow: hidden;
         }
         
@@ -96,17 +102,7 @@
             filter: brightness(0.5);
         }
         
-        .hero::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(
-                to bottom,
-                transparent 0%,
-                rgba(12, 10, 9, 0.5) 60%,
-                var(--background) 100%
-            );
-        }
+        
         
         .hero-content {
             position: absolute;
@@ -116,12 +112,12 @@
             flex-direction: column;
             align-items: center;
             justify-content: flex-end;
-            padding: 0 20px 24px;
+            padding: 0 20px;
         }
         
         .hero-logo {
             max-width: 60%;
-            max-height: 120px;
+            max-height: 100px;
             width: auto;
             height: auto;
             object-fit: contain;
@@ -315,7 +311,7 @@
         
         .product-card {
             position: relative;
-            border-radius: 16px;
+            display: flex;
             overflow: hidden;
             background: var(--surface);
             border: 1px solid var(--border);
@@ -335,8 +331,8 @@
         
         .product-image-wrapper {
             position: relative;
-            width: 100%;
-            aspect-ratio: 16/9;
+            width: 30%;
+            aspect-ratio: 1 / 1;
             overflow: hidden;
         }
         
@@ -409,6 +405,7 @@
         /* Product info - below image, clean */
         .product-info {
             padding: 14px 16px 16px;
+            width: 70%;
         }
         
         .product-rating {
@@ -574,15 +571,14 @@
         .modal-content {
             position: relative;
             width: 100%;
-            max-width: 500px;
-            max-height: 90vh;
+            /* max-width: 500px; */
+            max-height: 100vh;
             background: var(--background);
-            border-radius: 24px 24px 0 0;
+            /* border-radius: 24px 24px 0 0; */
             overflow: hidden;
             transform: translateY(100%);
             transition: transform 0.3s ease;
-            display: flex;
-            flex-direction: column;
+            display: inline-grid;
         }
         
         .modal.active .modal-content {
@@ -616,7 +612,6 @@
         .modal-media {
             position: relative;
             width: 100%;
-            aspect-ratio: 4/3;
             background: var(--surface);
             overflow: hidden;
             flex-shrink: 0;
@@ -635,9 +630,13 @@
         
         .modal-info {
             display: flex;
+                width: 100%;
+            position: absolute;
             flex-direction: column;
+            bottom: 0;
             flex: 1;
             min-height: 0;
+            background: linear-gradient(0deg, rgba(0, 0, 0, 0.78) 1%, rgba(0, 0, 0, 0.65) 50%, rgba(0, 0, 0, 0) 100%);
         }
         
         .modal-header {
@@ -657,6 +656,7 @@
         
         .modal-name {
             font-family: 'Noto Serif JP', serif;
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.92);
             font-size: 1.5rem;
             font-weight: 700;
             margin-bottom: 8px;
@@ -664,6 +664,7 @@
         }
         
         .modal-price-row {
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.92);
             display: flex;
             align-items: baseline;
             gap: 12px;
@@ -775,12 +776,13 @@
                 aspect-ratio: 16/10;
             }
         }
+    
     </style>
 </head>
-<body>
+<body style="background-image: url('<?= htmlspecialchars($restaurant['background_image'] ?? '') ?>')">
     <!-- Hero Section -->
     <section class="hero">
-        <div class="hero-bg" id="heroBg" style="background-image: url('<?= htmlspecialchars($restaurant['banner'] ?? '') ?>')"></div>
+       
         <div class="hero-content">
             <?php if ($restaurant['logo']): ?>
                 <img 
