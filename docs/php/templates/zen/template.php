@@ -81,6 +81,9 @@
             min-height: 100vh;
             line-height: 1.6;
             -webkit-font-smoothing: antialiased;
+                background-position: center;
+    background-attachment: fixed;
+    background-size: cover;
         }
         
         /* ===== HERO - Minimal with subtle overlay ===== */
@@ -109,9 +112,9 @@
             inset: 0;
             z-index: 2;
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
             align-items: center;
-            justify-content: flex-end;
+            justify-content: space-between;
             padding: 0 20px;
         }
         
@@ -424,11 +427,11 @@
         
         .play-icon {
             position: absolute;
-            top: 12px;
+            bottom: 12px;
             right: 12px;
-            width: 36px;
-            height: 36px;
-            background: rgba(0,0,0,0.5);
+            width: 26px;
+            height: 26px;
+            background: rgba(0, 0, 0, 0.5);
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -670,7 +673,7 @@
             position: relative;
             width: 100%;
             /* max-width: 500px; */
-            max-height: 100vh;
+            height: 100vh;
             background: var(--background);
             /* border-radius: 24px 24px 0 0; */
             overflow: hidden;
