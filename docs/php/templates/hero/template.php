@@ -134,39 +134,6 @@
             text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
         }
 
-        /* Hero status badge (open/closed + hours) */
-        .hero-status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            margin-top: 12px;
-            padding: 5px 14px 5px 10px;
-            border-radius: 50px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255,255,255,0.15);
-            text-shadow: none;
-        }
-        .hero-status-badge.open {
-            background: rgba(34, 197, 94, 0.18);
-            color: #86efac;
-            border-color: rgba(34, 197, 94, 0.3);
-        }
-        .hero-status-badge.closed {
-            background: rgba(239, 68, 68, 0.18);
-            color: #fca5a5;
-            border-color: rgba(239, 68, 68, 0.3);
-        }
-        .hero-status-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            flex-shrink: 0;
-        }
-        .hero-status-badge.open .hero-status-dot { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
-        .hero-status-badge.closed .hero-status-dot { background: #ef4444; }
-        
         /* Social Bar */
         .social-bar {
             background: var(--card-bg);
@@ -730,26 +697,7 @@
                 <h1 class="hero-name"><?= htmlspecialchars($restaurant['name']) ?></h1>
             <?php endif; ?>
 
-            <?php if ($cartMode): ?>
-                <?php
-                // Calcular horário de funcionamento do dia atual
-                $scheduleLabel = '';
-                $schedule = json_decode($restaurant['schedule'] ?? '{}', true) ?: [];
-                $weekdays = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
-                $todayKey = $weekdays[(int)date('w')];
-                if (!empty($schedule[$todayKey]) && !empty($schedule[$todayKey]['open']) && !empty($schedule[$todayKey]['close'])) {
-                    $scheduleLabel = $schedule[$todayKey]['open'] . ' – ' . $schedule[$todayKey]['close'];
-                }
-                ?>
-                <div class="hero-status-badge <?= $isOpen ? 'open' : 'closed' ?>">
-                    <span class="hero-status-dot"></span>
-                    <?php if ($isOpen): ?>
-                        Aberto<?php if ($scheduleLabel): ?> · <?= htmlspecialchars($scheduleLabel) ?><?php endif; ?>
-                    <?php else: ?>
-                        Fechado<?php if ($scheduleLabel): ?> · Abre <?= htmlspecialchars($scheduleLabel) ?><?php endif; ?>
-                    <?php endif; ?>
-                </div>
-            <?php endif; ?>
+            
         </div>
     </section>
     
