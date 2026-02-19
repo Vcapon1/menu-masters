@@ -555,6 +555,63 @@
             visibility: hidden;
             transition: all 0.3s ease;
         }
+
+        /* ===== Modal Nav Arrows ===== */
+        .modal-nav {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 48px;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        .modal-nav:hover { opacity: 1 !important; }
+        .modal-content:hover .modal-nav { opacity: 0.6; }
+        .modal-nav-prev { left: 0; }
+        .modal-nav-next { right: 0; }
+        .modal-nav-btn {
+            width: 36px;
+            height: 36px;
+            background: rgba(12,10,9,0.75);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 50%;
+            color: var(--font);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(6px);
+            transition: background 0.2s;
+        }
+        .modal-nav-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.5; }
+
+        /* Swipe hint indicator */
+        .modal-swipe-hint {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 5px;
+            padding: 8px 0 6px;
+            z-index: 20;
+        }
+        .modal-swipe-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.25);
+            transition: all 0.25s ease;
+        }
+        .modal-swipe-dot.active {
+            background: var(--primary);
+            width: 16px;
+            border-radius: 3px;
+        }
         
         .modal.active {
             opacity: 1;
@@ -1009,10 +1066,25 @@
         <div class="modal-overlay" onclick="closeProductModal()"></div>
         <div class="modal-content">
             <button class="modal-close" onclick="closeProductModal()">&times;</button>
+
+            <!-- Nav arrows -->
+            <div class="modal-nav modal-nav-prev" id="modalNavPrev" onclick="navigateModal(-1)">
+                <div class="modal-nav-btn">
+                    <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+                </div>
+            </div>
+            <div class="modal-nav modal-nav-next" id="modalNavNext" onclick="navigateModal(1)">
+                <div class="modal-nav-btn">
+                    <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+                </div>
+            </div>
             
             <div class="modal-media">
                 <img id="modalImage" src="" alt="">
                 <video id="modalVideo" autoplay loop muted playsinline style="display: none;"></video>
+
+                <!-- Swipe dots indicator -->
+                <div class="modal-swipe-hint" id="modalSwipeDots"></div>
             </div>
             
             <div class="modal-info">
@@ -1043,29 +1115,40 @@
     
     <script>
         // Hero Parallax (subtle)
-        const heroBg = document.getElementById('heroBg');
-        let ticking = false;
-        
+        var heroBg = document.getElementById('heroBg');
+        var ticking = false;
+
         function updateParallax() {
-            const scrollY = window.scrollY;
-            const heroHeight = document.querySelector('.hero').offsetHeight;
+            var scrollY = window.scrollY;
+            var heroHeight = document.querySelector('.hero').offsetHeight;
             if (scrollY < heroHeight) {
                 heroBg.style.transform = 'translateY(' + (scrollY * 0.3) + 'px)';
             }
             ticking = false;
         }
-        
+
         window.addEventListener('scroll', function() {
             if (!ticking) {
                 requestAnimationFrame(updateParallax);
                 ticking = true;
             }
         }, { passive: true });
-        
-        // Modal
-        let __scrollTopBeforeModal = 0;
+
+        // ===== Modal & Swipe Navigation =====
+        var __scrollTopBeforeModal = 0;
         var __currentModalProduct = null;
-        
+        var __allProducts = []; // flat list built from PHP
+        var __currentModalIndex = 0;
+
+        // Build flat product list from DOM (available products only)
+        document.querySelectorAll('.product-card:not(.unavailable)').forEach(function(card) {
+            var onclick = card.getAttribute('onclick') || '';
+            var match = onclick.match(/openProductModal\((.+)\)$/);
+            if (match) {
+                try { __allProducts.push(JSON.parse(match[1])); } catch(e) {}
+            }
+        });
+
         function lockPageScroll() {
             __scrollTopBeforeModal = window.scrollY || document.documentElement.scrollTop;
             document.body.style.position = 'fixed';
@@ -1074,7 +1157,7 @@
             document.body.style.right = '0';
             document.body.style.width = '100%';
         }
-        
+
         function unlockPageScroll() {
             document.body.style.position = '';
             document.body.style.top = '';
@@ -1083,13 +1166,11 @@
             document.body.style.width = '';
             window.scrollTo(0, __scrollTopBeforeModal);
         }
-        
-        function openProductModal(product) {
-            __currentModalProduct = product;
-            var modal = document.getElementById('productModal');
+
+        function renderModalContent(product) {
             var img = document.getElementById('modalImage');
             var video = document.getElementById('modalVideo');
-            
+
             if (product.video) {
                 img.style.display = 'none';
                 video.style.display = 'block';
@@ -1104,11 +1185,11 @@
                 img.style.display = 'block';
                 img.src = product.image || '';
             }
-            
+
             document.getElementById('modalName').textContent = product.name;
             document.getElementById('modalDescription').textContent = product.description || '';
             document.getElementById('modalPrice').textContent = 'R$ ' + product.price;
-            
+
             var oldPriceEl = document.getElementById('modalOldPrice');
             if (product.oldPrice) {
                 oldPriceEl.textContent = 'R$ ' + product.oldPrice;
@@ -1116,33 +1197,29 @@
             } else {
                 oldPriceEl.style.display = 'none';
             }
-            
-            // Badges
+
             var badgesEl = document.getElementById('modalBadges');
             badgesEl.innerHTML = '';
             if (product.hasPromo) badgesEl.innerHTML += '<span class="badge badge-promo">Promoção</span>';
             if (product.badges && product.badges.indexOf('chef') !== -1) badgesEl.innerHTML += '<span class="badge badge-chef">⭐ Sugestão do Chef</span>';
             if (product.badges && product.badges.indexOf('vegan') !== -1) badgesEl.innerHTML += '<span class="badge badge-vegan">🌱 Vegano</span>';
             if (product.badges && product.badges.indexOf('new') !== -1) badgesEl.innerHTML += '<span class="badge badge-new">Novo</span>';
-            
+
             // Order button
             var orderArea = document.getElementById('modalOrderArea');
             var orderBtn = document.getElementById('modalOrderBtn');
-            if (orderBtn && typeof Cart !== 'undefined' && IS_OPEN) {
+            if (orderBtn && typeof Cart !== 'undefined' && typeof IS_OPEN !== 'undefined' && IS_OPEN) {
                 orderArea.classList.remove('hidden');
                 orderBtn.onclick = function() {
                     var priceStr = (product.price || '').replace('.', '').replace(',', '.');
                     var oldPriceStr = product.oldPrice ? product.oldPrice.replace('.', '').replace(',', '.') : null;
                     var numPrice = parseFloat(priceStr) || 0;
                     var numOldPrice = oldPriceStr ? parseFloat(oldPriceStr) : null;
-                    
                     var cartProduct = {
-                        id: product.id,
-                        name: product.name,
+                        id: product.id, name: product.name,
                         price: numOldPrice || numPrice,
                         promoPrice: numOldPrice ? numPrice : null,
-                        image: product.image || '',
-                        sizesPrices: null
+                        image: product.image || '', sizesPrices: null
                     };
                     closeProductModal();
                     Cart.openVariationsModal(cartProduct);
@@ -1150,12 +1227,43 @@
             } else if (orderArea) {
                 orderArea.classList.add('hidden');
             }
-            
-            modal.classList.add('active');
+
+            // Update nav arrows visibility
+            document.getElementById('modalNavPrev').style.opacity = __currentModalIndex > 0 ? '' : '0';
+            document.getElementById('modalNavPrev').style.pointerEvents = __currentModalIndex > 0 ? '' : 'none';
+            document.getElementById('modalNavNext').style.opacity = __currentModalIndex < __allProducts.length - 1 ? '' : '0';
+            document.getElementById('modalNavNext').style.pointerEvents = __currentModalIndex < __allProducts.length - 1 ? '' : 'none';
+
+            // Update swipe dots (show max 7 centered around current)
+            var dotsEl = document.getElementById('modalSwipeDots');
+            dotsEl.innerHTML = '';
+            var total = __allProducts.length;
+            if (total > 1 && total <= 20) {
+                var maxDots = Math.min(total, 7);
+                var start = Math.max(0, Math.min(__currentModalIndex - Math.floor(maxDots / 2), total - maxDots));
+                for (var i = start; i < start + maxDots; i++) {
+                    var dot = document.createElement('div');
+                    dot.className = 'modal-swipe-dot' + (i === __currentModalIndex ? ' active' : '');
+                    dotsEl.appendChild(dot);
+                }
+            }
+        }
+
+        function openProductModal(product) {
+            __currentModalProduct = product;
+            // Find index in flat list
+            var idx = -1;
+            for (var i = 0; i < __allProducts.length; i++) {
+                if (__allProducts[i].id === product.id) { idx = i; break; }
+            }
+            __currentModalIndex = idx >= 0 ? idx : 0;
+
+            renderModalContent(product);
+            document.getElementById('productModal').classList.add('active');
             lockPageScroll();
             logProductView(product.id);
         }
-        
+
         function closeProductModal() {
             var modal = document.getElementById('productModal');
             var video = document.getElementById('modalVideo');
@@ -1164,15 +1272,74 @@
             video.src = '';
             unlockPageScroll();
         }
-        
+
+        function navigateModal(direction) {
+            var newIndex = __currentModalIndex + direction;
+            if (newIndex < 0 || newIndex >= __allProducts.length) return;
+            __currentModalIndex = newIndex;
+            var product = __allProducts[__currentModalIndex];
+            __currentModalProduct = product;
+
+            // Slide animation
+            var content = document.querySelector('.modal-content');
+            var slideOut = direction > 0 ? '-60px' : '60px';
+            content.style.transition = 'transform 0.18s ease, opacity 0.18s ease';
+            content.style.transform = 'translateX(' + slideOut + ')';
+            content.style.opacity = '0';
+            setTimeout(function() {
+                renderModalContent(product);
+                content.style.transform = 'translateX(' + (direction > 0 ? '60px' : '-60px') + ')';
+                setTimeout(function() {
+                    content.style.transition = 'transform 0.22s ease, opacity 0.22s ease';
+                    content.style.transform = 'translateX(0)';
+                    content.style.opacity = '1';
+                }, 20);
+            }, 180);
+
+            logProductView(product.id);
+        }
+
+        // Keyboard navigation
         document.addEventListener('keydown', function(e) {
+            var modal = document.getElementById('productModal');
+            if (!modal.classList.contains('active')) return;
             if (e.key === 'Escape') closeProductModal();
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') navigateModal(1);
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') navigateModal(-1);
         });
-        
+
+        // Touch swipe on modal
+        (function() {
+            var modalEl = document.getElementById('productModal');
+            var touchStartX = 0;
+            var touchStartY = 0;
+            modalEl.addEventListener('touchstart', function(e) {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+            }, { passive: true });
+            modalEl.addEventListener('touchend', function(e) {
+                var dx = e.changedTouches[0].clientX - touchStartX;
+                var dy = e.changedTouches[0].clientY - touchStartY;
+                // Only horizontal swipe with enough distance and not inside scrollable
+                if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+                    var scrollable = e.target.closest('.modal-scrollable');
+                    if (!scrollable) {
+                        navigateModal(dx < 0 ? 1 : -1);
+                    }
+                }
+            }, { passive: true });
+        })();
+
+        var __productModal = document.getElementById('productModal');
+        __productModal.addEventListener('touchmove', function(e) {
+            var scrollable = e.target.closest('.modal-scrollable');
+            if (!scrollable) e.preventDefault();
+        }, { passive: false });
+
         // Category active state
         var categoryChips = document.querySelectorAll('.category-chip');
         var sections = document.querySelectorAll('.category-section');
-        
+
         function updateActiveCategory() {
             var scrollY = window.scrollY + 120;
             sections.forEach(function(section) {
@@ -1187,16 +1354,10 @@
                 }
             });
         }
-        
-        var __productModal = document.getElementById('productModal');
-        __productModal.addEventListener('touchmove', function(e) {
-            var scrollable = e.target.closest('.modal-scrollable');
-            if (!scrollable) e.preventDefault();
-        }, { passive: false });
-        
+
         window.addEventListener('scroll', updateActiveCategory);
         updateActiveCategory();
-        
+
         categoryChips.forEach(function(chip) {
             chip.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -1205,7 +1366,7 @@
                 if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
             });
         });
-        
+
         function logProductView(productId) {
             fetch('<?= dirname($_SERVER['SCRIPT_NAME']) ?>/api/log.php', {
                 method: 'POST',
