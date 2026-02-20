@@ -583,7 +583,7 @@ function createOrder(array $data): array {
         $stmt = db()->prepare($sql);
         $stmt->execute([
             'oid' => $orderId,
-            'pid' => $item['product_id'] ?? null,
+            'pid' => (isset($item['product_id']) && is_numeric($item['product_id'])) ? (int)$item['product_id'] : null,
             'pname' => $item['product_name'],
             'qty' => $item['quantity'] ?? 1,
             'size' => $item['size_selected'] ?? null,
