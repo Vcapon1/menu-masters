@@ -391,6 +391,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $message = 'Falha ao enviar email: ' . $errorMsg;
                 }
                 break;
+            case 'import_ai':
+                $restaurantIdImport = (int)($_POST['restaurant_id'] ?? 0);
+                $importDataRaw = $_POST['import_data'] ?? '{}';
+                $importData = json_decode($importDataRaw, true);
+                
+                if (!$restaurantIdImport || !$importData || empty($importData['categories'])) {
+                    throw new Exception('Dados de importação inválidos.');
+                }
+                
+                $importedCats = 0;
+                $importedProds = 0;
+                
+                foreach ($importData['categories'] as $catData) {
+                    $catName = sanitize($catData['name'] ?? '');
+                    if (empty($catName)) continue;
+                    
+                    // Check if category exists
+                    $catSql = "SELECT id FROM categories WHERE restaurant_id = :rid AND name = :name LIMIT 1";
+                    $catStmt = db()->prepare($catSql);
+                    $catStmt->execute(['rid' => $restaurantIdImport, 'name' => $catName]);
+                    $existingCat = $catStmt->fetch();
+                    
+                    if ($existingCat) {
+                        $categoryId = $existingCat['id'];
+                    } else {
+                        $insCatSql = "INSERT INTO categories (restaurant_id, name, sort_order) VALUES (:rid, :name, :sort)";
+                        $insCatStmt = db()->prepare($insCatSql);
+                        $maxSort = db()->query("SELECT COALESCE(MAX(sort_order),0) FROM categories WHERE restaurant_id = $restaurantIdImport")->fetchColumn();
+                        $insCatStmt->execute(['rid' => $restaurantIdImport, 'name' => $catName, 'sort' => $maxSort + 1]);
+                        $categoryId = db()->lastInsertId();
+                        $importedCats++;
+                    }
+                    
+                    foreach ($catData['products'] ?? [] as $prodData) {
+                        $prodName = sanitize($prodData['name'] ?? '');
+                        if (empty($prodName)) continue;
+                        
+                        $prodDesc = sanitize($prodData['description'] ?? '');
+                        $prodPrice = floatval($prodData['price'] ?? 0);
+                        
+                        $insProdSql = "INSERT INTO products (restaurant_id, category_id, name, description, price, is_available) 
+                                       VALUES (:rid, :cid, :name, :desc, :price, 1)";
+                        $insProdStmt = db()->prepare($insProdSql);
+                        $insProdStmt->execute([
+                            'rid' => $restaurantIdImport,
+                            'cid' => $categoryId,
+                            'name' => $prodName,
+                            'desc' => $prodDesc,
+                            'price' => $prodPrice
+                        ]);
+                        $importedProds++;
+                    }
+                }
+                
+                $message = "✅ Importação IA concluída: {$importedCats} categorias criadas e {$importedProds} produtos importados!";
+                break;
         }
     } catch (Exception $e) {
         $error = $e->getMessage();
@@ -584,6 +640,8 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
                                         class="text-blue-400 hover:text-blue-300 mr-2" title="Editar">Editar</button>
                                 <button onclick="sendContractData(<?= htmlspecialchars(json_encode($r)) ?>)" 
                                         class="text-green-400 hover:text-green-300 mr-2" title="Enviar dados do contrato por email">📧</button>
+                                <button onclick="openImportAI(<?= $r['id'] ?>, '<?= htmlspecialchars($r['name']) ?>')" 
+                                        class="text-yellow-400 hover:text-yellow-300 mr-2" title="Importar cardápio por foto">📸 IA</button>
                                 <button onclick="confirmDelete(<?= $r['id'] ?>, '<?= htmlspecialchars($r['name']) ?>')" 
                                         class="text-red-400 hover:text-red-300" title="Excluir">Excluir</button>
                             </td>
@@ -1050,6 +1108,295 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
         </div>
     </div>
     
+    <!-- Modal Importar Cardápio por IA -->
+    <div id="import-ai-modal" class="modal-overlay">
+        <div class="modal-container" style="max-width: 64rem;">
+            <div class="modal-header flex justify-between items-center">
+                <h2 class="text-xl font-bold text-yellow-400">📸 Importar Cardápio por Foto (IA)</h2>
+                <button type="button" onclick="closeImportAI()" class="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="import-restaurant-id">
+                
+                <!-- Fase 1: Upload -->
+                <div id="import-phase-upload">
+                    <p class="text-gray-300 mb-4">
+                        Envie até <strong>5 fotos</strong> do cardápio físico do restaurante <strong id="import-restaurant-name"></strong>. 
+                        A IA vai extrair categorias e produtos automaticamente.
+                    </p>
+                    
+                    <div id="import-dropzone" class="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center cursor-pointer hover:border-yellow-500 transition mb-4"
+                         onclick="document.getElementById('import-files').click()"
+                         ondragover="event.preventDefault(); this.classList.add('border-yellow-500')"
+                         ondragleave="this.classList.remove('border-yellow-500')"
+                         ondrop="handleDrop(event)">
+                        <p class="text-4xl mb-2">📷</p>
+                        <p class="text-gray-300">Arraste as fotos aqui ou clique para selecionar</p>
+                        <p class="text-xs text-gray-500 mt-2">JPG, PNG ou WebP • Máximo 5 fotos</p>
+                        <input type="file" id="import-files" accept="image/*" multiple class="hidden" onchange="handleFiles(this.files)">
+                    </div>
+                    
+                    <div id="import-previews" class="grid grid-cols-5 gap-2 mb-4"></div>
+                    
+                    <button onclick="analyzeWithAI()" id="btn-analyze" disabled
+                            class="w-full bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-700 disabled:text-gray-500 py-3 rounded-lg font-medium transition">
+                        🤖 Analisar com IA
+                    </button>
+                </div>
+                
+                <!-- Fase 2: Loading -->
+                <div id="import-phase-loading" class="hidden text-center py-12">
+                    <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-yellow-400 mx-auto mb-4"></div>
+                    <p class="text-xl font-medium text-yellow-400">Analisando cardápio...</p>
+                    <p class="text-gray-400 mt-2">A IA está lendo as imagens e extraindo os dados. Aguarde...</p>
+                </div>
+                
+                <!-- Fase 3: Revisão -->
+                <div id="import-phase-review" class="hidden">
+                    <div class="flex items-center justify-between mb-4">
+                        <p class="text-gray-300">
+                            Revise os dados extraídos. Edite ou desmarque itens antes de importar.
+                        </p>
+                        <div class="flex gap-2">
+                            <button onclick="selectAll(true)" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded">Selecionar tudo</button>
+                            <button onclick="selectAll(false)" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded">Desmarcar tudo</button>
+                        </div>
+                    </div>
+                    
+                    <div id="import-review-data" class="space-y-4 max-h-96 overflow-y-auto"></div>
+                </div>
+                
+                <!-- Fase 4: Resultado -->
+                <div id="import-phase-result" class="hidden text-center py-8">
+                    <p class="text-4xl mb-4">✅</p>
+                    <p id="import-result-text" class="text-xl font-medium text-green-400"></p>
+                    <p class="text-gray-400 mt-2">Os dados foram salvos. Recarregue a página para ver as alterações no painel do restaurante.</p>
+                </div>
+                
+                <!-- Fase Erro -->
+                <div id="import-phase-error" class="hidden text-center py-8">
+                    <p class="text-4xl mb-4">❌</p>
+                    <p id="import-error-text" class="text-xl font-medium text-red-400"></p>
+                    <button onclick="resetImport()" class="mt-4 bg-gray-700 hover:bg-gray-600 px-6 py-2 rounded-lg">Tentar novamente</button>
+                </div>
+            </div>
+            <div class="modal-footer flex gap-2" id="import-footer-review" style="display:none;">
+                <button onclick="confirmImport()" class="flex-1 bg-green-600 hover:bg-green-700 py-2 rounded font-medium">
+                    ✅ Importar Selecionados
+                </button>
+                <button onclick="closeImportAI()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== IMPORTAÇÃO POR IA =====
+        const EDGE_FUNCTION_URL = '<?= defined("EDGE_FUNCTION_BASE") ? EDGE_FUNCTION_BASE : "https://qmpikyymjcnmocjfmvxs.supabase.co/functions/v1" ?>/menu-import-ai';
+        let importImages = [];
+        let importedData = null;
+        
+        function openImportAI(restaurantId, name) {
+            document.getElementById('import-restaurant-id').value = restaurantId;
+            document.getElementById('import-restaurant-name').textContent = name;
+            resetImport();
+            document.getElementById('import-ai-modal').classList.add('active');
+        }
+        
+        function closeImportAI() {
+            document.getElementById('import-ai-modal').classList.remove('active');
+            resetImport();
+        }
+        
+        function resetImport() {
+            importImages = [];
+            importedData = null;
+            document.getElementById('import-previews').innerHTML = '';
+            document.getElementById('btn-analyze').disabled = true;
+            showPhase('upload');
+        }
+        
+        function showPhase(phase) {
+            ['upload','loading','review','result','error'].forEach(p => {
+                document.getElementById('import-phase-' + p).classList.toggle('hidden', p !== phase);
+            });
+            document.getElementById('import-footer-review').style.display = phase === 'review' ? 'flex' : 'none';
+        }
+        
+        function handleDrop(e) {
+            e.preventDefault();
+            e.target.closest('#import-dropzone').classList.remove('border-yellow-500');
+            handleFiles(e.dataTransfer.files);
+        }
+        
+        function handleFiles(files) {
+            const maxFiles = 5;
+            const remaining = maxFiles - importImages.length;
+            const toAdd = Array.from(files).slice(0, remaining);
+            
+            toAdd.forEach(file => {
+                if (!file.type.startsWith('image/')) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    importImages.push(e.target.result);
+                    renderPreviews();
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        function renderPreviews() {
+            const container = document.getElementById('import-previews');
+            container.innerHTML = importImages.map((img, i) => `
+                <div class="relative group">
+                    <img src="${img}" class="w-full h-24 object-cover rounded border border-gray-600">
+                    <button onclick="removeImage(${i})" class="absolute top-1 right-1 bg-red-600 text-white rounded-full w-5 h-5 text-xs opacity-0 group-hover:opacity-100 transition">×</button>
+                </div>
+            `).join('');
+            document.getElementById('btn-analyze').disabled = importImages.length === 0;
+        }
+        
+        function removeImage(idx) {
+            importImages.splice(idx, 1);
+            renderPreviews();
+        }
+        
+        async function analyzeWithAI() {
+            showPhase('loading');
+            try {
+                const resp = await fetch(EDGE_FUNCTION_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ images: importImages })
+                });
+                
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    throw new Error(err.error || 'Erro ao processar imagens');
+                }
+                
+                importedData = await resp.json();
+                renderReview(importedData);
+                showPhase('review');
+            } catch (e) {
+                document.getElementById('import-error-text').textContent = e.message;
+                showPhase('error');
+            }
+        }
+        
+        function renderReview(data) {
+            const container = document.getElementById('import-review-data');
+            if (!data.categories || data.categories.length === 0) {
+                container.innerHTML = '<p class="text-gray-400 text-center py-8">Nenhum dado encontrado nas imagens.</p>';
+                return;
+            }
+            
+            container.innerHTML = data.categories.map((cat, ci) => `
+                <div class="bg-gray-900 rounded-lg border border-gray-700 overflow-hidden">
+                    <div class="bg-gray-800 px-4 py-3 flex items-center gap-3 cursor-pointer" onclick="toggleCategory(${ci})">
+                        <input type="checkbox" checked class="cat-check rounded bg-gray-700 border-gray-600" data-cat="${ci}" onchange="toggleCategoryItems(${ci}, this.checked)" onclick="event.stopPropagation()">
+                        <span class="text-yellow-400 font-medium flex-1">
+                            📂 <input type="text" value="${escHtml(cat.name)}" class="bg-transparent border-b border-gray-600 focus:border-yellow-400 outline-none px-1 w-64" data-cat-name="${ci}" onclick="event.stopPropagation()">
+                        </span>
+                        <span class="text-xs text-gray-400">${cat.products.length} produtos</span>
+                        <span class="text-gray-500 cat-arrow" id="cat-arrow-${ci}">▼</span>
+                    </div>
+                    <div class="divide-y divide-gray-800" id="cat-products-${ci}">
+                        ${cat.products.map((p, pi) => `
+                            <div class="px-4 py-2 flex items-center gap-3">
+                                <input type="checkbox" checked class="prod-check rounded bg-gray-700 border-gray-600" data-cat="${ci}" data-prod="${pi}">
+                                <div class="flex-1 grid grid-cols-3 gap-2">
+                                    <input type="text" value="${escHtml(p.name)}" class="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-sm" data-field="name" data-cat="${ci}" data-prod="${pi}">
+                                    <input type="text" value="${escHtml(p.description || '')}" class="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-sm text-gray-400" data-field="desc" data-cat="${ci}" data-prod="${pi}" placeholder="Descrição">
+                                    <input type="number" step="0.01" value="${p.price || 0}" class="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-sm text-right" data-field="price" data-cat="${ci}" data-prod="${pi}">
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function escHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML.replace(/"/g, '&quot;');
+        }
+        
+        function toggleCategory(ci) {
+            const el = document.getElementById('cat-products-' + ci);
+            const arrow = document.getElementById('cat-arrow-' + ci);
+            el.classList.toggle('hidden');
+            arrow.textContent = el.classList.contains('hidden') ? '▶' : '▼';
+        }
+        
+        function toggleCategoryItems(ci, checked) {
+            document.querySelectorAll(`.prod-check[data-cat="${ci}"]`).forEach(cb => cb.checked = checked);
+        }
+        
+        function selectAll(checked) {
+            document.querySelectorAll('.cat-check, .prod-check').forEach(cb => cb.checked = checked);
+        }
+        
+        function confirmImport() {
+            // Collect selected data from editable fields
+            const restaurantId = document.getElementById('import-restaurant-id').value;
+            const selectedData = [];
+            
+            document.querySelectorAll('.cat-check').forEach(catCb => {
+                const ci = catCb.dataset.cat;
+                const catName = document.querySelector(`[data-cat-name="${ci}"]`).value.trim();
+                if (!catName) return;
+                
+                const products = [];
+                document.querySelectorAll(`.prod-check[data-cat="${ci}"]`).forEach(prodCb => {
+                    if (!prodCb.checked) return;
+                    const pi = prodCb.dataset.prod;
+                    const name = document.querySelector(`[data-field="name"][data-cat="${ci}"][data-prod="${pi}"]`).value.trim();
+                    const desc = document.querySelector(`[data-field="desc"][data-cat="${ci}"][data-prod="${pi}"]`).value.trim();
+                    const price = parseFloat(document.querySelector(`[data-field="price"][data-cat="${ci}"][data-prod="${pi}"]`).value) || 0;
+                    if (name) products.push({ name, description: desc, price });
+                });
+                
+                if (catCb.checked || products.length > 0) {
+                    selectedData.push({ name: catName, products });
+                }
+            });
+            
+            if (selectedData.length === 0) {
+                alert('Selecione ao menos uma categoria ou produto.');
+                return;
+            }
+            
+            showPhase('loading');
+            
+            // POST to PHP for insertion
+            const form = new FormData();
+            form.append('action', 'import_ai');
+            form.append('restaurant_id', restaurantId);
+            form.append('import_data', JSON.stringify({ categories: selectedData }));
+            
+            fetch('restaurants.php', {
+                method: 'POST',
+                body: form
+            })
+            .then(r => r.text())
+            .then(html => {
+                // Count what was imported
+                let totalCats = selectedData.length;
+                let totalProds = selectedData.reduce((sum, c) => sum + c.products.length, 0);
+                document.getElementById('import-result-text').textContent = 
+                    `${totalCats} categorias e ${totalProds} produtos importados com sucesso!`;
+                showPhase('result');
+            })
+            .catch(e => {
+                document.getElementById('import-error-text').textContent = e.message;
+                showPhase('error');
+            });
+        }
+    </script>
+
     <script>
         // Data padrão para expiração
         const defaultExpiresAt = '<?= $defaultExpiresAt ?>';
