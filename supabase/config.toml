@@ -1,1 +1,7 @@
 project_id = "qmpikyymjcnmocjfmvxs"
+
+[functions.menu-import-ai]
+verify_jwt = false
+
+[functions.menu-enhance-image]
+verify_jwt = false
