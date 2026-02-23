@@ -524,16 +524,26 @@ $availableBadges = [
                                     <div>
                                         <span id="stock-badge" class="hidden text-xs bg-purple-600 px-2 py-0.5 rounded font-medium">📸 Banco de Imagens</span>
                                         <span id="upload-badge" class="hidden text-xs bg-gray-600 px-2 py-0.5 rounded">Upload próprio</span>
+                                        <span id="ai-badge" class="hidden text-xs bg-gradient-to-r from-pink-600 to-purple-600 px-2 py-0.5 rounded font-medium">✨ Melhorada por IA</span>
                                     </div>
+                                    <button type="button" onclick="openEnhanceModal()" 
+                                            class="text-xs bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 px-2 py-1 rounded font-medium whitespace-nowrap" 
+                                            id="btn-enhance-existing" title="Melhorar esta imagem com IA">
+                                        ✨ Melhorar com IA
+                                    </button>
                                 </div>
                             </div>
                             <div class="flex gap-2">
-                                <input type="file" name="image" accept="image/*"
+                                <input type="file" name="image" accept="image/*" id="file-image-input"
                                        class="flex-1 bg-gray-700 border border-gray-600 rounded px-3 py-2" 
                                        onchange="onFileImageSelected()">
                                 <button type="button" onclick="openStockModal()" 
                                         class="bg-purple-600 hover:bg-purple-700 px-3 py-2 rounded text-sm font-medium whitespace-nowrap flex items-center gap-1">
                                     📸 Banco
+                                </button>
+                                <button type="button" onclick="openEnhanceModal()" 
+                                        class="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 px-3 py-2 rounded text-sm font-medium whitespace-nowrap flex items-center gap-1">
+                                    ✨ IA
                                 </button>
                             </div>
                         </div>
@@ -1146,5 +1156,357 @@ $availableBadges = [
             </div>
         </div>
     </div>
+    
+    <!-- Modal de Melhoria por IA -->
+    <div id="enhance-modal" class="fixed inset-0 bg-black bg-opacity-80 hidden items-center justify-center" style="z-index: 70;">
+        <div class="bg-gray-800 rounded-lg max-w-3xl w-full mx-4 modal-container" style="max-height: 90vh;">
+            <div class="modal-header flex items-center justify-between">
+                <h2 class="text-lg font-bold">✨ Melhorar Foto com IA</h2>
+                <button type="button" onclick="closeEnhanceModal()" class="text-gray-400 hover:text-white text-xl">✕</button>
+            </div>
+            
+            <!-- Fase 1: Upload + Escolha de Estilo -->
+            <div id="enhance-phase-upload" class="modal-body">
+                <div class="mb-4">
+                    <label class="block text-sm mb-2 font-medium">Foto do Prato</label>
+                    <div id="enhance-drop-zone" class="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center cursor-pointer hover:border-purple-500 transition-colors"
+                         onclick="document.getElementById('enhance-file-input').click()">
+                        <div id="enhance-preview-area" class="hidden">
+                            <img id="enhance-preview-img" src="" class="max-h-48 mx-auto rounded-lg mb-2">
+                            <p class="text-xs text-gray-400">Clique para trocar a imagem</p>
+                        </div>
+                        <div id="enhance-upload-hint">
+                            <p class="text-3xl mb-2">📷</p>
+                            <p class="text-gray-400">Clique ou arraste uma foto do prato aqui</p>
+                            <p class="text-xs text-gray-500 mt-1">JPG, PNG ou WebP</p>
+                        </div>
+                    </div>
+                    <input type="file" id="enhance-file-input" accept="image/*" class="hidden" onchange="onEnhanceFileSelected(this)">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm mb-2 font-medium">Nome do Prato (opcional, melhora o resultado)</label>
+                    <input type="text" id="enhance-food-name" placeholder="Ex: Hambúrguer artesanal, Pizza margherita..." 
+                           class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm mb-3 font-medium">Escolha o Estilo</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" id="enhance-styles">
+                        <div class="enhance-style-card border-2 border-gray-600 rounded-lg p-3 cursor-pointer hover:border-purple-500 transition-all" 
+                             data-style="minimalist" onclick="selectEnhanceStyle('minimalist')">
+                            <div class="text-xl mb-1">🍣</div>
+                            <h4 class="font-bold text-sm">Minimalista & Moderno</h4>
+                            <p class="text-xs text-gray-400 mt-1">Fine Dining / Sushi — Foco total na comida, pratos clean</p>
+                        </div>
+                        <div class="enhance-style-card border-2 border-gray-600 rounded-lg p-3 cursor-pointer hover:border-purple-500 transition-all" 
+                             data-style="industrial" onclick="selectEnhanceStyle('industrial')">
+                            <div class="text-xl mb-1">🍔</div>
+                            <h4 class="font-bold text-sm">Industrial & Urbano</h4>
+                            <p class="text-xs text-gray-400 mt-1">Hamburguerias / Pubs — Visual noturno e de rua</p>
+                        </div>
+                        <div class="enhance-style-card border-2 border-gray-600 rounded-lg p-3 cursor-pointer hover:border-purple-500 transition-all" 
+                             data-style="solar" onclick="selectEnhanceStyle('solar')">
+                            <div class="text-xl mb-1">🥗</div>
+                            <h4 class="font-bold text-sm">Solar & Orgânico</h4>
+                            <p class="text-xs text-gray-400 mt-1">Saudável / Cafés / Brunch — Frescor e leveza</p>
+                        </div>
+                        <div class="enhance-style-card border-2 border-gray-600 rounded-lg p-3 cursor-pointer hover:border-purple-500 transition-all" 
+                             data-style="traditional" onclick="selectEnhanceStyle('traditional')">
+                            <div class="text-xl mb-1">🍕</div>
+                            <h4 class="font-bold text-sm">Tradicional & Aconchegante</h4>
+                            <p class="text-xs text-gray-400 mt-1">Pizzarias / Padarias — Tradição e preparo artesanal</p>
+                        </div>
+                        <div class="enhance-style-card border-2 border-gray-600 rounded-lg p-3 cursor-pointer hover:border-purple-500 transition-all" 
+                             data-style="pop" onclick="selectEnhanceStyle('pop')">
+                            <div class="text-xl mb-1">🍦</div>
+                            <h4 class="font-bold text-sm">Pop & Colorido</h4>
+                            <p class="text-xs text-gray-400 mt-1">Sorveterias / Docerias / Fast Food — Visual lúdico</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Opção de cor para estilo Pop -->
+                <div id="enhance-pop-color" class="mb-4 hidden">
+                    <label class="block text-sm mb-2 font-medium">Cor de Fundo (estilo Pop)</label>
+                    <div class="flex gap-2 flex-wrap">
+                        <button type="button" class="pop-color-btn w-8 h-8 rounded-full border-2 border-gray-600 hover:border-white" 
+                                style="background: #fecdd3" data-color="pink" onclick="selectPopColor('pink')"></button>
+                        <button type="button" class="pop-color-btn w-8 h-8 rounded-full border-2 border-gray-600 hover:border-white" 
+                                style="background: #bfdbfe" data-color="blue" onclick="selectPopColor('blue')"></button>
+                        <button type="button" class="pop-color-btn w-8 h-8 rounded-full border-2 border-gray-600 hover:border-white" 
+                                style="background: #bbf7d0" data-color="green" onclick="selectPopColor('green')"></button>
+                        <button type="button" class="pop-color-btn w-8 h-8 rounded-full border-2 border-gray-600 hover:border-white" 
+                                style="background: #fef08a" data-color="yellow" onclick="selectPopColor('yellow')"></button>
+                        <button type="button" class="pop-color-btn w-8 h-8 rounded-full border-2 border-gray-600 hover:border-white" 
+                                style="background: #e9d5ff" data-color="purple" onclick="selectPopColor('purple')"></button>
+                        <button type="button" class="pop-color-btn w-8 h-8 rounded-full border-2 border-gray-600 hover:border-white" 
+                                style="background: #fed7aa" data-color="orange" onclick="selectPopColor('orange')"></button>
+                    </div>
+                </div>
+                
+                <button type="button" onclick="startEnhance()" id="btn-start-enhance"
+                        class="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 py-3 rounded-lg font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled>
+                    ✨ Melhorar com IA
+                </button>
+            </div>
+            
+            <!-- Fase 2: Loading -->
+            <div id="enhance-phase-loading" class="modal-body hidden">
+                <div class="text-center py-12">
+                    <div class="inline-block animate-spin text-5xl mb-4">✨</div>
+                    <p class="text-lg font-bold mb-2">Melhorando sua foto...</p>
+                    <p class="text-sm text-gray-400">A IA está aplicando o estilo escolhido</p>
+                    <p class="text-xs text-gray-500 mt-2">Isso pode levar até 30 segundos</p>
+                </div>
+            </div>
+            
+            <!-- Fase 3: Resultado -->
+            <div id="enhance-phase-result" class="modal-body hidden">
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <p class="text-xs text-gray-400 mb-1 text-center">📷 Original</p>
+                        <img id="enhance-original-result" src="" class="w-full rounded-lg border border-gray-600">
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-400 mb-1 text-center">✨ Melhorada</p>
+                        <img id="enhance-result-img" src="" class="w-full rounded-lg border border-purple-500">
+                    </div>
+                </div>
+                <p class="text-center text-sm text-gray-400 mb-4" id="enhance-style-label"></p>
+                <div class="flex gap-2">
+                    <button type="button" onclick="useEnhancedImage()" 
+                            class="flex-1 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 py-2 rounded-lg font-bold">
+                        ✅ Usar Esta Imagem
+                    </button>
+                    <button type="button" onclick="retryEnhance()" 
+                            class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">
+                        🔄 Tentar Outro Estilo
+                    </button>
+                    <button type="button" onclick="closeEnhanceModal()" 
+                            class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // =====================================================
+        // MELHORIA DE IMAGEM POR IA
+        // =====================================================
+        const ENHANCE_EDGE_URL = 'https://qmpikyymjcnmocjfmvxs.supabase.co/functions/v1/menu-enhance-image';
+        let enhanceImageBase64 = null;
+        let enhanceSelectedStyle = null;
+        let enhancePopColor = null;
+        let enhancedResultBase64 = null;
+        
+        function openEnhanceModal() {
+            document.getElementById('enhance-modal').classList.remove('hidden');
+            document.getElementById('enhance-modal').classList.add('flex');
+            showEnhancePhase('upload');
+            
+            // Pre-fill with existing image if available
+            const currentImg = document.getElementById('form-current-image').value;
+            if (currentImg) {
+                loadImageAsBase64(currentImg).then(b64 => {
+                    if (b64) {
+                        enhanceImageBase64 = b64;
+                        document.getElementById('enhance-preview-img').src = currentImg;
+                        document.getElementById('enhance-preview-area').classList.remove('hidden');
+                        document.getElementById('enhance-upload-hint').classList.add('hidden');
+                        updateEnhanceButton();
+                    }
+                });
+            }
+            
+            // Pre-fill food name
+            const foodName = document.getElementById('form-name').value;
+            if (foodName) {
+                document.getElementById('enhance-food-name').value = foodName;
+            }
+        }
+        
+        function closeEnhanceModal() {
+            document.getElementById('enhance-modal').classList.add('hidden');
+            document.getElementById('enhance-modal').classList.remove('flex');
+            resetEnhanceState();
+        }
+        
+        function resetEnhanceState() {
+            enhanceImageBase64 = null;
+            enhanceSelectedStyle = null;
+            enhancePopColor = null;
+            enhancedResultBase64 = null;
+            document.getElementById('enhance-preview-area').classList.add('hidden');
+            document.getElementById('enhance-upload-hint').classList.remove('hidden');
+            document.getElementById('enhance-food-name').value = '';
+            document.getElementById('enhance-pop-color').classList.add('hidden');
+            document.querySelectorAll('.enhance-style-card').forEach(c => c.classList.remove('border-purple-500', 'bg-purple-900/30'));
+            document.querySelectorAll('.enhance-style-card').forEach(c => c.classList.add('border-gray-600'));
+            document.getElementById('btn-start-enhance').disabled = true;
+        }
+        
+        function showEnhancePhase(phase) {
+            ['upload', 'loading', 'result'].forEach(p => {
+                document.getElementById(`enhance-phase-${p}`).classList.toggle('hidden', p !== phase);
+            });
+        }
+        
+        function onEnhanceFileSelected(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                enhanceImageBase64 = e.target.result;
+                document.getElementById('enhance-preview-img').src = enhanceImageBase64;
+                document.getElementById('enhance-preview-area').classList.remove('hidden');
+                document.getElementById('enhance-upload-hint').classList.add('hidden');
+                updateEnhanceButton();
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // Drag and drop
+        document.addEventListener('DOMContentLoaded', () => {
+            const dropZone = document.getElementById('enhance-drop-zone');
+            if (!dropZone) return;
+            
+            ['dragenter', 'dragover'].forEach(evt => {
+                dropZone.addEventListener(evt, (e) => {
+                    e.preventDefault();
+                    dropZone.classList.add('border-purple-500', 'bg-purple-900/20');
+                });
+            });
+            ['dragleave', 'drop'].forEach(evt => {
+                dropZone.addEventListener(evt, (e) => {
+                    e.preventDefault();
+                    dropZone.classList.remove('border-purple-500', 'bg-purple-900/20');
+                });
+            });
+            dropZone.addEventListener('drop', (e) => {
+                const file = e.dataTransfer.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    const dt = new DataTransfer();
+                    dt.items.add(file);
+                    document.getElementById('enhance-file-input').files = dt.files;
+                    onEnhanceFileSelected(document.getElementById('enhance-file-input'));
+                }
+            });
+        });
+        
+        function selectEnhanceStyle(style) {
+            enhanceSelectedStyle = style;
+            document.querySelectorAll('.enhance-style-card').forEach(c => {
+                const isSelected = c.dataset.style === style;
+                c.classList.toggle('border-purple-500', isSelected);
+                c.classList.toggle('bg-purple-900/30', isSelected);
+                c.classList.toggle('border-gray-600', !isSelected);
+            });
+            
+            // Show/hide pop color picker
+            document.getElementById('enhance-pop-color').classList.toggle('hidden', style !== 'pop');
+            
+            updateEnhanceButton();
+        }
+        
+        function selectPopColor(color) {
+            enhancePopColor = color;
+            document.querySelectorAll('.pop-color-btn').forEach(btn => {
+                btn.classList.toggle('border-white', btn.dataset.color === color);
+                btn.classList.toggle('border-gray-600', btn.dataset.color !== color);
+                btn.classList.toggle('ring-2', btn.dataset.color === color);
+                btn.classList.toggle('ring-white', btn.dataset.color === color);
+            });
+        }
+        
+        function updateEnhanceButton() {
+            const btn = document.getElementById('btn-start-enhance');
+            btn.disabled = !(enhanceImageBase64 && enhanceSelectedStyle);
+        }
+        
+        async function loadImageAsBase64(url) {
+            try {
+                const res = await fetch(url);
+                const blob = await res.blob();
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = () => resolve(null);
+                    reader.readAsDataURL(blob);
+                });
+            } catch {
+                return null;
+            }
+        }
+        
+        async function startEnhance() {
+            if (!enhanceImageBase64 || !enhanceSelectedStyle) return;
+            
+            showEnhancePhase('loading');
+            
+            try {
+                const body = {
+                    image: enhanceImageBase64,
+                    style: enhanceSelectedStyle,
+                    food_name: document.getElementById('enhance-food-name').value.trim() || undefined,
+                };
+                
+                if (enhanceSelectedStyle === 'pop' && enhancePopColor) {
+                    body.bg_color = enhancePopColor;
+                }
+                
+                const res = await fetch(ENHANCE_EDGE_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
+                
+                const data = await res.json();
+                
+                if (!res.ok) {
+                    throw new Error(data.error || 'Erro ao processar imagem');
+                }
+                
+                enhancedResultBase64 = data.enhanced_image;
+                
+                // Show result
+                document.getElementById('enhance-original-result').src = enhanceImageBase64;
+                document.getElementById('enhance-result-img').src = enhancedResultBase64;
+                document.getElementById('enhance-style-label').textContent = `Estilo: ${data.style_name}`;
+                showEnhancePhase('result');
+                
+            } catch (err) {
+                alert('Erro: ' + err.message);
+                showEnhancePhase('upload');
+            }
+        }
+        
+        function useEnhancedImage() {
+            if (!enhancedResultBase64) return;
+            
+            // Set as current image in the product form
+            document.getElementById('form-current-image').value = enhancedResultBase64;
+            document.getElementById('preview-img').src = enhancedResultBase64;
+            document.getElementById('current-image-preview').classList.remove('hidden');
+            
+            // Show AI badge
+            document.getElementById('stock-badge').classList.add('hidden');
+            document.getElementById('upload-badge').classList.add('hidden');
+            document.getElementById('ai-badge').classList.remove('hidden');
+            
+            // Clear file input so the base64 is used
+            document.getElementById('file-image-input').value = '';
+            
+            closeEnhanceModal();
+        }
+        
+        function retryEnhance() {
+            showEnhancePhase('upload');
+        }
+    </script>
 </body>
 </html>
