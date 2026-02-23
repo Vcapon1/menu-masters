@@ -358,63 +358,67 @@ $availableBadges = [
                     $productBadges = json_decode($product['badges'] ?? '[]', true) ?: [];
                     $hasVariations = isset($productVariations[$product['id']]);
                 ?>
-                    <div class="p-4 flex items-center gap-4" data-id="<?= $product['id'] ?>">
-                        <!-- Ordenação -->
-                        <div class="flex flex-col gap-1">
-                            <button onclick="moveProduct(<?= $product['id'] ?>, 'up')" 
-                                    class="text-gray-400 hover:text-white p-1" <?= $index === 0 ? 'disabled' : '' ?>>
-                                ▲
-                            </button>
-                            <button onclick="moveProduct(<?= $product['id'] ?>, 'down')" 
-                                    class="text-gray-400 hover:text-white p-1" <?= $index === count($products) - 1 ? 'disabled' : '' ?>>
-                                ▼
-                            </button>
-                        </div>
-                        
-                        <!-- Imagem/Vídeo -->
-                        <?php if (!empty($product['video'])): ?>
-                            <video class="w-16 h-16 rounded object-cover" muted>
-                                <source src="<?= htmlspecialchars($product['video']) ?>" type="video/mp4">
-                            </video>
-                        <?php elseif (!empty($product['image'])): ?>
-                            <img src="<?= htmlspecialchars($product['image']) ?>" 
-                                 class="w-16 h-16 rounded object-cover">
-                        <?php else: ?>
-                            <div class="w-16 h-16 bg-gray-700 rounded flex items-center justify-center text-2xl">
-                                🍽️
+                    <div class="p-3 sm:p-4" data-id="<?= $product['id'] ?>">
+                        <div class="flex items-center gap-2 sm:gap-4">
+                            <!-- Ordenação -->
+                            <div class="flex flex-col gap-0.5 flex-shrink-0">
+                                <button onclick="moveProduct(<?= $product['id'] ?>, 'up')" 
+                                        class="text-gray-400 hover:text-white p-0.5 text-xs" <?= $index === 0 ? 'disabled' : '' ?>>
+                                    ▲
+                                </button>
+                                <button onclick="moveProduct(<?= $product['id'] ?>, 'down')" 
+                                        class="text-gray-400 hover:text-white p-0.5 text-xs" <?= $index === count($products) - 1 ? 'disabled' : '' ?>>
+                                    ▼
+                                </button>
                             </div>
-                        <?php endif; ?>
-                        
-                        <!-- Info -->
-                        <div class="flex-1">
-                            <p class="font-medium"><?= htmlspecialchars($product['name']) ?></p>
-                            <p class="text-sm text-gray-400"><?= htmlspecialchars($product['category_name']) ?></p>
-                            <div class="flex gap-1 mt-1">
-                                <?php foreach ($productBadges as $badge): ?>
-                                    <span class="text-xs px-2 py-0.5 rounded bg-gray-700">
-                                        <?= $availableBadges[$badge] ?? $badge ?>
-                                    </span>
-                                <?php endforeach; ?>
-                                <?php if ($hasVariations): ?>
-                                    <span class="text-xs px-2 py-0.5 rounded bg-indigo-900 text-indigo-300">
-                                        📋 <?= count($productVariations[$product['id']]) ?> variação(ões)
-                                    </span>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                        
-                        <!-- Preço -->
-                        <div class="text-right">
-                            <?php if (!empty($product['promo_price'])): ?>
-                                <p class="text-sm line-through text-gray-500"><?= formatPrice($product['price']) ?></p>
-                                <p class="font-bold text-red-400"><?= formatPrice($product['promo_price']) ?></p>
+                            
+                            <!-- Imagem/Vídeo -->
+                            <?php if (!empty($product['video'])): ?>
+                                <video class="w-12 h-12 sm:w-16 sm:h-16 rounded object-cover flex-shrink-0" muted>
+                                    <source src="<?= htmlspecialchars($product['video']) ?>" type="video/mp4">
+                                </video>
+                            <?php elseif (!empty($product['image'])): ?>
+                                <img src="<?= htmlspecialchars($product['image']) ?>" 
+                                     class="w-12 h-12 sm:w-16 sm:h-16 rounded object-cover flex-shrink-0">
                             <?php else: ?>
-                                <p class="font-bold"><?= formatPrice($product['price']) ?></p>
+                                <div class="w-12 h-12 sm:w-16 sm:h-16 bg-gray-700 rounded flex items-center justify-center text-xl sm:text-2xl flex-shrink-0">
+                                    🍽️
+                                </div>
                             <?php endif; ?>
+                            
+                            <!-- Info + Preço -->
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-start justify-between gap-2">
+                                    <div class="min-w-0">
+                                        <p class="font-medium text-sm sm:text-base truncate"><?= htmlspecialchars($product['name']) ?></p>
+                                        <p class="text-xs sm:text-sm text-gray-400 truncate"><?= htmlspecialchars($product['category_name']) ?></p>
+                                    </div>
+                                    <div class="text-right flex-shrink-0">
+                                        <?php if (!empty($product['promo_price'])): ?>
+                                            <p class="text-xs line-through text-gray-500"><?= formatPrice($product['price']) ?></p>
+                                            <p class="font-bold text-sm text-red-400"><?= formatPrice($product['promo_price']) ?></p>
+                                        <?php else: ?>
+                                            <p class="font-bold text-sm"><?= formatPrice($product['price']) ?></p>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <div class="flex flex-wrap gap-1 mt-1">
+                                    <?php foreach ($productBadges as $badge): ?>
+                                        <span class="text-xs px-1.5 py-0.5 rounded bg-gray-700">
+                                            <?= $availableBadges[$badge] ?? $badge ?>
+                                        </span>
+                                    <?php endforeach; ?>
+                                    <?php if ($hasVariations): ?>
+                                        <span class="text-xs px-1.5 py-0.5 rounded bg-indigo-900 text-indigo-300">
+                                            📋 <?= count($productVariations[$product['id']]) ?>
+                                        </span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
                         </div>
                         
-                        <!-- Status -->
-                        <div>
+                        <!-- Status + Ações (row below on mobile) -->
+                        <div class="flex items-center justify-end gap-2 mt-2 ml-8 sm:ml-20">
                             <?php if (!$product['is_available']): ?>
                                 <span class="text-xs px-2 py-1 rounded bg-red-900 text-red-400">
                                     <?= $product['hide_when_unavailable'] ? 'Oculto' : 'Indisponível' ?>
@@ -422,18 +426,14 @@ $availableBadges = [
                             <?php else: ?>
                                 <span class="text-xs px-2 py-1 rounded bg-green-900 text-green-400">Disponível</span>
                             <?php endif; ?>
-                        </div>
-                        
-                        <!-- Ações -->
-                        <div class="flex gap-2">
                             <button onclick="editProduct(<?= htmlspecialchars(json_encode($product)) ?>)" 
-                                    class="text-blue-400 hover:text-blue-300">
-                                Editar
+                                    class="text-blue-400 hover:text-blue-300 text-sm px-2 py-1">
+                                ✏️ Editar
                             </button>
                             <form method="post" class="inline" onsubmit="return confirm('Excluir este prato?')">
                                 <input type="hidden" name="action" value="delete">
                                 <input type="hidden" name="id" value="<?= $product['id'] ?>">
-                                <button type="submit" class="text-red-400 hover:text-red-300">Excluir</button>
+                                <button type="submit" class="text-red-400 hover:text-red-300 text-sm px-2 py-1">🗑️</button>
                             </form>
                         </div>
                     </div>
@@ -519,32 +519,34 @@ $availableBadges = [
                         <div>
                             <label class="block text-sm mb-1">Imagem</label>
                             <div id="current-image-preview" class="mb-2 hidden">
-                                <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-2 flex-wrap">
                                     <img id="preview-img" src="" class="w-16 h-16 rounded object-cover border border-gray-600">
-                                    <div>
-                                        <span id="stock-badge" class="hidden text-xs bg-purple-600 px-2 py-0.5 rounded font-medium">📸 Banco de Imagens</span>
-                                        <span id="upload-badge" class="hidden text-xs bg-gray-600 px-2 py-0.5 rounded">Upload próprio</span>
-                                        <span id="ai-badge" class="hidden text-xs bg-gradient-to-r from-pink-600 to-purple-600 px-2 py-0.5 rounded font-medium">✨ Melhorada por IA</span>
+                                    <div class="flex flex-wrap gap-1 items-center">
+                                        <span id="stock-badge" class="hidden text-xs bg-purple-600 px-2 py-0.5 rounded font-medium">📸 Banco</span>
+                                        <span id="upload-badge" class="hidden text-xs bg-gray-600 px-2 py-0.5 rounded">Upload</span>
+                                        <span id="ai-badge" class="hidden text-xs bg-gradient-to-r from-pink-600 to-purple-600 px-2 py-0.5 rounded font-medium">✨ IA</span>
                                     </div>
                                     <button type="button" onclick="openEnhanceModal()" 
                                             class="text-xs bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 px-2 py-1 rounded font-medium whitespace-nowrap" 
                                             id="btn-enhance-existing" title="Melhorar esta imagem com IA">
-                                        ✨ Melhorar com IA
+                                        ✨ Melhorar
                                     </button>
                                 </div>
                             </div>
-                            <div class="flex gap-2">
+                            <div class="space-y-2">
                                 <input type="file" name="image" accept="image/*" id="file-image-input"
-                                       class="flex-1 bg-gray-700 border border-gray-600 rounded px-3 py-2" 
+                                       class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm" 
                                        onchange="onFileImageSelected()">
-                                <button type="button" onclick="openStockModal()" 
-                                        class="bg-purple-600 hover:bg-purple-700 px-3 py-2 rounded text-sm font-medium whitespace-nowrap flex items-center gap-1">
-                                    📸 Banco
-                                </button>
-                                <button type="button" onclick="openEnhanceModal()" 
-                                        class="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 px-3 py-2 rounded text-sm font-medium whitespace-nowrap flex items-center gap-1">
-                                    ✨ IA
-                                </button>
+                                <div class="flex gap-2">
+                                    <button type="button" onclick="openStockModal()" 
+                                            class="flex-1 bg-purple-600 hover:bg-purple-700 px-3 py-2 rounded text-sm font-medium flex items-center justify-center gap-1">
+                                        📸 Banco
+                                    </button>
+                                    <button type="button" onclick="openEnhanceModal()" 
+                                            class="flex-1 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 px-3 py-2 rounded text-sm font-medium flex items-center justify-center gap-1">
+                                        ✨ IA
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         
@@ -881,6 +883,8 @@ $availableBadges = [
             document.getElementById('current-image-preview').classList.add('hidden');
             document.getElementById('stock-badge').classList.add('hidden');
             document.getElementById('upload-badge').classList.add('hidden');
+            document.getElementById('ai-badge').classList.add('hidden');
+            document.getElementById('btn-enhance-existing').classList.remove('hidden');
             const videoPreview = document.getElementById('current-video-preview');
             if (videoPreview) videoPreview.classList.add('hidden');
             
@@ -935,6 +939,10 @@ $availableBadges = [
             if (product.image) {
                 previewImg.src = product.image;
                 imagePreview.classList.remove('hidden');
+                const aiBadge = document.getElementById('ai-badge');
+                const enhanceBtn = document.getElementById('btn-enhance-existing');
+                aiBadge.classList.add('hidden');
+                enhanceBtn.classList.remove('hidden');
                 // Detect stock image
                 if (product.image.indexOf('stock-images/') !== -1) {
                     stockBadge.classList.remove('hidden');
@@ -1159,7 +1167,7 @@ $availableBadges = [
     
     <!-- Modal de Melhoria por IA -->
     <div id="enhance-modal" class="fixed inset-0 bg-black bg-opacity-80 hidden items-center justify-center" style="z-index: 70;">
-        <div class="bg-gray-800 rounded-lg max-w-3xl w-full mx-4 modal-container" style="max-height: 90vh;">
+        <div class="bg-gray-800 rounded-lg max-w-3xl w-full mx-2 sm:mx-4 modal-container" style="max-height: 90vh; max-height: 90dvh;">
             <div class="modal-header flex items-center justify-between">
                 <h2 class="text-lg font-bold">✨ Melhorar Foto com IA</h2>
                 <button type="button" onclick="closeEnhanceModal()" class="text-gray-400 hover:text-white text-xl">✕</button>
@@ -1264,28 +1272,35 @@ $availableBadges = [
             
             <!-- Fase 3: Resultado -->
             <div id="enhance-phase-result" class="modal-body hidden">
-                <div class="grid grid-cols-2 gap-4 mb-4">
+                <div class="grid grid-cols-2 gap-3 sm:gap-4 mb-4">
                     <div>
                         <p class="text-xs text-gray-400 mb-1 text-center">📷 Original</p>
                         <img id="enhance-original-result" src="" class="w-full rounded-lg border border-gray-600">
                     </div>
-                    <div>
+                    <div class="relative">
                         <p class="text-xs text-gray-400 mb-1 text-center">✨ Melhorada</p>
-                        <img id="enhance-result-img" src="" class="w-full rounded-lg border border-purple-500">
+                        <div class="relative group">
+                            <img id="enhance-result-img" src="" class="w-full rounded-lg border border-purple-500">
+                            <button type="button" onclick="zoomEnhancedImage()" 
+                                    class="absolute top-2 right-2 bg-black/70 hover:bg-black/90 text-white w-8 h-8 rounded-full flex items-center justify-center text-lg transition-all opacity-80 group-hover:opacity-100"
+                                    title="Ver em tamanho real">
+                                🔍
+                            </button>
+                        </div>
                     </div>
                 </div>
-                <p class="text-center text-sm text-gray-400 mb-4" id="enhance-style-label"></p>
-                <div class="flex gap-2">
+                <p class="text-center text-sm text-gray-400 mb-3" id="enhance-style-label"></p>
+                <div class="flex flex-col sm:flex-row gap-2">
                     <button type="button" onclick="useEnhancedImage()" 
-                            class="flex-1 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 py-2 rounded-lg font-bold">
-                        ✅ Usar Esta Imagem
+                            class="flex-1 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 py-3 rounded-lg font-bold text-sm sm:text-base">
+                        ✅ Usar Imagem
                     </button>
                     <button type="button" onclick="retryEnhance()" 
-                            class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">
-                        🔄 Tentar Outro Estilo
+                            class="flex-1 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium">
+                        🔄 Outro Estilo
                     </button>
                     <button type="button" onclick="closeEnhanceModal()" 
-                            class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">
+                            class="py-2.5 px-4 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">
                         Cancelar
                     </button>
                 </div>
@@ -1493,10 +1508,13 @@ $availableBadges = [
             document.getElementById('preview-img').src = enhancedResultBase64;
             document.getElementById('current-image-preview').classList.remove('hidden');
             
-            // Show AI badge
+            // Show AI badge, hide others
             document.getElementById('stock-badge').classList.add('hidden');
             document.getElementById('upload-badge').classList.add('hidden');
             document.getElementById('ai-badge').classList.remove('hidden');
+            
+            // Hide the "Melhorar" button since already enhanced
+            document.getElementById('btn-enhance-existing').classList.add('hidden');
             
             // Clear file input so the base64 is used
             document.getElementById('file-image-input').value = '';
@@ -1506,6 +1524,19 @@ $availableBadges = [
         
         function retryEnhance() {
             showEnhancePhase('upload');
+        }
+        
+        function zoomEnhancedImage() {
+            const src = document.getElementById('enhance-result-img').src;
+            if (!src) return;
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;cursor:zoom-out;padding:1rem;';
+            overlay.onclick = () => overlay.remove();
+            const img = document.createElement('img');
+            img.src = src;
+            img.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;border-radius:0.5rem;';
+            overlay.appendChild(img);
+            document.body.appendChild(overlay);
         }
     </script>
 </body>
