@@ -197,6 +197,7 @@ try {
             $localPath = $videoDir . $filename;
 
             // Se vier base64 (data URI), decodificar e salvar diretamente
+            $videoUri = trim($videoUri);
             if (strpos($videoUri, 'data:video/') === 0) {
                 $parts = explode(',', $videoUri, 2);
                 if (count($parts) !== 2 || strpos($parts[0], ';base64') === false) {
