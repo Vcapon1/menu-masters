@@ -151,20 +151,29 @@ serve(async (req) => {
 
       const accessToken = await getAccessToken(clientEmail, privateKey);
 
+      // If operation_name is just a UUID, construct the full path
+      const fullOperationName = operation_name.includes("/")
+        ? operation_name
+        : `projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/${MODEL_ID}/operations/${operation_name}`;
+
+      console.log("Polling operation:", fullOperationName);
+
       const pollResp = await fetch(FETCH_PREDICT_OPERATION_URL, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ operationName: operation_name }),
+        body: JSON.stringify({ operationName: fullOperationName }),
       });
 
       if (!pollResp.ok) {
         const errText = await pollResp.text();
         console.error("Poll error:", pollResp.status, errText);
+        console.error("Poll URL used:", FETCH_PREDICT_OPERATION_URL);
+        console.error("Operation name sent:", operation_name);
         return new Response(
-          JSON.stringify({ error: "Erro ao verificar status do vídeo" }),
+          JSON.stringify({ error: "Erro ao verificar status do vídeo", status: pollResp.status, details: errText }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
