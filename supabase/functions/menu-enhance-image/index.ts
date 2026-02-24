@@ -16,7 +16,19 @@ const STYLE_PROMPTS: Record<string, string> = {
   traditional:
     "Professional commercial food photography, tight dominant close-up, rustic traditional style. The food fills at least 80% of the frame on dark reclaimed wood. Warm directional key light emphasizing texture depth, crispy edges and golden tones. Subtle steam rising if applicable. Background very dark and heavily blurred with warm amber glow, strong contrast between subject and surroundings. Rich shadows, authentic imperfections, tactile realism, ultra sharp surface detail, shallow depth of field, 8k.",
   pop: "Professional commercial food photography, bold extreme close-up, vibrant pop commercial style. The food occupies at least 90% of the frame, centered and dominant. Solid highly saturated pastel background, evenly lit but clearly separated from subject. Bright directional lighting creating shine on sauces, crisp texture on edges, visible depth and volume. High color contrast focused on food, background slightly less saturated to avoid overpowering subject. Ultra sharp edges, advertising quality realism, shallow depth of field, 8k.",
-  teste_vitor: `Use the food from the first image exactly as it is. Do not alter its shape, size, thickness, toppings or proportions. Place it naturally into the environment of the second image. You may adjust the camera angle of the environment if needed for realism. Photograph as a professional food shot using a 50mm lens, f/0.9 aperture. Shallow depth of field with strong background blur. Natural commercial lighting focused on the food. The food must remain identical and be the clear focal point.`,
+  teste_vitor: "Keep the pizza exactly as in the first image. Do not alter its structure, toppings or proportions.
+
+Insert it into the restaurant environment from the second image and fully recompose the scene as a professional food photograph.
+
+Adjust perspective, lighting and depth to make the pizza the clear foreground subject.
+
+Use a 50mm lens, f/0.9 aperture. 
+Strong shallow depth of field. 
+Foreground sharply focused. 
+Background naturally blurred and slightly darkened for separation.
+
+Re-light the environment to match the pizza. 
+The final result must look like a real professional restaurant photoshoot.",
 };
 
 const STYLE_NAMES: Record<string, string> = {
