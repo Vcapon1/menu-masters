@@ -8,15 +8,15 @@ const corsHeaders = {
 
 const STYLE_PROMPTS: Record<string, string> = {
   minimalist:
-    "Professional food photography, minimalist fine dining style. The food item centered on a clean white porcelain plate or gray slate, placed on a white marble surface. Bright, neutral studio lighting with soft shadows. High-end restaurant aesthetic, sharp focus on food textures, 8k resolution, realistic.",
+    "Professional food photography, extreme close-up, minimalist fine dining style. The food item centered on a clean white porcelain plate or gray slate, placed on a white marble surface. Soft, directional studio lighting emphasizing food textures. Very shallow depth of field with a minimalist, blurred light grey background. High-end aesthetic, sharp focus on food details, 8k resolution, realistic.",
   industrial:
-    "Professional food photography, industrial street food style. The food item on a dark metal tray or concrete surface. Moody, high-contrast cinematic lighting with deep shadows. Background featuring a blurred dark bar or brick wall. Vibrant colors, gritty but appetizing textures, 8k, highly detailed.",
+    "Professional food photography, close-up shot, industrial street food style. The food item prominently displayed on a dark metal tray or slate surface. Dramatic, high-contrast spotlighting on the food. Very shallow depth of field with a dark, blurred brick wall background. Vibrant colors, gritty but appetizing textures, 8k, highly detailed, food fills most of the frame.",
   solar:
-    "Professional food photography, bright organic lifestyle style. The food item on a light oak wood table. Golden hour natural sunlight coming from a window, soft long shadows. Background with blurred green indoor plants (bokeh). Fresh, airy, and inviting atmosphere, 8k, realistic.",
+    "Professional food photography, tight shot, bright organic lifestyle style. The food item on a light oak wood table. Bright natural sunlight directly illuminating the food, with soft, long shadows. Extremely blurred green foliage background (bokeh), creating a serene, natural halo around the product. Fresh, airy, and inviting atmosphere, 8k, realistic.",
   traditional:
-    "Professional food photography, rustic traditional style. The food item on a dark reclaimed wood table. Warm amber lighting, cozy atmosphere. Background with a blurred stone oven or rustic kitchen. Slight dust of flour on the surface, rich textures, home-cooked feel, 8k, realistic.",
+    "Professional food photography, dominant close-up, rustic traditional style. The food item on a dark reclaimed wood table. Warm, inviting light focused on the product, highlighting its textures. Very blurred, dark background with subtle, warm amber light (like a distant oven glow). Slight dust of flour on the surface, rich, authentic textures, home-cooked feel, 8k, realistic.",
   pop:
-    "Professional food photography, vibrant pop art commercial style. The food item against a solid pastel background. Bright, flat, and even commercial lighting. High color saturation, playful and fun aesthetic. Sharp focus, clean edges, advertising quality, 8k.",
+    "Professional food photography, bold close-up, vibrant pop art commercial style. The food item against a solid, evenly lit, highly saturated pastel background that almost fills the frame. Bright, flat, commercial lighting, making the food pop. High color saturation, playful and fun aesthetic. Sharp focus, clean edges, advertising quality, 8k, product occupies at least 70% of the image.",
 };
 
 const STYLE_NAMES: Record<string, string> = {
@@ -59,7 +59,7 @@ serve(async (req) => {
 
     // For pop style, allow custom background color
     if (style === "pop" && bg_color) {
-      prompt = prompt.replace("a solid pastel background", `a solid pastel ${bg_color} background`);
+      prompt = prompt.replace("highly saturated pastel background", `highly saturated ${bg_color} background`);
     }
 
     // Add food name context if provided
