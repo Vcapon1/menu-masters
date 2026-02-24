@@ -196,37 +196,61 @@ try {
             $filename = 'ai_' . uniqid() . '.mp4';
             $localPath = $videoDir . $filename;
 
-            // Se for URI do GCS (gs://), precisamos de acesso autenticado
-            // Por enquanto, se for https:// podemos baixar diretamente
-            if (strpos($videoUri, 'gs://') === 0) {
-                // Converter gs:// para URL de download da API do GCS
-                // gs://bucket/path -> https://storage.googleapis.com/bucket/path
-                $gcsPath = substr($videoUri, 5); // Remove "gs://"
-                $downloadUrl = 'https://storage.googleapis.com/' . $gcsPath;
-            } else {
-                $downloadUrl = $videoUri;
-            }
-
-            // Baixar o vídeo
-            $ch = curl_init($downloadUrl);
-            $fp = fopen($localPath, 'wb');
-            curl_setopt_array($ch, [
-                CURLOPT_FILE => $fp,
-                CURLOPT_FOLLOWLOCATION => true,
-                CURLOPT_TIMEOUT => 120,
-            ]);
-            curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            $curlError = curl_error($ch);
-            curl_close($ch);
-            fclose($fp);
-
-            if ($curlError || $httpCode !== 200) {
-                // Limpar arquivo parcial
-                if (file_exists($localPath)) {
-                    unlink($localPath);
+            // Se vier base64 (data URI), decodificar e salvar diretamente
+            if (strpos($videoUri, 'data:video/') === 0) {
+                $parts = explode(',', $videoUri, 2);
+                if (count($parts) !== 2 || strpos($parts[0], ';base64') === false) {
+                    throw new Exception('Formato de vídeo base64 inválido');
                 }
-                throw new Exception('Erro ao baixar vídeo: ' . ($curlError ?: "HTTP {$httpCode}"));
+
+                $binaryVideo = base64_decode($parts[1], true);
+                if ($binaryVideo === false) {
+                    throw new Exception('Falha ao decodificar vídeo em base64');
+                }
+
+                if (file_put_contents($localPath, $binaryVideo) === false) {
+                    throw new Exception('Erro ao salvar vídeo localmente');
+                }
+            } elseif (preg_match('/^[A-Za-z0-9+\/=\r\n]+$/', $videoUri) && strlen($videoUri) > 1000) {
+                // Fallback: payload base64 sem prefixo data:
+                $binaryVideo = base64_decode($videoUri, true);
+                if ($binaryVideo === false) {
+                    throw new Exception('Falha ao decodificar payload de vídeo');
+                }
+
+                if (file_put_contents($localPath, $binaryVideo) === false) {
+                    throw new Exception('Erro ao salvar vídeo localmente');
+                }
+            } else {
+                // Se for URI do GCS (gs://), converter para URL pública
+                if (strpos($videoUri, 'gs://') === 0) {
+                    $gcsPath = substr($videoUri, 5); // Remove "gs://"
+                    $downloadUrl = 'https://storage.googleapis.com/' . $gcsPath;
+                } else {
+                    $downloadUrl = $videoUri;
+                }
+
+                // Baixar o vídeo via HTTP
+                $ch = curl_init($downloadUrl);
+                $fp = fopen($localPath, 'wb');
+                curl_setopt_array($ch, [
+                    CURLOPT_FILE => $fp,
+                    CURLOPT_FOLLOWLOCATION => true,
+                    CURLOPT_TIMEOUT => 120,
+                ]);
+                curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                $curlError = curl_error($ch);
+                curl_close($ch);
+                fclose($fp);
+
+                if ($curlError || $httpCode !== 200) {
+                    // Limpar arquivo parcial
+                    if (file_exists($localPath)) {
+                        unlink($localPath);
+                    }
+                    throw new Exception('Erro ao baixar vídeo: ' . ($curlError ?: "HTTP {$httpCode}"));
+                }
             }
 
             $videoUrl = UPLOAD_URL . "restaurants/{$restaurantId}/videos/{$filename}";
