@@ -7,6 +7,8 @@
  * 
  * Modos: table, delivery, full
  * Dados do carrinho vêm do localStorage via JavaScript.
+ * 
+ * Pagamento Online: Stripe Connect com Cartão e Pix
  */
 
 require_once __DIR__ . '/includes/functions.php';
@@ -26,11 +28,19 @@ if (!$restaurant) {
     exit;
 }
 
+// Verificar se pagamento online está habilitado
+$hasStripePayment = !empty($restaurant['stripe_account_id']) && $restaurant['stripe_account_status'] === 'active';
+$paymentModel = $restaurant['payment_model'] ?? 'commission';
+$platformFeePercent = floatval($restaurant['platform_fee_percent'] ?? 6.00);
+
 $modeLabels = [
     'table' => 'Pedido Mesa',
     'delivery' => 'Pedido Entrega',
     'full' => 'Pedido Completo'
 ];
+
+// URL base da Edge Function
+$edgeFunctionBase = defined('EDGE_FUNCTION_BASE') ? EDGE_FUNCTION_BASE : 'https://qmpikyymjcnmocjfmvxs.supabase.co/functions/v1';
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -38,6 +48,9 @@ $modeLabels = [
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Finalizar Pedido - <?= htmlspecialchars($restaurant['name']) ?></title>
+    <?php if ($hasStripePayment && $mode === 'full'): ?>
+    <script src="https://js.stripe.com/v3/"></script>
+    <?php endif; ?>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -58,9 +71,7 @@ $modeLabels = [
             top: 0;
             z-index: 10;
         }
-        .checkout-logo {
-            width: 40px; height: 40px; border-radius: 50%; object-fit: cover;
-        }
+        .checkout-logo { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
         .checkout-name { font-weight: 700; font-size: 1rem; }
         .checkout-mode { font-size: 0.75rem; color: rgba(255,255,255,0.5); }
         .checkout-back {
@@ -69,11 +80,7 @@ $modeLabels = [
             text-decoration: none;
             font-size: 0.85rem;
         }
-        .checkout-container {
-            max-width: 500px;
-            margin: 0 auto;
-            padding: 20px;
-        }
+        .checkout-container { max-width: 500px; margin: 0 auto; padding: 20px; }
         .checkout-section {
             background: rgba(30,30,30,0.9);
             border: 1px solid rgba(255,255,255,0.08);
@@ -144,10 +151,7 @@ $modeLabels = [
         }
         .checkout-submit button:hover { filter: brightness(1.1); }
         .checkout-submit button:disabled { opacity: 0.5; cursor: not-allowed; }
-        .checkout-msg {
-            text-align: center;
-            padding: 40px 20px;
-        }
+        .checkout-msg { text-align: center; padding: 40px 20px; }
         .checkout-msg h2 { font-size: 1.5rem; margin-bottom: 8px; }
         .checkout-msg a {
             display: inline-block;
@@ -159,7 +163,86 @@ $modeLabels = [
             text-decoration: none;
             font-weight: 600;
         }
-        .input-required { color: #f87171; }
+        /* Payment method selection */
+        .payment-method-options {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .payment-method-btn {
+            flex: 1;
+            padding: 14px;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            background: rgba(255,255,255,0.03);
+            color: #fff;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+        .payment-method-btn.active {
+            border-color: #f59e0b;
+            background: rgba(245,158,11,0.1);
+        }
+        .payment-method-btn:hover { border-color: rgba(255,255,255,0.3); }
+        .payment-method-btn .icon { font-size: 1.5rem; display: block; margin-bottom: 4px; }
+        .payment-method-btn .label { font-weight: 600; }
+        .payment-method-btn .desc { font-size: 0.7rem; color: rgba(255,255,255,0.4); margin-top: 2px; }
+        /* Stripe Elements container */
+        #stripe-card-element {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+        }
+        #stripe-card-errors {
+            color: #f87171;
+            font-size: 0.8rem;
+            margin-bottom: 8px;
+        }
+        /* Pix QR Code */
+        .pix-container {
+            text-align: center;
+            padding: 20px;
+        }
+        .pix-container img {
+            max-width: 200px;
+            margin: 0 auto 12px;
+            border-radius: 8px;
+        }
+        .pix-status {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.5);
+        }
+        .pix-copy-btn {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.85rem;
+        }
+        .pix-copy-btn:hover { background: rgba(255,255,255,0.15); }
+        .payment-processing {
+            text-align: center;
+            padding: 30px;
+        }
+        .payment-processing .spinner {
+            width: 40px; height: 40px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: #f59e0b;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -211,12 +294,54 @@ $modeLabels = [
             <input type="email" id="field-email" class="checkout-input" placeholder="Email *" required>
             <input type="text" id="field-address" class="checkout-input" placeholder="Endereço completo *" required>
         </div>
+        
+        <?php if ($hasStripePayment): ?>
+        <!-- Seção de Pagamento Online -->
+        <div class="checkout-section" id="payment-section">
+            <h3>💳 Forma de Pagamento</h3>
+            
+            <div class="payment-method-options">
+                <button type="button" class="payment-method-btn active" onclick="selectPaymentMethod('card')" id="pm-card">
+                    <span class="icon">💳</span>
+                    <span class="label">Cartão</span>
+                    <span class="desc">Crédito/Débito</span>
+                </button>
+                <button type="button" class="payment-method-btn" onclick="selectPaymentMethod('pix')" id="pm-pix">
+                    <span class="icon">📱</span>
+                    <span class="label">Pix</span>
+                    <span class="desc">Pagamento instantâneo</span>
+                </button>
+            </div>
+            
+            <!-- Formulário de Cartão (Stripe Elements) -->
+            <div id="card-payment-form">
+                <div id="stripe-card-element"></div>
+                <div id="stripe-card-errors" role="alert"></div>
+            </div>
+            
+            <!-- Pix (mostrado após criar PaymentIntent) -->
+            <div id="pix-payment-form" style="display:none;">
+                <div class="pix-container" id="pix-container">
+                    <p class="pix-status">O QR Code será gerado após confirmar o pedido.</p>
+                </div>
+            </div>
+            
+            <!-- Processing -->
+            <div id="payment-processing" style="display:none;">
+                <div class="payment-processing">
+                    <div class="spinner"></div>
+                    <p>Processando pagamento...</p>
+                </div>
+            </div>
+        </div>
+        <?php else: ?>
         <div class="checkout-section">
             <h3>Pagamento</h3>
             <p style="color: rgba(255,255,255,0.4); font-size: 0.85rem;">
-                💳 Integração de pagamento será implementada em breve.
+                💳 Pagamento na entrega ou retirada.
             </p>
         </div>
+        <?php endif; ?>
         <?php endif; ?>
 
         <div class="checkout-section">
@@ -235,7 +360,7 @@ $modeLabels = [
 
     <div class="checkout-submit" id="checkout-footer">
         <button onclick="submitOrder()" id="submit-btn">
-            <?= $mode === 'full' ? '💳 Pagar e Enviar Pedido' : '📦 Enviar Pedido' ?>
+            <?= ($mode === 'full' && $hasStripePayment) ? '💳 Pagar e Enviar Pedido' : '📦 Enviar Pedido' ?>
         </button>
     </div>
 
@@ -243,6 +368,51 @@ $modeLabels = [
         const MODE = '<?= $mode ?>';
         const RESTAURANT_ID = <?= $restaurant['id'] ?>;
         const RESTAURANT_SLUG = '<?= $restaurant['slug'] ?>';
+        const HAS_STRIPE = <?= $hasStripePayment ? 'true' : 'false' ?>;
+        const STRIPE_ACCOUNT_ID = '<?= htmlspecialchars($restaurant['stripe_account_id'] ?? '') ?>';
+        const PAYMENT_MODEL = '<?= $paymentModel ?>';
+        const PLATFORM_FEE = <?= $platformFeePercent ?>;
+        const EDGE_URL = '<?= $edgeFunctionBase ?>';
+
+        let selectedPaymentMethod = 'card';
+        let stripeInstance = null;
+        let stripeElements = null;
+        let cardElement = null;
+        let currentClientSecret = null;
+
+        // Inicializar Stripe se disponível
+        <?php if ($hasStripePayment && $mode === 'full'): ?>
+        // A publishable key do Stripe precisa ser configurada
+        const STRIPE_PK = '<?= defined("STRIPE_PUBLISHABLE_KEY") ? STRIPE_PUBLISHABLE_KEY : "" ?>';
+        if (STRIPE_PK) {
+            stripeInstance = Stripe(STRIPE_PK);
+            stripeElements = stripeInstance.elements({ locale: 'pt-BR' });
+            cardElement = stripeElements.create('card', {
+                style: {
+                    base: {
+                        color: '#ffffff',
+                        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                        fontSize: '16px',
+                        '::placeholder': { color: 'rgba(255,255,255,0.3)' },
+                    },
+                    invalid: { color: '#f87171' },
+                },
+            });
+            cardElement.mount('#stripe-card-element');
+            cardElement.on('change', (event) => {
+                const display = document.getElementById('stripe-card-errors');
+                display.textContent = event.error ? event.error.message : '';
+            });
+        }
+        <?php endif; ?>
+
+        function selectPaymentMethod(method) {
+            selectedPaymentMethod = method;
+            document.querySelectorAll('.payment-method-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('pm-' + method).classList.add('active');
+            document.getElementById('card-payment-form').style.display = method === 'card' ? 'block' : 'none';
+            document.getElementById('pix-payment-form').style.display = method === 'pix' ? 'block' : 'none';
+        }
 
         // Carregar dados do localStorage
         let checkoutData = {};
@@ -276,7 +446,6 @@ $modeLabels = [
 
             document.getElementById('checkout-total').textContent = 'R$ ' + checkoutData.total.toFixed(2).replace('.', ',');
 
-            // Preencher mesa se disponível (do checkout_data ou localStorage)
             if (MODE === 'table') {
                 const savedTable = checkoutData.tableNumber || localStorage.getItem('saved_table_' + RESTAURANT_ID) || '';
                 if (savedTable) {
@@ -312,24 +481,215 @@ $modeLabels = [
             };
 
             // Validação básica
-            if (MODE === 'table') {
-                if (!payload.table_number) {
-                    alert('Informe o número da mesa');
-                    document.getElementById('field-table')?.focus();
-                    btn.disabled = false;
-                    btn.textContent = '📦 Enviar Pedido';
-                    return;
-                }
+            if (MODE === 'table' && !payload.table_number) {
+                alert('Informe o número da mesa');
+                document.getElementById('field-table')?.focus();
+                resetBtn();
+                return;
             }
-            if (MODE === 'delivery' || MODE === 'full') {
-                if (!payload.customer_name || !payload.customer_phone) {
-                    alert('Preencha os campos obrigatórios');
-                    btn.disabled = false;
-                    btn.textContent = MODE === 'full' ? '💳 Pagar e Enviar Pedido' : '📦 Enviar Pedido';
-                    return;
-                }
+            if ((MODE === 'delivery' || MODE === 'full') && (!payload.customer_name || !payload.customer_phone)) {
+                alert('Preencha os campos obrigatórios');
+                resetBtn();
+                return;
             }
 
+            // Se tem pagamento Stripe no modo full
+            if (MODE === 'full' && HAS_STRIPE && stripeInstance) {
+                try {
+                    await processStripePayment(payload);
+                } catch (e) {
+                    alert('Erro no pagamento: ' + e.message);
+                    resetBtn();
+                }
+                return;
+            }
+
+            // Sem pagamento online — enviar pedido direto
+            await sendOrder(payload);
+        }
+
+        async function processStripePayment(payload) {
+            const btn = document.getElementById('submit-btn');
+            btn.textContent = 'Processando pagamento...';
+
+            // 1. Criar pedido primeiro (status pending)
+            payload.payment_method = selectedPaymentMethod;
+            payload.payment_status = 'pending';
+
+            const orderRes = await fetch('/api/orders.php?action=create', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const orderData = await orderRes.json();
+
+            if (!orderData.success || !orderData.order) {
+                throw new Error(orderData.error || 'Erro ao criar pedido');
+            }
+
+            const orderId = orderData.order.id;
+            const orderToken = orderData.order.token;
+
+            // 2. Criar PaymentIntent via Edge Function
+            const piRes = await fetch(EDGE_URL + '/stripe-create-payment', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    order_id: orderId,
+                    restaurant_id: RESTAURANT_ID,
+                    amount: checkoutData.total,
+                    payment_method_type: selectedPaymentMethod,
+                    stripe_account_id: STRIPE_ACCOUNT_ID,
+                    payment_model: PAYMENT_MODEL,
+                    platform_fee_percent: PLATFORM_FEE,
+                    customer_name: payload.customer_name,
+                    customer_email: document.getElementById('field-email')?.value || '',
+                })
+            });
+            const piData = await piRes.json();
+
+            if (!piData.success) {
+                throw new Error(piData.error || 'Erro ao criar pagamento');
+            }
+
+            currentClientSecret = piData.client_secret;
+
+            // 3. Confirmar pagamento conforme método
+            if (selectedPaymentMethod === 'card') {
+                await confirmCardPayment(orderId, orderToken);
+            } else {
+                await confirmPixPayment(orderId, orderToken);
+            }
+        }
+
+        async function confirmCardPayment(orderId, orderToken) {
+            document.getElementById('payment-processing').style.display = 'block';
+            document.getElementById('card-payment-form').style.display = 'none';
+
+            const { error, paymentIntent } = await stripeInstance.confirmCardPayment(
+                currentClientSecret,
+                { payment_method: { card: cardElement } }
+            );
+
+            if (error) {
+                document.getElementById('payment-processing').style.display = 'none';
+                document.getElementById('card-payment-form').style.display = 'block';
+                throw new Error(error.message);
+            }
+
+            if (paymentIntent.status === 'succeeded') {
+                // Atualizar status do pedido para paid
+                await fetch('/api/orders.php?action=update_payment', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        order_id: orderId,
+                        payment_status: 'paid',
+                        stripe_payment_id: paymentIntent.id,
+                    })
+                });
+
+                showSuccess(orderId, orderToken);
+            }
+        }
+
+        async function confirmPixPayment(orderId, orderToken) {
+            document.getElementById('payment-processing').style.display = 'block';
+            document.getElementById('pix-payment-form').style.display = 'none';
+
+            const { error, paymentIntent } = await stripeInstance.confirmPixPayment(
+                currentClientSecret,
+                { payment_method: {} }
+            );
+
+            document.getElementById('payment-processing').style.display = 'none';
+
+            if (error) {
+                throw new Error(error.message);
+            }
+
+            if (paymentIntent.status === 'requires_action' && paymentIntent.next_action?.pix_display_qr_code) {
+                const pixData = paymentIntent.next_action.pix_display_qr_code;
+                
+                document.getElementById('pix-payment-form').style.display = 'block';
+                document.getElementById('pix-container').innerHTML = `
+                    <img src="${pixData.image_url_png}" alt="QR Code Pix">
+                    <p style="font-weight:600; margin-bottom: 8px;">Escaneie o QR Code para pagar</p>
+                    <p class="pix-status">Aguardando pagamento...</p>
+                    ${pixData.data ? `
+                        <button class="pix-copy-btn" onclick="copyPix('${pixData.data}')">
+                            📋 Copiar código Pix
+                        </button>
+                    ` : ''}
+                    <p style="font-size:0.7rem; color:rgba(255,255,255,0.3); margin-top:12px;">
+                        O QR Code expira em ${pixData.expires_at ? 'alguns minutos' : '30 minutos'}
+                    </p>
+                `;
+
+                // Ocultar botão de envio enquanto aguarda Pix
+                document.getElementById('checkout-footer').style.display = 'none';
+
+                // Poll para verificar pagamento
+                pollPixPayment(orderId, orderToken);
+            } else if (paymentIntent.status === 'succeeded') {
+                await fetch('/api/orders.php?action=update_payment', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        order_id: orderId,
+                        payment_status: 'paid',
+                        stripe_payment_id: paymentIntent.id,
+                    })
+                });
+                showSuccess(orderId, orderToken);
+            }
+        }
+
+        async function pollPixPayment(orderId, orderToken) {
+            const maxAttempts = 60; // 5 minutos
+            let attempts = 0;
+
+            const poll = setInterval(async () => {
+                attempts++;
+                if (attempts > maxAttempts) {
+                    clearInterval(poll);
+                    document.querySelector('.pix-status').textContent = 'QR Code expirado. Tente novamente.';
+                    return;
+                }
+
+                try {
+                    const { paymentIntent } = await stripeInstance.retrievePaymentIntent(currentClientSecret);
+                    
+                    if (paymentIntent.status === 'succeeded') {
+                        clearInterval(poll);
+                        
+                        await fetch('/api/orders.php?action=update_payment', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                order_id: orderId,
+                                payment_status: 'paid',
+                                stripe_payment_id: paymentIntent.id,
+                            })
+                        });
+
+                        showSuccess(orderId, orderToken);
+                    }
+                } catch (e) {
+                    console.error('Poll error:', e);
+                }
+            }, 5000); // Check every 5 seconds
+        }
+
+        function copyPix(code) {
+            navigator.clipboard.writeText(code).then(() => {
+                const btn = event.target;
+                btn.textContent = '✅ Copiado!';
+                setTimeout(() => btn.textContent = '📋 Copiar código Pix', 2000);
+            });
+        }
+
+        async function sendOrder(payload) {
             try {
                 const res = await fetch('/api/orders.php?action=create', {
                     method: 'POST',
@@ -339,37 +699,50 @@ $modeLabels = [
                 const data = await res.json();
 
                 if (data.success && data.order) {
-                    // Salvar token do pedido para rastreamento passivo no cardápio
-                    localStorage.setItem('active_order_' + RESTAURANT_ID, JSON.stringify({
-                        token: data.order.token,
-                        orderId: data.order.id,
-                        createdAt: new Date().toISOString()
-                    }));
-
-                    // Salvar número da mesa para próximos pedidos
-                    if (payload.table_number) {
-                        localStorage.setItem('saved_table_' + RESTAURANT_ID, payload.table_number);
-                    }
-
-                    // Limpar carrinho
-                    localStorage.removeItem('checkout_data');
-                    localStorage.removeItem('cart_' + RESTAURANT_ID);
-
-                    // Mostrar sucesso
-                    document.getElementById('checkout-content').style.display = 'none';
-                    document.getElementById('checkout-footer').style.display = 'none';
-                    document.getElementById('checkout-success').style.display = 'block';
-                    document.getElementById('success-order-id').textContent = 'Pedido #' + data.order.id;
-                    document.getElementById('success-track-link').href = '/pedido/' + data.order.token;
+                    showSuccess(data.order.id, data.order.token);
                 } else {
                     alert(data.error || 'Erro ao enviar pedido');
-                    btn.disabled = false;
-                    btn.textContent = MODE === 'full' ? '💳 Pagar e Enviar Pedido' : '📦 Enviar Pedido';
+                    resetBtn();
                 }
             } catch (e) {
                 alert('Erro de conexão. Tente novamente.');
-                btn.disabled = false;
-                btn.textContent = MODE === 'full' ? '💳 Pagar e Enviar Pedido' : '📦 Enviar Pedido';
+                resetBtn();
+            }
+        }
+
+        function showSuccess(orderId, orderToken) {
+            // Salvar token para rastreamento
+            localStorage.setItem('active_order_' + RESTAURANT_ID, JSON.stringify({
+                token: orderToken,
+                orderId: orderId,
+                createdAt: new Date().toISOString()
+            }));
+
+            // Salvar mesa se aplicável
+            const tableNum = document.getElementById('field-table')?.value;
+            if (tableNum) {
+                localStorage.setItem('saved_table_' + RESTAURANT_ID, tableNum);
+            }
+
+            // Limpar carrinho
+            localStorage.removeItem('checkout_data');
+            localStorage.removeItem('cart_' + RESTAURANT_ID);
+
+            // Mostrar sucesso
+            document.getElementById('checkout-content').style.display = 'none';
+            document.getElementById('checkout-footer').style.display = 'none';
+            document.getElementById('checkout-success').style.display = 'block';
+            document.getElementById('success-order-id').textContent = 'Pedido #' + orderId;
+            document.getElementById('success-track-link').href = '/pedido/' + orderToken;
+        }
+
+        function resetBtn() {
+            const btn = document.getElementById('submit-btn');
+            btn.disabled = false;
+            if (MODE === 'full' && HAS_STRIPE) {
+                btn.textContent = '💳 Pagar e Enviar Pedido';
+            } else {
+                btn.textContent = '📦 Enviar Pedido';
             }
         }
     </script>

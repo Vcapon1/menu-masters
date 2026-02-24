@@ -348,7 +348,34 @@ CREATE TABLE IF NOT EXISTS `order_items` (
 -- =====================================================
 ALTER TABLE `restaurants` 
   ADD COLUMN `is_open` TINYINT(1) NOT NULL DEFAULT 1 COMMENT 'Restaurante aceitando pedidos agora',
-  ADD COLUMN `order_time_limits` JSON DEFAULT NULL COMMENT '{"pending":5,"preparing":20,"ready":10} em minutos';
+  ADD COLUMN `order_time_limits` JSON DEFAULT NULL COMMENT '{"pending":5,"preparing":20,"ready":10} em minutos',
+  ADD COLUMN `stripe_account_id` VARCHAR(255) DEFAULT NULL COMMENT 'ID da conta conectada Stripe (acct_xxx)',
+  ADD COLUMN `stripe_account_status` ENUM('pending','active','restricted') DEFAULT NULL COMMENT 'Status do onboarding Stripe',
+  ADD COLUMN `payment_model` ENUM('commission','full') DEFAULT 'commission' COMMENT 'Modelo de repasse: commission=6% plataforma, full=100% restaurante',
+  ADD COLUMN `platform_fee_percent` DECIMAL(5,2) DEFAULT 6.00 COMMENT 'Percentual de comissão da plataforma';
+
+-- =====================================================
+-- TABELA: payments (Registro de pagamentos Stripe)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS `payments` (
+  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `order_id` INT UNSIGNED NOT NULL,
+  `restaurant_id` INT UNSIGNED NOT NULL,
+  `stripe_payment_id` VARCHAR(255) DEFAULT NULL COMMENT 'PaymentIntent ID (pi_xxx)',
+  `amount` DECIMAL(10,2) NOT NULL COMMENT 'Valor total cobrado',
+  `platform_fee` DECIMAL(10,2) DEFAULT 0 COMMENT 'Taxa da plataforma',
+  `gateway_fee` DECIMAL(10,2) DEFAULT 0 COMMENT 'Taxa do Stripe',
+  `net_restaurant` DECIMAL(10,2) DEFAULT 0 COMMENT 'Valor líquido para o restaurante',
+  `payment_method` ENUM('card','pix') DEFAULT NULL,
+  `status` ENUM('pending','processing','succeeded','failed','refunded') DEFAULT 'pending',
+  `paid_at` DATETIME DEFAULT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`order_id`) REFERENCES `orders`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants`(`id`) ON DELETE CASCADE,
+  INDEX `idx_order` (`order_id`),
+  INDEX `idx_restaurant_status` (`restaurant_id`, `status`),
+  INDEX `idx_stripe_payment` (`stripe_payment_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =====================================================
 -- TABELA: stock_images (Banco de Imagens compartilhado)

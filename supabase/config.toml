@@ -8,3 +8,12 @@ verify_jwt = false
 
 [functions.menu-generate-video]
 verify_jwt = false
+
+[functions.stripe-onboarding]
+verify_jwt = false
+
+[functions.stripe-create-payment]
+verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false
