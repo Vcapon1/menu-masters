@@ -51,6 +51,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'button_color' => sanitize($_POST['button_color'] ?? '#dc2626'),
                     'button_text_color' => sanitize($_POST['button_text_color'] ?? '#ffffff'),
                     'font_color' => sanitize($_POST['font_color'] ?? '#ffffff'),
+                    'payment_model' => sanitize($_POST['payment_model'] ?? 'commission'),
+                    'platform_fee_percent' => floatval($_POST['platform_fee_percent'] ?? 6.00),
                 ];
                 
                 // Validar campos obrigatórios
@@ -122,12 +124,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             instagram, facebook, whatsapp, google_maps_url, google_review_url,
                             plan_id, template_id, status, expires_at, logo, banner, background_image,
                             primary_color, secondary_color, accent_color, button_color, button_text_color, font_color,
-                            admin_username, admin_password_hash)
+                            admin_username, admin_password_hash, payment_model, platform_fee_percent)
                             VALUES (:name, :slug, :email, :phone, :address, :internal_notes,
                             :instagram, :facebook, :whatsapp, :google_maps_url, :google_review_url,
                             :plan_id, :template_id, :status, :expires_at, :logo, :banner, :background_image,
                             :primary_color, :secondary_color, :accent_color, :button_color, :button_text_color, :font_color,
-                            :admin_username, :admin_password_hash)";
+                            :admin_username, :admin_password_hash, :payment_model, :platform_fee_percent)";
                     
                     $stmt = db()->prepare($sql);
                     $stmt->execute($data);
@@ -155,7 +157,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             background_image = :background_image, primary_color = :primary_color,
                             secondary_color = :secondary_color, accent_color = :accent_color,
                             button_color = :button_color, button_text_color = :button_text_color,
-                            font_color = :font_color, admin_username = :admin_username{$passwordUpdate}
+                            font_color = :font_color, admin_username = :admin_username,
+                            payment_model = :payment_model, platform_fee_percent = :platform_fee_percent{$passwordUpdate}
                             WHERE id = :id";
                     
                     $stmt = db()->prepare($sql);
@@ -1055,6 +1058,38 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
                             </div>
                         </div>
                         
+                        <!-- Configuração de Pagamento Stripe -->
+                        <div class="col-span-2">
+                            <h3 class="text-sm font-medium text-gray-400 border-b border-gray-700 pb-2 mb-4 mt-4">💳 Pagamento Online (Stripe)</h3>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm mb-1">Modelo de Pagamento</label>
+                            <select name="payment_model" id="form-payment-model"
+                                    class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                                <option value="commission">Comissionado (plataforma retém %)</option>
+                                <option value="full">Full (100% para restaurante)</option>
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">Define como o valor do pedido é dividido</p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm mb-1">Taxa da Plataforma (%)</label>
+                            <input type="number" name="platform_fee_percent" id="form-fee-percent" 
+                                   value="6.00" step="0.01" min="0" max="50"
+                                   class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                            <p class="text-xs text-gray-500 mt-1">Valor retido pela plataforma (modelo comissionado)</p>
+                        </div>
+                        
+                        <div class="col-span-2">
+                            <label class="block text-sm mb-1">Status da Conta Stripe</label>
+                            <div class="flex items-center gap-3 p-3 bg-gray-900 rounded-lg border border-gray-700">
+                                <span id="stripe-status-badge" class="px-2 py-1 text-xs rounded bg-gray-600">Não configurado</span>
+                                <span id="stripe-account-info" class="text-xs text-gray-400">O restaurante precisa configurar os recebimentos no painel dele.</span>
+                                <input type="hidden" name="stripe_account_id" id="form-stripe-account-id">
+                            </div>
+                        </div>
+                        
                         <!-- Cores -->
                         <div class="col-span-2">
                             <h3 class="text-sm font-medium text-gray-400 border-b border-gray-700 pb-2 mb-4 mt-4">Personalização de Cores</h3>
@@ -1488,6 +1523,14 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
             document.getElementById('form-button-text-color').value = '#ffffff';
             document.getElementById('form-font-color').value = '#ffffff';
             
+            // Stripe defaults
+            document.getElementById('form-payment-model').value = 'commission';
+            document.getElementById('form-fee-percent').value = '6.00';
+            document.getElementById('form-stripe-account-id').value = '';
+            document.getElementById('stripe-status-badge').textContent = 'Não configurado';
+            document.getElementById('stripe-status-badge').className = 'px-2 py-1 text-xs rounded bg-gray-600';
+            document.getElementById('stripe-account-info').textContent = 'O restaurante precisa configurar os recebimentos no painel dele.';
+            
             // Esconder previews de imagem
             document.getElementById('preview-logo').classList.add('hidden');
             document.getElementById('preview-banner').classList.add('hidden');
@@ -1532,6 +1575,31 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
             document.getElementById('form-button-color').value = r.button_color || '#dc2626';
             document.getElementById('form-button-text-color').value = r.button_text_color || '#ffffff';
             document.getElementById('form-font-color').value = r.font_color || '#ffffff';
+            
+            // Stripe fields
+            document.getElementById('form-payment-model').value = r.payment_model || 'commission';
+            document.getElementById('form-fee-percent').value = r.platform_fee_percent || '6.00';
+            document.getElementById('form-stripe-account-id').value = r.stripe_account_id || '';
+            
+            const stripeBadge = document.getElementById('stripe-status-badge');
+            const stripeInfo = document.getElementById('stripe-account-info');
+            if (r.stripe_account_status === 'active') {
+                stripeBadge.textContent = '✅ Ativo';
+                stripeBadge.className = 'px-2 py-1 text-xs rounded bg-green-600';
+                stripeInfo.textContent = 'Conta: ' + (r.stripe_account_id || '') + ' — Recebimentos ativos.';
+            } else if (r.stripe_account_status === 'pending') {
+                stripeBadge.textContent = '⏳ Pendente';
+                stripeBadge.className = 'px-2 py-1 text-xs rounded bg-yellow-600';
+                stripeInfo.textContent = 'Onboarding iniciado mas não finalizado.';
+            } else if (r.stripe_account_status === 'restricted') {
+                stripeBadge.textContent = '⚠️ Restrito';
+                stripeBadge.className = 'px-2 py-1 text-xs rounded bg-red-600';
+                stripeInfo.textContent = 'Conta restrita — verificação pendente no Stripe.';
+            } else {
+                stripeBadge.textContent = 'Não configurado';
+                stripeBadge.className = 'px-2 py-1 text-xs rounded bg-gray-600';
+                stripeInfo.textContent = 'O restaurante precisa configurar os recebimentos no painel dele.';
+            }
             
             // Preview de imagens existentes
             const logoPreview = document.getElementById('preview-logo');

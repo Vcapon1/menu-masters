@@ -125,6 +125,53 @@ $canAddCategories = $maxCategories === -1 || $totalCategories < $maxCategories;
             </a>
         </div>
         
+        <!-- Stripe Payments Card -->
+        <?php 
+        $hasStripe = !empty($restaurant['stripe_account_id']);
+        $stripeStatus = $restaurant['stripe_account_status'] ?? '';
+        $edgeFunctionBase = defined('EDGE_FUNCTION_BASE') ? EDGE_FUNCTION_BASE : 'https://qmpikyymjcnmocjfmvxs.supabase.co/functions/v1';
+        ?>
+        <div class="bg-gray-800 rounded-lg border border-gray-700 p-6 mb-8">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="font-bold text-lg">💳 Recebimentos Online</h2>
+                <?php if ($stripeStatus === 'active'): ?>
+                    <span class="px-3 py-1 text-xs rounded-full bg-green-600">✅ Ativo</span>
+                <?php elseif ($stripeStatus === 'pending'): ?>
+                    <span class="px-3 py-1 text-xs rounded-full bg-yellow-600">⏳ Pendente</span>
+                <?php else: ?>
+                    <span class="px-3 py-1 text-xs rounded-full bg-gray-600">Não configurado</span>
+                <?php endif; ?>
+            </div>
+            
+            <?php if ($stripeStatus === 'active'): ?>
+                <p class="text-gray-400 text-sm mb-4">
+                    Seus recebimentos estão configurados. Os pagamentos online dos pedidos serão depositados na sua conta.
+                </p>
+                <div class="flex gap-3">
+                    <button onclick="openStripeDashboard()" 
+                            class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg text-sm transition">
+                        📊 Ver Dashboard Stripe
+                    </button>
+                </div>
+            <?php elseif ($stripeStatus === 'pending'): ?>
+                <p class="text-yellow-400 text-sm mb-4">
+                    Sua conta está sendo verificada. Complete o cadastro para começar a receber pagamentos.
+                </p>
+                <button onclick="startOnboarding()" 
+                        class="bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded-lg text-sm transition">
+                    Completar Cadastro →
+                </button>
+            <?php else: ?>
+                <p class="text-gray-400 text-sm mb-4">
+                    Configure seus recebimentos para aceitar pagamentos online via cartão de crédito e Pix diretamente no seu cardápio.
+                </p>
+                <button onclick="startOnboarding()" 
+                        class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg text-sm transition">
+                    🚀 Configurar Recebimentos
+                </button>
+            <?php endif; ?>
+        </div>
+        
         <!-- Plan Info -->
         <?php if (!$canAddProducts || !$canAddCategories): ?>
         <div class="bg-yellow-900/50 border border-yellow-600 rounded-lg p-4 mb-8">
@@ -188,5 +235,115 @@ $canAddCategories = $maxCategories === -1 || $totalCategories < $maxCategories;
         </div>
     </main>
 
+    <script>
+        const EDGE_URL = '<?= $edgeFunctionBase ?>';
+        const RESTAURANT_ID = <?= $restaurantId ?>;
+        const STRIPE_ACCOUNT_ID = '<?= htmlspecialchars($restaurant['stripe_account_id'] ?? '') ?>';
+
+        async function startOnboarding() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = 'Preparando...';
+
+            try {
+                const action = STRIPE_ACCOUNT_ID ? 'refresh_link' : 'create';
+                const res = await fetch(EDGE_URL + '/stripe-onboarding', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        action: action,
+                        restaurant_id: RESTAURANT_ID,
+                        restaurant_name: '<?= htmlspecialchars($restaurant['name'], ENT_QUOTES) ?>',
+                        restaurant_email: '<?= htmlspecialchars($restaurant['email'], ENT_QUOTES) ?>',
+                        return_url: window.location.origin + '/admin/index.php',
+                        account_id: STRIPE_ACCOUNT_ID || undefined,
+                    })
+                });
+
+                const data = await res.json();
+                if (data.success && (data.onboarding_url)) {
+                    // Salvar account_id no banco via PHP
+                    if (data.account_id) {
+                        await fetch('/api/orders.php?action=save_stripe_account', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                restaurant_id: RESTAURANT_ID,
+                                stripe_account_id: data.account_id,
+                                stripe_account_status: 'pending'
+                            })
+                        });
+                    }
+                    window.location.href = data.onboarding_url;
+                } else {
+                    alert(data.error || 'Erro ao iniciar configuração');
+                    btn.disabled = false;
+                    btn.textContent = '🚀 Configurar Recebimentos';
+                }
+            } catch (e) {
+                alert('Erro de conexão: ' + e.message);
+                btn.disabled = false;
+                btn.textContent = '🚀 Configurar Recebimentos';
+            }
+        }
+
+        async function openStripeDashboard() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = 'Abrindo...';
+
+            try {
+                const res = await fetch(EDGE_URL + '/stripe-onboarding', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        action: 'login_link',
+                        account_id: STRIPE_ACCOUNT_ID,
+                    })
+                });
+
+                const data = await res.json();
+                if (data.success && data.url) {
+                    window.open(data.url, '_blank');
+                } else {
+                    alert(data.error || 'Erro ao abrir dashboard');
+                }
+            } catch (e) {
+                alert('Erro: ' + e.message);
+            }
+            btn.disabled = false;
+            btn.textContent = '📊 Ver Dashboard Stripe';
+        }
+
+        // Verificar retorno do Stripe onboarding
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('stripe_return') === '1') {
+            const accountId = urlParams.get('account_id');
+            if (accountId) {
+                // Verificar status da conta
+                fetch(EDGE_URL + '/stripe-onboarding', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ action: 'status', account_id: accountId })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        fetch('/api/orders.php?action=save_stripe_account', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                restaurant_id: RESTAURANT_ID,
+                                stripe_account_id: accountId,
+                                stripe_account_status: data.status
+                            })
+                        }).then(() => {
+                            window.location.href = '/admin/index.php';
+                        });
+                    }
+                });
+            }
+        }
+    </script>
 </body>
 </html>
