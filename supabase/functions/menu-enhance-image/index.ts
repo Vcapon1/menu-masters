@@ -8,50 +8,46 @@ const corsHeaders = {
 
 // Guardrail global: trava o modelo no modo "edição", não "criação"
 const BASE_GUARDRAIL =
-  `This is a real photo of real food. ` +
-  `Keep the dish exactly the same: do not change ingredients, shape, size, proportions, or texture. ` +
-  `Do not slice, replate, rearrange, stylize, or generate a different dish. ` +
-  `Do not add any new food, sauces, toppings, garnish, or props. ` +
-  `Only improve lighting, sharpness, color balance, and background style. ` +
-  `If the image quality is low, still keep the original food unchanged. `;
+  `Edit the provided photo only. Keep the exact same dish and composition. ` +
+  `Do not change ingredients, toppings, sauces, garnish, shape, size, proportions, texture, doneness, or arrangement. ` +
+  `Do not slice, add/remove pieces, replate, or restyle the food. ` +
+  `Do not add props or any new objects. ` +
+  `No visible light fixtures (no lamps, no spotlights, no hanging lights in frame). ` +
+  `Only improve lighting, exposure, white balance, sharpness and background style while preserving the food exactly. ` +
+  `Make the food the hero: tight crop and shallow depth of field. `;
 
 const STYLE_PROMPTS: Record<string, string> = {
   minimalist:
-    `Minimal clean studio look. Neutral surface (white marble or light grey). ` +
-    `Soft natural-looking light. Background softly blurred and uncluttered. ` +
-    `Food is the clear focus.`,
+    `Minimal clean studio look. Food occupies 90–95% of the frame (tight close-up). ` +
+    `Neutral surface (white marble or light grey). Soft diffused side light (no hard spots). ` +
+    `Background plain and heavily blurred. No extra objects. No visible light fixtures.`,
 
   industrial:
-    `Industrial urban mood. Darker background with subtle texture (metal/brick feel). ` +
-    `Focused light on the food. Background blurred and less bright than the food. ` +
-    `Food stands out clearly.`,
+    `Industrial urban mood. Food occupies 90–95% of the frame (tight close-up). ` +
+    `Dark matte surface (stone/metal/wood). Controlled soft side light with gentle shadow. ` +
+    `Background dark, heavily blurred, subtle texture only. No props. No visible light fixtures.`,
 
   solar:
-    `Bright natural daylight. Light wooden surface. ` +
-    `Warm soft daylight with gentle shadows. ` +
-    `Background softly blurred with natural tones. ` +
-    `Food is the clear focus.`,
+    `Bright natural daylight look. Food occupies 90–95% of the frame (tight close-up). ` +
+    `Light wooden or neutral surface. Soft daylight from the side (not overhead), natural shadows. ` +
+    `Background bright but heavily blurred. No props. No visible light fixtures.`,
 
   traditional:
-    `Warm traditional mood. Wooden surface. ` +
-    `Warm light, slightly darker background. ` +
-    `Background softly blurred, cozy tones. ` +
-    `Food stands out clearly.`,
+    `Warm cozy look. Food occupies 90–95% of the frame (tight close-up). ` +
+    `Wooden surface. Warm soft side light, richer shadows, realistic highlights. ` +
+    `Background darker and heavily blurred. No props. No visible light fixtures.`,
 
   pop:
-    `Clean commercial pop look. Solid simple colorful background. ` +
-    `Bright even light on the food. Background smooth and slightly blurred. ` +
-    `No illustration style; keep it photographic and realistic. ` +
-    `Food is the clear focus.`,
+    `Commercial pop look (still photographic). Food occupies 90–95% of the frame (tight close-up). ` +
+    `Solid clean background color, smooth and slightly blurred. Even soft light, true-to-life textures. ` +
+    `No illustration/cartoon. No props. No visible light fixtures.`,
 
   teste_vitor:
-    `Use the restaurant environment from the second image as background context only. ` +
-    `Make the food the hero: tight foreground framing and close crop. ` +
-    `Background must be distant, soft and heavily blurred. ` +
-    `Darken and soften the environment to avoid distraction. ` +
-    `Remove extra plates, glasses and cutlery; keep the table clean. ` +
-    `Match lighting direction and color temperature so the composite looks real. ` +
-    `Create a realistic contact shadow under the dish.`,
+    `Use the second image only as a blurred background context. ` +
+    `Food occupies 85–90% of the frame in the foreground (tight crop). ` +
+    `Remove all table items/props; keep a clean surface only. ` +
+    `Match perspective and lighting; add realistic contact shadow under the dish. ` +
+    `Background distant, heavily blurred and slightly darkened. No visible light fixtures.`,
 };
 
 const STYLE_NAMES: Record<string, string> = {
