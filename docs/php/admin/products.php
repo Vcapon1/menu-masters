@@ -559,8 +559,14 @@ $availableBadges = [
                                 </video>
                                 <span class="text-xs text-gray-400">Vídeo atual</span>
                             </div>
-                            <input type="file" name="video" accept="video/mp4,video/webm"
-                                   class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                            <div class="space-y-2">
+                                <input type="file" name="video" accept="video/mp4,video/webm"
+                                       class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
+                                <button type="button" onclick="openVideoAiModal()" 
+                                        class="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 px-3 py-2 rounded text-sm font-medium flex items-center justify-center gap-1">
+                                    🎬 Gerar Vídeo com IA
+                                </button>
+                            </div>
                         </div>
                         <?php endif; ?>
                         
@@ -1537,6 +1543,393 @@ $availableBadges = [
             img.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;border-radius:0.5rem;';
             overlay.appendChild(img);
             document.body.appendChild(overlay);
+        }
+    </script>
+    
+    <!-- Modal de Geração de Vídeo por IA -->
+    <div id="video-ai-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center" style="z-index: 70;">
+        <div class="bg-gray-800 rounded-lg max-w-lg w-full mx-4 modal-container" style="max-height: 85vh;">
+            <!-- Fase 1: Seleção de estilo -->
+            <div id="video-phase-select" class="flex flex-col">
+                <div class="modal-header flex items-center justify-between">
+                    <h2 class="text-lg font-bold">🎬 Gerar Vídeo com IA</h2>
+                    <button type="button" onclick="closeVideoAiModal()" class="text-gray-400 hover:text-white text-xl">✕</button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-sm text-gray-400 mb-4">Selecione um estilo cinematográfico para transformar a foto do prato em um vídeo vertical (9:16) de 5 segundos.</p>
+                    
+                    <div id="video-no-image-warn" class="hidden bg-yellow-900/40 border border-yellow-600 rounded-lg p-3 mb-4">
+                        <p class="text-sm text-yellow-300">⚠️ Adicione uma imagem ao prato primeiro para gerar o vídeo.</p>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                        <div class="video-style-card border-2 border-gray-600 rounded-lg p-3 cursor-pointer hover:border-cyan-500 transition-all" 
+                             data-style="cheese_pull" onclick="selectVideoStyle('cheese_pull')">
+                            <div class="text-2xl mb-1">🧀</div>
+                            <h4 class="font-bold text-sm">Cheese Pull</h4>
+                            <p class="text-xs text-gray-400 mt-1">Queijo derretido se esticando em câmera lenta</p>
+                        </div>
+                        <div class="video-style-card border-2 border-gray-600 rounded-lg p-3 cursor-pointer hover:border-cyan-500 transition-all" 
+                             data-style="spinning_plate" onclick="selectVideoStyle('spinning_plate')">
+                            <div class="text-2xl mb-1">🍽️</div>
+                            <h4 class="font-bold text-sm">Prato Girando</h4>
+                            <p class="text-xs text-gray-400 mt-1">Rotação 360° dramática com iluminação de estúdio</p>
+                        </div>
+                        <div class="video-style-card border-2 border-gray-600 rounded-lg p-3 cursor-pointer hover:border-cyan-500 transition-all" 
+                             data-style="macro_detail" onclick="selectVideoStyle('macro_detail')">
+                            <div class="text-2xl mb-1">🔬</div>
+                            <h4 class="font-bold text-sm">Macro Detail</h4>
+                            <p class="text-xs text-gray-400 mt-1">Ultra close-up nas texturas e detalhes do prato</p>
+                        </div>
+                        <div class="video-style-card border-2 border-gray-600 rounded-lg p-3 cursor-pointer hover:border-cyan-500 transition-all" 
+                             data-style="steam_heat" onclick="selectVideoStyle('steam_heat')">
+                            <div class="text-2xl mb-1">♨️</div>
+                            <h4 class="font-bold text-sm">Vapor & Calor</h4>
+                            <p class="text-xs text-gray-400 mt-1">Vapor subindo dramaticamente em câmera lenta</p>
+                        </div>
+                    </div>
+                    
+                    <button type="button" onclick="startVideoGeneration()" id="btn-start-video"
+                            class="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 py-3 rounded-lg font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled>
+                        🎬 Gerar Vídeo
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Fase 2: Progresso -->
+            <div id="video-phase-progress" class="hidden flex flex-col">
+                <div class="modal-header flex items-center justify-between">
+                    <h2 class="text-lg font-bold">🎬 Gerando Vídeo...</h2>
+                    <span class="text-xs text-gray-400" id="video-style-label"></span>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center py-8">
+                        <div class="inline-block animate-spin text-5xl mb-4">🎬</div>
+                        <p class="text-lg font-bold mb-2" id="video-progress-text">Iniciando geração...</p>
+                        <p class="text-sm text-gray-400 mb-4">A IA está criando seu vídeo cinematográfico</p>
+                        
+                        <!-- Barra de progresso -->
+                        <div class="w-full bg-gray-700 rounded-full h-3 mb-2 overflow-hidden">
+                            <div id="video-progress-bar" class="bg-gradient-to-r from-blue-500 to-cyan-400 h-3 rounded-full transition-all duration-500" style="width: 5%"></div>
+                        </div>
+                        <p class="text-xs text-gray-500" id="video-progress-percent">5%</p>
+                        
+                        <p class="text-xs text-gray-500 mt-4">⏱️ Isso pode levar de 2 a 5 minutos</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Fase 3: Resultado -->
+            <div id="video-phase-result" class="hidden flex flex-col">
+                <div class="modal-header flex items-center justify-between">
+                    <h2 class="text-lg font-bold">🎬 Vídeo Pronto!</h2>
+                    <button type="button" onclick="closeVideoAiModal()" class="text-gray-400 hover:text-white text-xl">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-4 rounded-lg overflow-hidden border border-cyan-500 bg-black">
+                        <video id="video-result-player" controls class="w-full" style="max-height: 400px;">
+                            <source src="" type="video/mp4">
+                        </video>
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <button type="button" onclick="useGeneratedVideo()" 
+                                class="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 py-3 rounded-lg font-bold text-sm sm:text-base">
+                            ✅ Usar Vídeo
+                        </button>
+                        <button type="button" onclick="retryVideoGeneration()" 
+                                class="flex-1 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium">
+                            🔄 Outro Estilo
+                        </button>
+                        <button type="button" onclick="closeVideoAiModal()" 
+                                class="py-2.5 px-4 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Fase Erro -->
+            <div id="video-phase-error" class="hidden flex flex-col">
+                <div class="modal-header flex items-center justify-between">
+                    <h2 class="text-lg font-bold">❌ Erro na Geração</h2>
+                    <button type="button" onclick="closeVideoAiModal()" class="text-gray-400 hover:text-white text-xl">✕</button>
+                </div>
+                <div class="modal-body text-center py-8">
+                    <div class="text-5xl mb-4">😔</div>
+                    <p class="text-lg font-bold mb-2">Não foi possível gerar o vídeo</p>
+                    <p class="text-sm text-red-400 mb-4" id="video-error-msg"></p>
+                    <div class="flex gap-2 justify-center">
+                        <button type="button" onclick="retryVideoGeneration()" 
+                                class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm font-medium">
+                            🔄 Tentar Novamente
+                        </button>
+                        <button type="button" onclick="closeVideoAiModal()" 
+                                class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm">
+                            Fechar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // =====================================================
+        // GERAÇÃO DE VÍDEO POR IA (Vertex AI Veo)
+        // =====================================================
+        const VIDEO_API_URL = '../api/generate-video.php';
+        let videoSelectedStyle = null;
+        let videoOperationName = null;
+        let videoPollTimer = null;
+        let videoResultUri = null;
+        
+        function openVideoAiModal() {
+            const modal = document.getElementById('video-ai-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            showVideoPhase('select');
+            videoSelectedStyle = null;
+            videoOperationName = null;
+            videoResultUri = null;
+            
+            // Check if product has image
+            const currentImg = document.getElementById('form-current-image').value;
+            const fileInput = document.getElementById('file-image-input');
+            const hasImage = currentImg || (fileInput && fileInput.files.length > 0);
+            
+            document.getElementById('video-no-image-warn').classList.toggle('hidden', hasImage);
+            document.getElementById('btn-start-video').disabled = true;
+            
+            // Reset style selection
+            document.querySelectorAll('.video-style-card').forEach(c => {
+                c.classList.remove('border-cyan-500', 'bg-cyan-900/20');
+                c.classList.add('border-gray-600');
+            });
+        }
+        
+        function closeVideoAiModal() {
+            document.getElementById('video-ai-modal').classList.add('hidden');
+            document.getElementById('video-ai-modal').classList.remove('flex');
+            if (videoPollTimer) {
+                clearInterval(videoPollTimer);
+                videoPollTimer = null;
+            }
+        }
+        
+        function showVideoPhase(phase) {
+            ['select', 'progress', 'result', 'error'].forEach(p => {
+                document.getElementById(`video-phase-${p}`).classList.toggle('hidden', p !== phase);
+            });
+        }
+        
+        function selectVideoStyle(style) {
+            videoSelectedStyle = style;
+            document.querySelectorAll('.video-style-card').forEach(c => {
+                const isSelected = c.dataset.style === style;
+                c.classList.toggle('border-cyan-500', isSelected);
+                c.classList.toggle('bg-cyan-900/20', isSelected);
+                c.classList.toggle('border-gray-600', !isSelected);
+            });
+            
+            // Enable button if we have image
+            const currentImg = document.getElementById('form-current-image').value;
+            const fileInput = document.getElementById('file-image-input');
+            const hasImage = currentImg || (fileInput && fileInput.files.length > 0);
+            document.getElementById('btn-start-video').disabled = !hasImage;
+        }
+        
+        async function getImageBase64ForVideo() {
+            // Priority: file input > current image URL > enhanced image
+            const fileInput = document.getElementById('file-image-input');
+            if (fileInput && fileInput.files.length > 0) {
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = () => resolve(null);
+                    reader.readAsDataURL(fileInput.files[0]);
+                });
+            }
+            
+            const currentImg = document.getElementById('form-current-image').value;
+            if (currentImg) {
+                // If already base64
+                if (currentImg.startsWith('data:')) return currentImg;
+                // Load from URL
+                return await loadImageAsBase64(currentImg);
+            }
+            
+            return null;
+        }
+        
+        async function startVideoGeneration() {
+            if (!videoSelectedStyle) return;
+            
+            const imageBase64 = await getImageBase64ForVideo();
+            if (!imageBase64) {
+                alert('Adicione uma imagem ao prato primeiro.');
+                return;
+            }
+            
+            const foodName = document.getElementById('form-name').value.trim();
+            const styleNames = {
+                cheese_pull: 'Cheese Pull',
+                spinning_plate: 'Prato Girando',
+                macro_detail: 'Macro Detail',
+                steam_heat: 'Vapor & Calor'
+            };
+            
+            showVideoPhase('progress');
+            document.getElementById('video-style-label').textContent = styleNames[videoSelectedStyle] || '';
+            updateVideoProgress(5, 'Enviando imagem...');
+            
+            try {
+                const res = await fetch(VIDEO_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'generate',
+                        image: imageBase64,
+                        style: videoSelectedStyle,
+                        food_name: foodName,
+                    }),
+                });
+                
+                const data = await res.json();
+                
+                if (!data.success) {
+                    throw new Error(data.error || 'Erro ao iniciar geração');
+                }
+                
+                videoOperationName = data.operation_name;
+                updateVideoProgress(10, 'Geração iniciada. Processando...');
+                
+                // Start polling
+                let pollCount = 0;
+                videoPollTimer = setInterval(async () => {
+                    pollCount++;
+                    try {
+                        const pollRes = await fetch(VIDEO_API_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                action: 'poll',
+                                operation_name: videoOperationName,
+                            }),
+                        });
+                        
+                        const pollData = await pollRes.json();
+                        
+                        if (pollData.done) {
+                            clearInterval(videoPollTimer);
+                            videoPollTimer = null;
+                            
+                            if (pollData.error || !pollData.success) {
+                                showVideoError(pollData.error || 'Erro desconhecido na geração');
+                                return;
+                            }
+                            
+                            videoResultUri = pollData.video_uri;
+                            updateVideoProgress(100, 'Vídeo pronto!');
+                            
+                            // Show result
+                            setTimeout(() => {
+                                const player = document.getElementById('video-result-player');
+                                player.querySelector('source').src = videoResultUri;
+                                player.load();
+                                showVideoPhase('result');
+                            }, 500);
+                            return;
+                        }
+                        
+                        // Update progress
+                        const progress = pollData.progress || Math.min(10 + pollCount * 3, 90);
+                        const stateMessages = {
+                            'RUNNING': 'Processando vídeo...',
+                            'QUEUED': 'Na fila de processamento...',
+                        };
+                        const msg = stateMessages[pollData.state] || 'Gerando vídeo...';
+                        updateVideoProgress(progress, msg);
+                        
+                    } catch (err) {
+                        console.error('Poll error:', err);
+                        // Don't stop polling on transient errors
+                        if (pollCount > 60) { // ~5 min timeout
+                            clearInterval(videoPollTimer);
+                            videoPollTimer = null;
+                            showVideoError('Tempo limite excedido. Tente novamente.');
+                        }
+                    }
+                }, 5000); // Poll every 5 seconds
+                
+            } catch (err) {
+                showVideoError(err.message);
+            }
+        }
+        
+        function updateVideoProgress(percent, text) {
+            document.getElementById('video-progress-bar').style.width = percent + '%';
+            document.getElementById('video-progress-percent').textContent = percent + '%';
+            if (text) {
+                document.getElementById('video-progress-text').textContent = text;
+            }
+        }
+        
+        function showVideoError(msg) {
+            document.getElementById('video-error-msg').textContent = msg;
+            showVideoPhase('error');
+        }
+        
+        async function useGeneratedVideo() {
+            if (!videoResultUri) return;
+            
+            // Download and save via API
+            const productId = document.getElementById('form-id').value || 0;
+            
+            try {
+                const res = await fetch(VIDEO_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'download',
+                        video_uri: videoResultUri,
+                        product_id: parseInt(productId),
+                    }),
+                });
+                
+                const data = await res.json();
+                
+                if (!data.success) {
+                    throw new Error(data.error || 'Erro ao salvar vídeo');
+                }
+                
+                // Update form
+                document.getElementById('form-current-video').value = data.video_url;
+                
+                // Update video preview
+                const videoPreview = document.getElementById('current-video-preview');
+                const previewVideo = document.getElementById('preview-video');
+                if (videoPreview && previewVideo) {
+                    previewVideo.querySelector('source').src = data.video_url;
+                    previewVideo.load();
+                    videoPreview.classList.remove('hidden');
+                }
+                
+                closeVideoAiModal();
+                
+            } catch (err) {
+                alert('Erro ao salvar: ' + err.message);
+            }
+        }
+        
+        function retryVideoGeneration() {
+            if (videoPollTimer) {
+                clearInterval(videoPollTimer);
+                videoPollTimer = null;
+            }
+            videoOperationName = null;
+            videoResultUri = null;
+            showVideoPhase('select');
         }
     </script>
 </body>
