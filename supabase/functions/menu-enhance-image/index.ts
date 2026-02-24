@@ -17,15 +17,26 @@ const STYLE_PROMPTS: Record<string, string> = {
     "Professional commercial food photography, tight dominant close-up, rustic traditional style. The food fills at least 80% of the frame on dark reclaimed wood. Warm directional key light emphasizing texture depth, crispy edges and golden tones. Subtle steam rising if applicable. Background very dark and heavily blurred with warm amber glow, strong contrast between subject and surroundings. Rich shadows, authentic imperfections, tactile realism, ultra sharp surface detail, shallow depth of field, 8k.",
   pop: "Professional commercial food photography, bold extreme close-up, vibrant pop commercial style. The food occupies at least 90% of the frame, centered and dominant. Solid highly saturated pastel background, evenly lit but clearly separated from subject. Bright directional lighting creating shine on sauces, crisp texture on edges, visible depth and volume. High color contrast focused on food, background slightly less saturated to avoid overpowering subject. Ultra sharp edges, advertising quality realism, shallow depth of field, 8k.",
   teste_vitor: `
-Improve this photo and turn it into a professional restaurant food image.
+Enhance this photo into a professional restaurant food image.
 
-You may improve lighting, sharpness and plate arrangement, but you must keep the exact same pizza and ingredients.
+Keep the exact same pizza and ingredients. Do not redesign or replace the food.
 
-Do not change the food itself.
+The pizza must be the only subject on the table.
+Remove all extra plates, glasses and cutlery.
 
-Make the pizza the clear focus. 
-Blur and soften the background naturally. 
-Adjust the environment to look realistic and cohesive.
+Frame the pizza as the hero shot.
+It must occupy most of the foreground.
+
+Background should be distant, soft and heavily blurred.
+Darken and soften the environment to avoid distraction.
+
+Improve lighting and color balance.
+Create realistic shadow under the pizza.
+Maintain original food structure.
+
+Use tight foreground framing.
+Crop close to the pizza.
+Background must be secondary and out of focus.
 `,
 };
 
