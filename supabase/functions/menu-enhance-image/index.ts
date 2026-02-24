@@ -16,6 +16,7 @@ const STYLE_PROMPTS: Record<string, string> = {
   traditional:
     "Professional commercial food photography, tight dominant close-up, rustic traditional style. The food fills at least 80% of the frame on dark reclaimed wood. Warm directional key light emphasizing texture depth, crispy edges and golden tones. Subtle steam rising if applicable. Background very dark and heavily blurred with warm amber glow, strong contrast between subject and surroundings. Rich shadows, authentic imperfections, tactile realism, ultra sharp surface detail, shallow depth of field, 8k.",
   pop: "Professional commercial food photography, bold extreme close-up, vibrant pop commercial style. The food occupies at least 85% of the frame, centered and dominant. Solid highly saturated pastel background, evenly lit but clearly separated from subject. Bright directional lighting creating shine on sauces, crisp texture on edges, visible depth and volume. High color contrast focused on food, background slightly less saturated to avoid overpowering subject. Ultra sharp edges, advertising quality realism, shallow depth of field, 8k.",
+  teste_vitor: "Create a stunning professional food photograph by placing the food item from the first image into the environment/setting shown in the second image. The food must be the hero of the shot, occupying at least 60% of the frame, with professional commercial lighting that highlights textures, colors and freshness. Use the environment as background context with strong bokeh blur to separate subject from background. Ensure the composite looks natural and cohesive, as if the food was actually photographed in that environment. 8k resolution, shallow depth of field, realistic lighting matching both elements.",
 };
 
 const STYLE_NAMES: Record<string, string> = {
@@ -24,6 +25,7 @@ const STYLE_NAMES: Record<string, string> = {
   solar: "Solar & Orgânico",
   traditional: "Tradicional & Aconchegante",
   pop: "Pop & Colorido",
+  teste_vitor: "Teste Vitor (Prato + Ambiente)",
 };
 
 serve(async (req) => {
@@ -37,7 +39,7 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const { image, style, food_name, bg_color } = await req.json();
+    const { image, image_environment, style, food_name, bg_color } = await req.json();
 
     if (!image) {
       return new Response(JSON.stringify({ error: "Envie uma imagem em base64" }), {
@@ -48,6 +50,14 @@ serve(async (req) => {
 
     if (!style || !STYLE_PROMPTS[style]) {
       return new Response(JSON.stringify({ error: `Estilo inválido. Use: ${Object.keys(STYLE_PROMPTS).join(", ")}` }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Validate teste_vitor requires second image
+    if (style === "teste_vitor" && !image_environment) {
+      return new Response(JSON.stringify({ error: "O estilo Teste Vitor requer uma segunda imagem do ambiente (image_environment)" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -67,6 +77,18 @@ serve(async (req) => {
 
     const imageUrl = image.startsWith("data:") ? image : `data:image/jpeg;base64,${image}`;
 
+    // Build content array with images
+    const contentParts: any[] = [
+      { type: "text", text: fullPrompt },
+      { type: "image_url", image_url: { url: imageUrl } },
+    ];
+
+    // Add environment image for teste_vitor style
+    if (style === "teste_vitor" && image_environment) {
+      const envImageUrl = image_environment.startsWith("data:") ? image_environment : `data:image/jpeg;base64,${image_environment}`;
+      contentParts.push({ type: "image_url", image_url: { url: envImageUrl } });
+    }
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -78,10 +100,7 @@ serve(async (req) => {
         messages: [
           {
             role: "user",
-            content: [
-              { type: "text", text: fullPrompt },
-              { type: "image_url", image_url: { url: imageUrl } },
-            ],
+            content: contentParts,
           },
         ],
         modalities: ["image", "text"],
