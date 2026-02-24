@@ -71,6 +71,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // Upload de imagem
                 $image = $_POST['current_image'] ?? null;
+                
+                // Se current_image é base64 (vindo da IA), converter para arquivo
+                if ($image && preg_match('/^data:image\/(png|jpeg|jpg|webp);base64,/', $image, $matches)) {
+                    $ext = $matches[1] === 'jpg' ? 'jpeg' : $matches[1];
+                    $base64Data = preg_replace('/^data:image\/\w+;base64,/', '', $image);
+                    $binaryData = base64_decode($base64Data);
+                    if ($binaryData !== false) {
+                        $uploadDir = __DIR__ . "/../uploads/restaurants/{$restaurantId}/products/";
+                        if (!is_dir($uploadDir)) {
+                            mkdir($uploadDir, 0755, true);
+                        }
+                        $filename = 'ai_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . ($ext === 'jpeg' ? 'jpg' : $ext);
+                        $filePath = $uploadDir . $filename;
+                        if (file_put_contents($filePath, $binaryData)) {
+                            $image = "uploads/restaurants/{$restaurantId}/products/{$filename}";
+                        }
+                    }
+                }
+                
                 if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
                     $image = uploadImage($_FILES['image'], "restaurants/{$restaurantId}/products");
                 }
@@ -1621,9 +1640,9 @@ $availableBadges = [
     
     <!-- Modal de Geração de Vídeo por IA -->
     <div id="video-ai-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center" style="z-index: 70;">
-        <div class="bg-gray-800 rounded-lg max-w-lg w-full mx-4 modal-container" style="max-height: 85vh;">
+        <div class="bg-gray-800 rounded-lg max-w-lg w-full mx-4 modal-container" style="max-height: 85vh; max-height: 85dvh;">
             <!-- Fase 1: Seleção de estilo -->
-            <div id="video-phase-select" class="flex flex-col">
+            <div id="video-phase-select" class="flex flex-col flex-1 overflow-hidden">
                 <div class="modal-header flex items-center justify-between">
                     <h2 class="text-lg font-bold">🎬 Gerar Vídeo com IA</h2>
                     <button type="button" onclick="closeVideoAiModal()" class="text-gray-400 hover:text-white text-xl">✕</button>
@@ -1671,7 +1690,7 @@ $availableBadges = [
             </div>
             
             <!-- Fase 2: Progresso -->
-            <div id="video-phase-progress" class="hidden flex flex-col">
+            <div id="video-phase-progress" class="hidden flex flex-col flex-1 overflow-hidden">
                 <div class="modal-header flex items-center justify-between">
                     <h2 class="text-lg font-bold">🎬 Gerando Vídeo...</h2>
                     <span class="text-xs text-gray-400" id="video-style-label"></span>
