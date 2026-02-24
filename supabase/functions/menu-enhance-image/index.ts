@@ -17,25 +17,15 @@ const STYLE_PROMPTS: Record<string, string> = {
     "Professional commercial food photography, tight dominant close-up, rustic traditional style. The food fills at least 80% of the frame on dark reclaimed wood. Warm directional key light emphasizing texture depth, crispy edges and golden tones. Subtle steam rising if applicable. Background very dark and heavily blurred with warm amber glow, strong contrast between subject and surroundings. Rich shadows, authentic imperfections, tactile realism, ultra sharp surface detail, shallow depth of field, 8k.",
   pop: "Professional commercial food photography, bold extreme close-up, vibrant pop commercial style. The food occupies at least 90% of the frame, centered and dominant. Solid highly saturated pastel background, evenly lit but clearly separated from subject. Bright directional lighting creating shine on sauces, crisp texture on edges, visible depth and volume. High color contrast focused on food, background slightly less saturated to avoid overpowering subject. Ultra sharp edges, advertising quality realism, shallow depth of field, 8k.",
   teste_vitor: `
-Keep the pizza exactly as in the first image. Do not alter shape, toppings, crust or proportions.
+Improve this photo and turn it into a professional restaurant food image.
 
-Recompose the scene as a tight professional food photograph.
+You may improve lighting, sharpness and plate arrangement, but you must keep the exact same pizza and ingredients.
 
-The pizza must occupy at least 90% of the frame.
-Camera positioned very close to the subject.
-Tight crop. Macro perspective.
+Do not change the food itself.
 
-Insert the restaurant environment only as distant background context.
-Push background far behind subject.
-Strong depth of field separation.
-
-Use 50mm lens, f/0.9 aperture.
-Foreground extremely sharp.
-Background heavily blurred and slightly darkened.
-
-No extra props.
-No redesign.
-Food remains identical.
+Make the pizza the clear focus. 
+Blur and soften the background naturally. 
+Adjust the environment to look realistic and cohesive.
 `,
 };
 
