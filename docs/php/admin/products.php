@@ -1237,6 +1237,12 @@ $availableBadges = [
                             <h4 class="font-bold text-sm">Pop & Colorido</h4>
                             <p class="text-xs text-gray-400 mt-1">Sorveterias / Docerias / Fast Food — Visual lúdico</p>
                         </div>
+                        <div class="enhance-style-card border-2 border-gray-600 rounded-lg p-3 cursor-pointer hover:border-purple-500 transition-all" 
+                             data-style="teste_vitor" onclick="selectEnhanceStyle('teste_vitor')">
+                            <div class="text-xl mb-1">🧪</div>
+                            <h4 class="font-bold text-sm">Teste Vitor (Prato + Ambiente)</h4>
+                            <p class="text-xs text-gray-400 mt-1">Envie 2 fotos: prato + ambiente. A IA combina numa foto profissional</p>
+                        </div>
                     </div>
                 </div>
                 
@@ -1257,6 +1263,24 @@ $availableBadges = [
                         <button type="button" class="pop-color-btn w-8 h-8 rounded-full border-2 border-gray-600 hover:border-white" 
                                 style="background: #fed7aa" data-color="orange" onclick="selectPopColor('orange')"></button>
                     </div>
+                </div>
+                
+                <!-- Upload de imagem do ambiente para estilo Teste Vitor -->
+                <div id="enhance-environment-upload" class="mb-4 hidden">
+                    <label class="block text-sm mb-2 font-medium">📍 Foto do Ambiente</label>
+                    <div id="enhance-env-drop-zone" class="border-2 border-dashed border-gray-600 rounded-lg p-4 text-center cursor-pointer hover:border-purple-500 transition-colors"
+                         onclick="document.getElementById('enhance-env-file-input').click()">
+                        <div id="enhance-env-preview-area" class="hidden">
+                            <img id="enhance-env-preview-img" src="" class="max-h-32 mx-auto rounded-lg mb-2">
+                            <p class="text-xs text-gray-400">Clique para trocar a foto do ambiente</p>
+                        </div>
+                        <div id="enhance-env-upload-hint">
+                            <p class="text-2xl mb-1">🏠</p>
+                            <p class="text-gray-400 text-sm">Clique ou arraste a foto do <strong>ambiente</strong> aqui</p>
+                            <p class="text-xs text-gray-500 mt-1">Ex: interior do restaurante, balcão, mesa decorada...</p>
+                        </div>
+                    </div>
+                    <input type="file" id="enhance-env-file-input" accept="image/*" class="hidden" onchange="onEnhanceEnvFileSelected(this)">
                 </div>
                 
                 <button type="button" onclick="startEnhance()" id="btn-start-enhance"
@@ -1320,6 +1344,7 @@ $availableBadges = [
         // =====================================================
         const ENHANCE_EDGE_URL = 'https://qmpikyymjcnmocjfmvxs.supabase.co/functions/v1/menu-enhance-image';
         let enhanceImageBase64 = null;
+        let enhanceEnvImageBase64 = null;
         let enhanceSelectedStyle = null;
         let enhancePopColor = null;
         let enhancedResultBase64 = null;
@@ -1358,6 +1383,7 @@ $availableBadges = [
         
         function resetEnhanceState() {
             enhanceImageBase64 = null;
+            enhanceEnvImageBase64 = null;
             enhanceSelectedStyle = null;
             enhancePopColor = null;
             enhancedResultBase64 = null;
@@ -1365,6 +1391,9 @@ $availableBadges = [
             document.getElementById('enhance-upload-hint').classList.remove('hidden');
             document.getElementById('enhance-food-name').value = '';
             document.getElementById('enhance-pop-color').classList.add('hidden');
+            document.getElementById('enhance-environment-upload').classList.add('hidden');
+            document.getElementById('enhance-env-preview-area').classList.add('hidden');
+            document.getElementById('enhance-env-upload-hint').classList.remove('hidden');
             document.querySelectorAll('.enhance-style-card').forEach(c => c.classList.remove('border-purple-500', 'bg-purple-900/30'));
             document.querySelectorAll('.enhance-style-card').forEach(c => c.classList.add('border-gray-600'));
             document.getElementById('btn-start-enhance').disabled = true;
@@ -1419,6 +1448,42 @@ $availableBadges = [
             });
         });
         
+        // Environment image handler for teste_vitor
+        function onEnhanceEnvFileSelected(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                enhanceEnvImageBase64 = e.target.result;
+                document.getElementById('enhance-env-preview-img').src = enhanceEnvImageBase64;
+                document.getElementById('enhance-env-preview-area').classList.remove('hidden');
+                document.getElementById('enhance-env-upload-hint').classList.add('hidden');
+                updateEnhanceButton();
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // Drag and drop for environment zone
+        document.addEventListener('DOMContentLoaded', () => {
+            const envZone = document.getElementById('enhance-env-drop-zone');
+            if (!envZone) return;
+            ['dragenter', 'dragover'].forEach(evt => {
+                envZone.addEventListener(evt, (e) => { e.preventDefault(); envZone.classList.add('border-purple-500', 'bg-purple-900/20'); });
+            });
+            ['dragleave', 'drop'].forEach(evt => {
+                envZone.addEventListener(evt, (e) => { e.preventDefault(); envZone.classList.remove('border-purple-500', 'bg-purple-900/20'); });
+            });
+            envZone.addEventListener('drop', (e) => {
+                const file = e.dataTransfer.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    const dt = new DataTransfer();
+                    dt.items.add(file);
+                    document.getElementById('enhance-env-file-input').files = dt.files;
+                    onEnhanceEnvFileSelected(document.getElementById('enhance-env-file-input'));
+                }
+            });
+        });
+        
         function selectEnhanceStyle(style) {
             enhanceSelectedStyle = style;
             document.querySelectorAll('.enhance-style-card').forEach(c => {
@@ -1430,6 +1495,9 @@ $availableBadges = [
             
             // Show/hide pop color picker
             document.getElementById('enhance-pop-color').classList.toggle('hidden', style !== 'pop');
+            
+            // Show/hide environment upload for teste_vitor
+            document.getElementById('enhance-environment-upload').classList.toggle('hidden', style !== 'teste_vitor');
             
             updateEnhanceButton();
         }
@@ -1446,7 +1514,8 @@ $availableBadges = [
         
         function updateEnhanceButton() {
             const btn = document.getElementById('btn-start-enhance');
-            btn.disabled = !(enhanceImageBase64 && enhanceSelectedStyle);
+            const needsEnv = enhanceSelectedStyle === 'teste_vitor';
+            btn.disabled = !(enhanceImageBase64 && enhanceSelectedStyle && (!needsEnv || enhanceEnvImageBase64));
         }
         
         async function loadImageAsBase64(url) {
@@ -1478,6 +1547,10 @@ $availableBadges = [
                 
                 if (enhanceSelectedStyle === 'pop' && enhancePopColor) {
                     body.bg_color = enhancePopColor;
+                }
+                
+                if (enhanceSelectedStyle === 'teste_vitor' && enhanceEnvImageBase64) {
+                    body.image_environment = enhanceEnvImageBase64;
                 }
                 
                 const res = await fetch(ENHANCE_EDGE_URL, {
