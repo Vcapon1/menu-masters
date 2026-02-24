@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.menu-enhance-image]
 verify_jwt = false
+
+[functions.menu-generate-video]
+verify_jwt = false
