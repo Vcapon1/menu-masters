@@ -189,14 +189,22 @@ serve(async (req) => {
           );
         }
 
-        // Try multiple possible paths for the video URI
-        const videoUri =
+        // Try multiple possible paths for URI and base64 payload
+        const rawVideoUri =
           opData.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri ||
           opData.response?.generatedSamples?.[0]?.video?.uri ||
           opData.response?.predictions?.[0]?.video?.uri ||
-          opData.response?.predictions?.[0]?.bytesBase64Encoded ||
           opData.response?.videos?.[0]?.uri ||
           opData.metadata?.output?.video_uri;
+
+        const rawVideoBase64 =
+          opData.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.bytesBase64Encoded ||
+          opData.response?.generatedSamples?.[0]?.video?.bytesBase64Encoded ||
+          opData.response?.predictions?.[0]?.bytesBase64Encoded ||
+          opData.response?.videos?.[0]?.bytesBase64Encoded ||
+          opData.metadata?.output?.video_base64;
+
+        const videoUri = rawVideoUri || (rawVideoBase64 ? `data:video/mp4;base64,${rawVideoBase64}` : null);
 
         if (!videoUri) {
           console.error("No video URI found. Full response keys:", JSON.stringify(Object.keys(opData)));
@@ -207,7 +215,7 @@ serve(async (req) => {
           );
         }
 
-        // If it's a GCS URI, generate a signed URL or return as-is
+        // If it's a GCS URI, it will be downloaded by the PHP proxy. If it's base64, proxy decodes and saves.
         return new Response(
           JSON.stringify({ done: true, video_uri: videoUri }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
