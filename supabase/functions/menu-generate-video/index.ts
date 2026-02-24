@@ -179,6 +179,7 @@ serve(async (req) => {
       }
 
       const opData = await pollResp.json();
+      console.log("Poll response:", JSON.stringify(opData).substring(0, 2000));
 
       if (opData.done) {
         if (opData.error) {
@@ -188,15 +189,20 @@ serve(async (req) => {
           );
         }
 
-        // Extract video URI from response
+        // Try multiple possible paths for the video URI
         const videoUri =
           opData.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri ||
-          opData.response?.generatedSamples?.[0]?.video?.uri;
+          opData.response?.generatedSamples?.[0]?.video?.uri ||
+          opData.response?.predictions?.[0]?.video?.uri ||
+          opData.response?.predictions?.[0]?.bytesBase64Encoded ||
+          opData.response?.videos?.[0]?.uri ||
+          opData.metadata?.output?.video_uri;
 
         if (!videoUri) {
-          console.error("No video URI in response:", JSON.stringify(opData).substring(0, 1000));
+          console.error("No video URI found. Full response keys:", JSON.stringify(Object.keys(opData)));
+          console.error("Response sub-keys:", opData.response ? JSON.stringify(Object.keys(opData.response)) : "no response key");
           return new Response(
-            JSON.stringify({ done: true, error: "Vídeo gerado mas URI não encontrada" }),
+            JSON.stringify({ done: true, error: "Vídeo gerado mas URI não encontrada", debug_keys: opData.response ? Object.keys(opData.response) : [] }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
