@@ -204,7 +204,9 @@ serve(async (req) => {
           opData.response?.videos?.[0]?.bytesBase64Encoded ||
           opData.metadata?.output?.video_base64;
 
-        const videoUri = rawVideoUri || (rawVideoBase64 ? `data:video/mp4;base64,${rawVideoBase64}` : null);
+        // Trim whitespace/newlines from base64 to avoid URL parsing issues downstream
+        const cleanBase64 = rawVideoBase64 ? rawVideoBase64.replace(/\s/g, "") : null;
+        const videoUri = rawVideoUri || (cleanBase64 ? `data:video/mp4;base64,${cleanBase64}` : null);
 
         if (!videoUri) {
           console.error("No video URI found. Full response keys:", JSON.stringify(Object.keys(opData)));
