@@ -10,7 +10,16 @@ const STYLE_PROMPTS: Record<string, string> = {
   minimalist:
     "Professional commercial food photography, extreme close-up, luxury minimalist fine dining style. The food item fills 80% of the frame, centered and dominant on a clean white porcelain plate or gray slate over white marble. Strong directional side lighting creating defined shadows and depth, emphasizing real textures, crispy edges, moisture highlights and natural imperfections. Background ultra blurred light grey, no visual distractions. High contrast between subject and background. Ultra sharp focus on food surface details, shallow depth of field, realistic texture, appetizing, 8k resolution.",
   industrial:
-    "Professional commercial food photography, tight close-up, bold industrial street food style. The food dominates 85% of the frame on a dark metal tray or slate. Strong dramatic side spotlight focused only on the food, deep shadows around it for contrast. Enhanced surface texture, visible crispiness, oil sheen, steam if applicable. Dark blurred brick background with strong separation from subject. High contrast, gritty but appetizing realism, intense texture detail, shallow depth of field, ultra sharp focus, 8k.",
+    "Transform the photo into a professional commercial food photograph while preserving the exact same pizza. 
+Do not alter crust, toppings or proportions. 
+Enhance lighting and contrast only.
+
+Place the existing pizza on a dark metal tray or slate surface. 
+Strong directional spotlight focused on the pizza. 
+Dark blurred brick wall background. 
+High contrast industrial atmosphere. 
+Realistic textures enhanced, no redesign of ingredients. 
+Food remains structurally identical.",
   solar:
     "Professional commercial food photography, tight dominant close-up, bright organic lifestyle style. The food fills 75–80% of the frame on a light oak table. Strong natural side sunlight creating depth, soft shadow gradients and glowing highlights on moisture and fresh textures. Background extremely blurred green foliage bokeh, strong subject separation. Enhanced color vibrancy only on the food, realistic texture, airy but high contrast between subject and background. Ultra detailed surface, shallow depth of field, 8k.",
   traditional:
