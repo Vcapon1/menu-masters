@@ -16,7 +16,15 @@ const STYLE_PROMPTS: Record<string, string> = {
   traditional:
     "Professional commercial food photography, tight dominant close-up, rustic traditional style. The food fills at least 80% of the frame on dark reclaimed wood. Warm directional key light emphasizing texture depth, crispy edges and golden tones. Subtle steam rising if applicable. Background very dark and heavily blurred with warm amber glow, strong contrast between subject and surroundings. Rich shadows, authentic imperfections, tactile realism, ultra sharp surface detail, shallow depth of field, 8k.",
   pop: "Professional commercial food photography, bold extreme close-up, vibrant pop commercial style. The food occupies at least 85% of the frame, centered and dominant. Solid highly saturated pastel background, evenly lit but clearly separated from subject. Bright directional lighting creating shine on sauces, crisp texture on edges, visible depth and volume. High color contrast focused on food, background slightly less saturated to avoid overpowering subject. Ultra sharp edges, advertising quality realism, shallow depth of field, 8k.",
-  teste_vitor: "Create a stunning professional food photograph by placing the food item from the first image into the environment/setting shown in the second image. The food must be the hero of the shot, occupying at least 60% of the frame, with professional commercial lighting that highlights textures, colors and freshness. Use the environment as background context with strong bokeh blur to separate subject from background. Ensure the composite looks natural and cohesive, as if the food was actually photographed in that environment. 8k resolution, shallow depth of field, realistic lighting matching both elements.",
+  teste_vitor: "Use the food from the first image exactly as it is. Do not alter its shape, size, thickness, toppings or proportions.
+
+Place it naturally into the environment of the second image. You may adjust the camera angle of the environment if needed for realism.
+
+Photograph as a professional food shot using a 50mm lens, f/0.9 aperture. 
+Shallow depth of field with strong background blur. 
+Natural commercial lighting focused on the food.
+
+The food must remain identical and be the clear focal point.",
 };
 
 const STYLE_NAMES: Record<string, string> = {
