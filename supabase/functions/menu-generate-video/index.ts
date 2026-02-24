@@ -12,6 +12,9 @@ const LOCATION = "us-central1";
 const MODEL_ID = "veo-3.0-generate-preview";
 const SCOPE = "https://www.googleapis.com/auth/cloud-platform";
 
+const AI_PLATFORM_REGIONAL_BASE = `https://${LOCATION}-aiplatform.googleapis.com/v1`;
+const FETCH_PREDICT_OPERATION_URL = `${AI_PLATFORM_REGIONAL_BASE}/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/${MODEL_ID}:fetchPredictOperation`;
+
 const VIDEO_STYLES: Record<string, { name: string; prompt: string }> = {
   cheese_pull: {
     name: "Cheese Pull",
@@ -148,9 +151,13 @@ serve(async (req) => {
 
       const accessToken = await getAccessToken(clientEmail, privateKey);
 
-      const pollUrl = `https://${LOCATION}-aiplatform.googleapis.com/v1/${operation_name}`;
-      const pollResp = await fetch(pollUrl, {
-        headers: { Authorization: `Bearer ${accessToken}` },
+      const pollResp = await fetch(FETCH_PREDICT_OPERATION_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ operationName: operation_name }),
       });
 
       if (!pollResp.ok) {
@@ -250,7 +257,7 @@ serve(async (req) => {
       parameters: {
         aspectRatio: "9:16",
         sampleCount: 1,
-        durationSeconds: 5,
+        durationSeconds: 6,
       },
     };
 
