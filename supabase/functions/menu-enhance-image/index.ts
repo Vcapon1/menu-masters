@@ -109,7 +109,7 @@ serve(async (req) => {
     const foodContext = food_name ? `This is "${food_name}". ` : "";
 
     // ✅ IMPORTANT: remove any instruction that allows "plating/presentation" changes
-    const fullPrompt = `${foodContext}${BASE_GUARDRAIL}${stylePrompt}`;
+    const fullPrompt = `${foodContext}${BASE_GUARDRAIL}${stylePrompt} Camera: 50mm look, f/1.4–f/2 shallow depth of field, subject razor sharp, background creamy blur.`;
 
     const imageUrl = image.startsWith("data:") ? image : `data:image/jpeg;base64,${image}`;
 
