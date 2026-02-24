@@ -16,8 +16,15 @@ Use soft natural lighting.
 Background clean and lightly blurred.
 Food must be the main focus.
 No extra objects.`,
-  industrial:
-    "Melhore esta foto transformando-a numa foto profissional, com luzes e angulo melhor, se necessário melhor um pouco a montagem do produto, o ambiente deixe algo industrial e urbano, altere apenas o ambiente.",
+  industrial: `Improve this photo and create a professional food image with an industrial style background.
+
+Keep the exact same food. Do not redesign the dish.
+
+Use a darker background with subtle texture.
+Lighting focused on the food.
+Background blurred and less bright than the food.
+No extra props.
+Food must stand out clearly.`,
   solar:
     "Professional commercial food photography, tight dominant close-up, bright organic lifestyle style. The food fills 75–80% of the frame on a light oak table. Strong natural side sunlight creating depth, soft shadow gradients and glowing highlights on moisture and fresh textures. Background extremely blurred green foliage bokeh, strong subject separation. Enhanced color vibrancy only on the food, realistic texture, airy but high contrast between subject and background. Ultra detailed surface, shallow depth of field, 8k.",
   traditional:
