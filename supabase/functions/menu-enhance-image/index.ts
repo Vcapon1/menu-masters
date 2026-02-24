@@ -16,19 +16,27 @@ const STYLE_PROMPTS: Record<string, string> = {
   traditional:
     "Professional commercial food photography, tight dominant close-up, rustic traditional style. The food fills at least 80% of the frame on dark reclaimed wood. Warm directional key light emphasizing texture depth, crispy edges and golden tones. Subtle steam rising if applicable. Background very dark and heavily blurred with warm amber glow, strong contrast between subject and surroundings. Rich shadows, authentic imperfections, tactile realism, ultra sharp surface detail, shallow depth of field, 8k.",
   pop: "Professional commercial food photography, bold extreme close-up, vibrant pop commercial style. The food occupies at least 90% of the frame, centered and dominant. Solid highly saturated pastel background, evenly lit but clearly separated from subject. Bright directional lighting creating shine on sauces, crisp texture on edges, visible depth and volume. High color contrast focused on food, background slightly less saturated to avoid overpowering subject. Ultra sharp edges, advertising quality realism, shallow depth of field, 8k.",
-  teste_vitor: "Keep the pizza exactly as in the first image. Do not alter its structure, toppings or proportions.
+  teste_vitor: `
+Keep the pizza exactly as in the first image. Do not alter shape, toppings, crust or proportions.
 
-Insert it into the restaurant environment from the second image and fully recompose the scene as a professional food photograph.
+Recompose the scene as a tight professional food photograph.
 
-Adjust perspective, lighting and depth to make the pizza the clear foreground subject.
+The pizza must occupy at least 90% of the frame.
+Camera positioned very close to the subject.
+Tight crop. Macro perspective.
 
-Use a 50mm lens, f/0.9 aperture. 
-Strong shallow depth of field. 
-Foreground sharply focused. 
-Background naturally blurred and slightly darkened for separation.
+Insert the restaurant environment only as distant background context.
+Push background far behind subject.
+Strong depth of field separation.
 
-Re-light the environment to match the pizza. 
-The final result must look like a real professional restaurant photoshoot.",
+Use 50mm lens, f/0.9 aperture.
+Foreground extremely sharp.
+Background heavily blurred and slightly darkened.
+
+No extra props.
+No redesign.
+Food remains identical.
+`,
 };
 
 const STYLE_NAMES: Record<string, string> = {
@@ -69,10 +77,13 @@ serve(async (req) => {
 
     // Validate teste_vitor requires second image
     if (style === "teste_vitor" && !image_environment) {
-      return new Response(JSON.stringify({ error: "O estilo Teste Vitor requer uma segunda imagem do ambiente (image_environment)" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "O estilo Teste Vitor requer uma segunda imagem do ambiente (image_environment)" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Build prompt
@@ -97,7 +108,9 @@ serve(async (req) => {
 
     // Add environment image for teste_vitor style
     if (style === "teste_vitor" && image_environment) {
-      const envImageUrl = image_environment.startsWith("data:") ? image_environment : `data:image/jpeg;base64,${image_environment}`;
+      const envImageUrl = image_environment.startsWith("data:")
+        ? image_environment
+        : `data:image/jpeg;base64,${image_environment}`;
       contentParts.push({ type: "image_url", image_url: { url: envImageUrl } });
     }
 
