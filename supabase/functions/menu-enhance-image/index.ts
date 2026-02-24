@@ -7,8 +7,15 @@ const corsHeaders = {
 };
 
 const STYLE_PROMPTS: Record<string, string> = {
-  minimalist:
-    "Professional commercial food photography, extreme close-up, luxury minimalist fine dining style. The food item fills 80% of the frame, centered and dominant on a clean white porcelain plate or gray slate over white marble. Strong directional side lighting creating defined shadows and depth, emphasizing real textures, crispy edges, moisture highlights and natural imperfections. Background ultra blurred light grey, no visual distractions. High contrast between subject and background. Ultra sharp focus on food surface details, shallow depth of field, realistic texture, appetizing, 8k resolution.",
+  minimalist: `Improve this photo and make it look like a clean professional food photo.
+
+Keep the exact same food. Do not change the dish.
+
+Place it on a simple neutral surface.
+Use soft natural lighting.
+Background clean and lightly blurred.
+Food must be the main focus.
+No extra objects.`,
   industrial:
     "Melhore esta foto transformando-a numa foto profissional, com luzes e angulo melhor, se necessário melhor um pouco a montagem do produto, o ambiente deixe algo industrial e urbano, altere apenas o ambiente.",
   solar:
