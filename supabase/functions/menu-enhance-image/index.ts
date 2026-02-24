@@ -8,15 +8,14 @@ const corsHeaders = {
 
 const STYLE_PROMPTS: Record<string, string> = {
   minimalist:
-    "Professional food photography, extreme close-up, minimalist fine dining style. The food item centered on a clean white porcelain plate or gray slate, placed on a white marble surface. Soft, directional studio lighting emphasizing food textures. Very shallow depth of field with a minimalist, blurred light grey background. High-end aesthetic, sharp focus on food details, 8k resolution, realistic.",
+    "Professional commercial food photography, extreme close-up, luxury minimalist fine dining style. The food item fills 80% of the frame, centered and dominant on a clean white porcelain plate or gray slate over white marble. Strong directional side lighting creating defined shadows and depth, emphasizing real textures, crispy edges, moisture highlights and natural imperfections. Background ultra blurred light grey, no visual distractions. High contrast between subject and background. Ultra sharp focus on food surface details, shallow depth of field, realistic texture, appetizing, 8k resolution.",
   industrial:
-    "Professional food photography, close-up shot, industrial street food style. The food item prominently displayed on a dark metal tray or slate surface. Dramatic, high-contrast spotlighting on the food. Very shallow depth of field with a dark, blurred brick wall background. Vibrant colors, gritty but appetizing textures, 8k, highly detailed, food fills most of the frame.",
+    "Professional commercial food photography, tight close-up, bold industrial street food style. The food dominates 85% of the frame on a dark metal tray or slate. Strong dramatic side spotlight focused only on the food, deep shadows around it for contrast. Enhanced surface texture, visible crispiness, oil sheen, steam if applicable. Dark blurred brick background with strong separation from subject. High contrast, gritty but appetizing realism, intense texture detail, shallow depth of field, ultra sharp focus, 8k.",
   solar:
-    "Professional food photography, tight shot, bright organic lifestyle style. The food item on a light oak wood table. Bright natural sunlight directly illuminating the food, with soft, long shadows. Extremely blurred green foliage background (bokeh), creating a serene, natural halo around the product. Fresh, airy, and inviting atmosphere, 8k, realistic.",
+    "Professional commercial food photography, tight dominant close-up, bright organic lifestyle style. The food fills 75–80% of the frame on a light oak table. Strong natural side sunlight creating depth, soft shadow gradients and glowing highlights on moisture and fresh textures. Background extremely blurred green foliage bokeh, strong subject separation. Enhanced color vibrancy only on the food, realistic texture, airy but high contrast between subject and background. Ultra detailed surface, shallow depth of field, 8k.",
   traditional:
-    "Professional food photography, dominant close-up, rustic traditional style. The food item on a dark reclaimed wood table. Warm, inviting light focused on the product, highlighting its textures. Very blurred, dark background with subtle, warm amber light (like a distant oven glow). Slight dust of flour on the surface, rich, authentic textures, home-cooked feel, 8k, realistic.",
-  pop:
-    "Professional food photography, bold close-up, vibrant pop art commercial style. The food item against a solid, evenly lit, highly saturated pastel background that almost fills the frame. Bright, flat, commercial lighting, making the food pop. High color saturation, playful and fun aesthetic. Sharp focus, clean edges, advertising quality, 8k, product occupies at least 70% of the image.",
+    "Professional commercial food photography, tight dominant close-up, rustic traditional style. The food fills at least 80% of the frame on dark reclaimed wood. Warm directional key light emphasizing texture depth, crispy edges and golden tones. Subtle steam rising if applicable. Background very dark and heavily blurred with warm amber glow, strong contrast between subject and surroundings. Rich shadows, authentic imperfections, tactile realism, ultra sharp surface detail, shallow depth of field, 8k.",
+  pop: "Professional commercial food photography, bold extreme close-up, vibrant pop commercial style. The food occupies at least 85% of the frame, centered and dominant. Solid highly saturated pastel background, evenly lit but clearly separated from subject. Bright directional lighting creating shine on sauces, crisp texture on edges, visible depth and volume. High color contrast focused on food, background slightly less saturated to avoid overpowering subject. Ultra sharp edges, advertising quality realism, shallow depth of field, 8k.",
 };
 
 const STYLE_NAMES: Record<string, string> = {
@@ -41,17 +40,17 @@ serve(async (req) => {
     const { image, style, food_name, bg_color } = await req.json();
 
     if (!image) {
-      return new Response(
-        JSON.stringify({ error: "Envie uma imagem em base64" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Envie uma imagem em base64" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     if (!style || !STYLE_PROMPTS[style]) {
-      return new Response(
-        JSON.stringify({ error: `Estilo inválido. Use: ${Object.keys(STYLE_PROMPTS).join(", ")}` }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: `Estilo inválido. Use: ${Object.keys(STYLE_PROMPTS).join(", ")}` }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Build prompt
@@ -68,49 +67,46 @@ serve(async (req) => {
 
     const imageUrl = image.startsWith("data:") ? image : `data:image/jpeg;base64,${image}`;
 
-    const response = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash-image",
-          messages: [
-            {
-              role: "user",
-              content: [
-                { type: "text", text: fullPrompt },
-                { type: "image_url", image_url: { url: imageUrl } },
-              ],
-            },
-          ],
-          modalities: ["image", "text"],
-        }),
-      }
-    );
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image",
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: fullPrompt },
+              { type: "image_url", image_url: { url: imageUrl } },
+            ],
+          },
+        ],
+        modalities: ["image", "text"],
+      }),
+    });
 
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(
           JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns minutos." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
       if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Créditos de IA esgotados. Adicione créditos na sua conta." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: "Créditos de IA esgotados. Adicione créditos na sua conta." }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
       const errText = await response.text();
       console.error("AI gateway error:", response.status, errText);
-      return new Response(
-        JSON.stringify({ error: "Erro ao processar imagem com IA" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Erro ao processar imagem com IA" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const data = await response.json();
@@ -118,10 +114,10 @@ serve(async (req) => {
 
     if (!resultImage) {
       console.error("No image in response:", JSON.stringify(data).substring(0, 500));
-      return new Response(
-        JSON.stringify({ error: "IA não retornou imagem. Tente novamente." }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "IA não retornou imagem. Tente novamente." }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     return new Response(
@@ -129,13 +125,13 @@ serve(async (req) => {
         enhanced_image: resultImage,
         style_name: STYLE_NAMES[style],
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
     console.error("menu-enhance-image error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
