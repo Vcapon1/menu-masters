@@ -1,139 +1,165 @@
 
 
-# Importacao Inteligente de Cardapio por Foto (IA)
+# Sistema de Pagamento com Stripe Connect
 
-## Visao Geral
+## Resumo
 
-Adicionar no painel **Master Admin**, na pagina de gerenciamento de um restaurante, um botao **"Importar Cardapio por Foto"** que permite enviar uma ou mais fotos de um cardapio fisico. A IA (Google Gemini via Lovable AI Gateway) analisa as imagens e retorna categorias e produtos estruturados, prontos para revisao e insercao no banco.
+Implementar pagamento online no checkout do cardápio digital usando **Stripe Connect** com suporte a **cartão de crédito e Pix**. O sistema terá dois modelos de repasse configurados pelo Master Admin por restaurante.
 
-## Fluxo do Administrador
+---
 
-```text
-1. Master Admin abre a pagina do restaurante
-          |
-2. Clica em "Importar Cardapio por Foto"
-          |
-3. Upload de 1 a 5 fotos do cardapio fisico
-          |
-4. Sistema envia as imagens para Edge Function
-   -> Edge Function chama Gemini com prompt estruturado
-   -> Gemini retorna JSON com categorias e produtos
-          |
-5. Tela de revisao exibida ao admin:
-   - Lista de categorias detectadas
-   - Produtos com nome, descricao, preco
-   - Checkboxes para selecionar/desmarcar itens
-   - Campos editaveis para correcao manual
-          |
-6. Admin confirma -> sistema insere no banco via API PHP
-```
+## Modelos de Pagamento
 
-## Arquitetura
+### Modelo 1 — Comissionado (6%)
+- 6% do valor do pedido fica com a plataforma (liquido)
+- Taxa do Stripe e descontada do restaurante
+- Exemplo: pedido R$100 -> Plataforma recebe R$6,00 -> Restaurante recebe R$100 - R$6 - taxa Stripe
 
-O fluxo utiliza uma Edge Function (Supabase/Lovable Cloud) como backend para chamar a IA, e o frontend PHP faz a interface de upload, revisao e insercao.
+### Modelo 2 — Full (100% repasse)
+- 100% do valor vai para o restaurante
+- Taxa do Stripe e descontada do restaurante
+- Plataforma nao cobra nada (receita vem do plano mensal)
+
+---
+
+## Arquitetura Tecnica
+
+### 1. Banco de Dados (MySQL - PHP)
+
+Novas colunas na tabela `restaurants`:
 
 ```text
-[Master Admin PHP]
-      |
-      | POST com imagem(ns) base64
-      v
-[Edge Function: menu-import-ai]
-      |
-      | Chamada ao Lovable AI Gateway (Gemini com visao)
-      v
-[Google Gemini 2.5 Flash]
-      |
-      | Retorna JSON estruturado
-      v
-[Edge Function retorna JSON]
-      |
-      v
-[Master Admin PHP: Tela de revisao]
-      |
-      | POST confirmacao
-      v
-[PHP insere categorias + produtos no MySQL]
+restaurants
+  +-- stripe_account_id       VARCHAR(255)   -- ID da conta conectada (acct_xxx)
+  +-- stripe_account_status   ENUM('pending','active','restricted')
+  +-- payment_model           ENUM('commission','full') DEFAULT 'commission'
+  +-- platform_fee_percent    DECIMAL(5,2) DEFAULT 6.00
 ```
 
-## Arquivos a Criar/Modificar
-
-| Arquivo | Acao | Descricao |
-|---------|------|-----------|
-| `supabase/functions/menu-import-ai/index.ts` | Criar | Edge Function que recebe imagens e chama Gemini para extrair dados do cardapio |
-| `docs/php/master/restaurants.php` | Modificar | Adicionar botao "Importar Cardapio por Foto" e modal de upload/revisao |
-| `docs/php/admin/index.php` | Modificar | Adicionar atalho para importacao tambem no painel do restaurante |
-
-## Detalhes Tecnicos
-
-### Edge Function: menu-import-ai
-
-Recebe imagens em base64, monta prompt com instrucoes para extrair:
-- **Categorias**: nome
-- **Produtos**: nome, descricao (se visivel), preco, categoria a que pertence
-
-Prompt estruturado para Gemini:
+Nova tabela para registro de pagamentos:
 
 ```text
-Analise esta foto de um cardapio de restaurante brasileiro.
-Extraia TODAS as categorias e produtos visiveis.
-Retorne APENAS um JSON valido no formato:
-{
-  "categories": [
-    {
-      "name": "Nome da Categoria",
-      "products": [
-        {
-          "name": "Nome do Produto",
-          "description": "Descricao se visivel, senao vazio",
-          "price": 29.90
-        }
-      ]
-    }
-  ]
-}
-Regras:
-- Precos em formato numerico (sem R$)
-- Se houver tamanhos (P, M, G), use o campo sizes_prices
-- Se nao conseguir ler um preco, coloque 0
-- Mantenha acentuacao correta em portugues
+payments
+  +-- id                  INT AUTO_INCREMENT PK
+  +-- order_id            INT FK -> orders
+  +-- restaurant_id       INT FK -> restaurants
+  +-- stripe_payment_id   VARCHAR(255)
+  +-- amount              DECIMAL(10,2)
+  +-- platform_fee        DECIMAL(10,2)
+  +-- gateway_fee         DECIMAL(10,2)
+  +-- net_restaurant      DECIMAL(10,2)
+  +-- payment_method      ENUM('card','pix')
+  +-- status              ENUM('pending','processing','succeeded','failed','refunded')
+  +-- paid_at             DATETIME
+  +-- created_at          DATETIME DEFAULT CURRENT_TIMESTAMP
 ```
 
-Modelo utilizado: `google/gemini-2.5-flash` (suporta imagens, rapido e economico).
+### 2. Stripe Connect - Fluxo de Onboarding
 
-Uso de **tool calling** para garantir retorno JSON estruturado (conforme documentacao do Lovable AI).
+Cada restaurante precisa ter uma **conta conectada** no Stripe. O fluxo:
 
-### Interface no Master Admin (PHP)
+1. Master Admin cadastra restaurante e define o modelo (commission/full)
+2. No painel Admin do restaurante, aparece botao "Configurar Recebimentos"
+3. Clica e e redirecionado ao Stripe Connect Onboarding (formulario do proprio Stripe)
+4. Stripe valida dados bancarios e ativa a conta
+5. Status atualiza para `active` e pagamentos ficam habilitados
 
-**Modal de Upload:**
-- Area de drag-and-drop para ate 5 fotos
-- Preview das imagens antes de enviar
-- Botao "Analisar com IA"
-- Loading com mensagem "Analisando cardapio..."
+### 3. Edge Functions (Lovable Cloud)
 
-**Tela de Revisao:**
-- Tabela editavel com categorias e produtos extraidos
-- Cada linha tem: checkbox de selecao, nome (editavel), descricao (editavel), preco (editavel)
-- Categorias como headers colapsaveis
-- Botao "Importar Selecionados" que faz POST para o PHP inserir no banco
-- Botao "Descartar" para cancelar
+**a) `stripe-onboarding`** — Cria conta conectada e gera link de onboarding
 
-**Insercao no Banco (PHP):**
-- Cria categorias que nao existem
-- Cria produtos vinculados ao restaurante e categoria
-- Respeita limites do plano (max_categories, max_products)
-- Exibe resumo: "X categorias e Y produtos importados"
+```text
+POST /stripe-onboarding
+Body: { restaurant_id, return_url }
+Response: { account_id, onboarding_url }
+```
 
-### Pre-requisitos
+**b) `stripe-create-payment`** — Cria PaymentIntent com split
 
-- Lovable Cloud habilitado (para a Edge Function)
-- LOVABLE_API_KEY ja disponivel automaticamente
-- Nenhuma configuracao adicional necessaria pelo usuario
+```text
+POST /stripe-create-payment
+Body: { order_id, restaurant_id, amount, payment_method_type }
+Response: { client_secret, payment_intent_id }
+```
 
-## Limitacoes e Consideracoes
+Logica do split:
+- Busca `payment_model` e `platform_fee_percent` do restaurante
+- Se `commission`: cria PaymentIntent com `application_fee_amount`
+- Se `full`: cria PaymentIntent sem fee, `transfer_data` direto para a conta
 
-- Fotos com baixa qualidade ou texto manuscrito podem ter menor precisao
-- O admin sempre revisa antes de confirmar a importacao
-- Cardapios muito extensos podem precisar de multiplas fotos
-- Limite de 5 fotos por importacao para controlar custo de API
-- Produtos duplicados (mesmo nome) sao sinalizados na revisao
+**c) `stripe-webhook`** — Recebe eventos do Stripe
 
+```text
+POST /stripe-webhook
+Eventos: payment_intent.succeeded, payment_intent.payment_failed
+Atualiza status do pagamento e do pedido
+```
+
+### 4. Alteracoes no Checkout (PHP)
+
+O arquivo `checkout.php` sera atualizado:
+
+- Detectar se o modo e `full` (pagamento online) ou se o restaurante tem pagamento habilitado
+- Carregar Stripe.js no frontend
+- Mostrar opcoes: Cartao de Credito ou Pix
+- Para **Cartao**: exibir Stripe Elements (formulario do Stripe)
+- Para **Pix**: exibir QR Code gerado pelo Stripe
+- Apos pagamento confirmado, redirecionar para pagina de sucesso com rastreamento
+
+### 5. Painel Master Admin
+
+No formulario de restaurante (`master/restaurants.php`):
+
+- Novo campo: **Modelo de Pagamento** (select: Comissionado 6% / Full 100%)
+- Campo editavel para percentual de comissao (padrao 6%)
+- Exibir status da conta Stripe do restaurante (pendente/ativo/restrito)
+- Botao para resetar conta Stripe se necessario
+
+### 6. Painel Admin do Restaurante
+
+No dashboard (`admin/index.php`):
+
+- Card de "Recebimentos" mostrando status da conta Stripe
+- Se nao configurado: botao "Configurar Recebimentos" que inicia o onboarding
+- Se ativo: resumo de recebimentos (total recebido, pendente, ultimo repasse)
+- Na pagina de pedidos: exibir status do pagamento em cada pedido
+
+---
+
+## Fluxo Completo do Cliente
+
+```text
+1. Cliente monta carrinho no cardapio
+2. Vai para checkout (modo 'full' ou com pagamento habilitado)
+3. Preenche dados pessoais e endereco
+4. Escolhe forma de pagamento: Cartao ou Pix
+5. Cartao: preenche dados no Stripe Elements -> confirma
+   Pix: recebe QR Code -> escaneia e paga -> confirmacao automatica
+6. Pedido criado com status 'paid'
+7. Restaurante recebe notificacao de novo pedido pago
+8. Cliente ve pagina de acompanhamento
+```
+
+---
+
+## Ordem de Implementacao
+
+1. Habilitar integracao Stripe no Lovable (coletar chave)
+2. Criar schema do banco (colunas + tabela payments)
+3. Criar edge function `stripe-onboarding`
+4. Adicionar configuracao no Master Admin
+5. Adicionar onboarding no Admin do restaurante
+6. Criar edge function `stripe-create-payment`
+7. Atualizar checkout.php com Stripe Elements + Pix
+8. Criar edge function `stripe-webhook`
+9. Exibir status de pagamento nos paineis
+
+---
+
+## Consideracoes
+
+- **Seguranca**: Todas as chaves do Stripe ficam nas secrets do Lovable Cloud, nunca expostas no frontend
+- **Pix via Stripe**: O Stripe suporta Pix nativamente no Brasil, gerando QR Code automaticamente
+- **Taxas reais do Stripe BR**: Cartao ~3,99% + R$0,39 | Pix ~1% (max R$5)
+- **O checkout.php ja tem a estrutura visual** preparada para o modo `full` com placeholder para pagamento
+- **A taxa do gateway e descontada do restaurante** em ambos os modelos, conforme definido
