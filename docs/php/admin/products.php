@@ -70,26 +70,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 
                 // Upload de imagem
-                $image = $_POST['current_image'] ?? null;
-                
-                // Se current_image é base64 (vindo da IA), converter para arquivo
-                if ($image && preg_match('/^data:image\/(png|jpeg|jpg|webp);base64,/', $image, $matches)) {
-                    $ext = $matches[1] === 'jpg' ? 'jpeg' : $matches[1];
-                    $base64Data = preg_replace('/^data:image\/\w+;base64,/', '', $image);
-                    $binaryData = base64_decode($base64Data);
-                    if ($binaryData !== false) {
-                        $uploadDir = __DIR__ . "/../uploads/restaurants/{$restaurantId}/products/";
-                        if (!is_dir($uploadDir)) {
-                            mkdir($uploadDir, 0755, true);
+                $image = isset($_POST['current_image']) ? trim((string)$_POST['current_image']) : null;
+                if ($image === '') {
+                    $image = null;
+                }
+
+                // Normalizar caminhos relativos antigos (ex: "uploads/..." -> URL absoluta)
+                if ($image && strpos($image, 'uploads/') === 0) {
+                    $image = rtrim(APP_URL, '/') . '/' . ltrim($image, '/');
+                } elseif ($image && strpos($image, '/uploads/') === 0) {
+                    $image = rtrim(APP_URL, '/') . $image;
+                }
+
+                // Se current_image vier em base64 (data URI ou base64 puro), converter para arquivo
+                if ($image) {
+                    $mime = 'jpeg';
+                    $base64Data = null;
+
+                    if (preg_match('/^data:image\/([a-zA-Z0-9.+-]+)(?:;charset=[^;]+)?;base64,(.*)$/is', $image, $matches)) {
+                        $mime = strtolower($matches[1]);
+                        $base64Data = $matches[2];
+                    } elseif (strlen($image) > 500 && preg_match('/^[A-Za-z0-9+\/=\s]+$/', $image)) {
+                        // fallback para respostas que venham sem prefixo data:image
+                        $base64Data = $image;
+                    }
+
+                    if ($base64Data !== null) {
+                        $base64Data = preg_replace('/\s+/', '', $base64Data);
+                        $binaryData = base64_decode($base64Data, true);
+
+                        if ($binaryData === false) {
+                            throw new Exception('Imagem da IA inválida. Gere novamente e tente salvar.');
                         }
-                        $filename = 'ai_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . ($ext === 'jpeg' ? 'jpg' : $ext);
+
+                        if (strlen($binaryData) > MAX_IMAGE_SIZE) {
+                            throw new Exception('Imagem da IA muito grande. Gere novamente com menor resolução.');
+                        }
+
+                        $extMap = [
+                            'jpeg' => 'jpg',
+                            'jpg' => 'jpg',
+                            'png' => 'png',
+                            'webp' => 'webp',
+                            'gif' => 'gif',
+                        ];
+                        $ext = $extMap[$mime] ?? 'jpg';
+
+                        $folder = "restaurants/{$restaurantId}/products";
+                        $uploadDir = UPLOAD_DIR . $folder . '/';
+                        if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
+                            throw new Exception('Não foi possível criar pasta para salvar imagem.');
+                        }
+
+                        $filename = 'ai_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
                         $filePath = $uploadDir . $filename;
-                        if (file_put_contents($filePath, $binaryData)) {
-                            $image = "uploads/restaurants/{$restaurantId}/products/{$filename}";
+
+                        if (file_put_contents($filePath, $binaryData) === false) {
+                            throw new Exception('Erro ao salvar imagem gerada por IA.');
                         }
+
+                        $image = UPLOAD_URL . $folder . '/' . $filename;
                     }
                 }
-                
+
+                // Segurança: evita gravar base64 bruto no banco se algo inesperado acontecer
+                if ($image && strpos($image, 'data:image/') === 0) {
+                    throw new Exception('Formato de imagem inválido para salvar. Tente gerar novamente.');
+                }
+
                 if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
                     $image = uploadImage($_FILES['image'], "restaurants/{$restaurantId}/products");
                 }
@@ -878,6 +926,13 @@ $availableBadges = [
             return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         }
 
+        function normalizeImageUrl(src) {
+            if (!src) return '';
+            if (src.startsWith('data:') || /^https?:\/\//i.test(src) || src.startsWith('//')) return src;
+            if (src.startsWith('/')) return src;
+            return '../' + src.replace(/^\.\/?/, '');
+        }
+
         // =====================================================
         // MODAL
         // =====================================================
@@ -934,7 +989,8 @@ $availableBadges = [
             document.getElementById('form-description').value = product.description || '';
             document.getElementById('form-available').checked = product.is_available == 1;
             document.getElementById('form-hide').checked = product.hide_when_unavailable == 1;
-            document.getElementById('form-current-image').value = product.image || '';
+            const existingImage = product.image || '';
+            document.getElementById('form-current-image').value = existingImage;
             document.getElementById('form-current-video').value = product.video || '';
             document.getElementById('form-sort').value = product.sort_order || 0;
             
@@ -961,8 +1017,8 @@ $availableBadges = [
             const previewImg = document.getElementById('preview-img');
             const stockBadge = document.getElementById('stock-badge');
             const uploadBadge = document.getElementById('upload-badge');
-            if (product.image) {
-                previewImg.src = product.image;
+            if (existingImage) {
+                previewImg.src = normalizeImageUrl(existingImage);
                 imagePreview.classList.remove('hidden');
                 const aiBadge = document.getElementById('ai-badge');
                 const enhanceBtn = document.getElementById('btn-enhance-existing');
@@ -1847,8 +1903,8 @@ $availableBadges = [
             if (currentImg) {
                 // If already base64
                 if (currentImg.startsWith('data:')) return currentImg;
-                // Load from URL
-                return await loadImageAsBase64(currentImg);
+                // Load from URL/path
+                return await loadImageAsBase64(normalizeImageUrl(currentImg));
             }
             
             return null;
