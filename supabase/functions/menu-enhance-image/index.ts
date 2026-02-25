@@ -126,19 +126,18 @@ serve(async (req) => {
       const bgPrompt = bgEffectMap[background_effect || "blurred_darkened"] || bgEffectMap["blurred_darkened"];
 
       stylePrompt =
-        `Use the second image ONLY as inspiration for the background environment style, colors, and mood. ` +
-        `Do NOT cut-and-paste the food onto the background. Instead, RE-RENDER the entire scene as one cohesive photograph. ` +
-        `The food must look like it was ORIGINALLY photographed in that environment — seamless, natural, no visible edges or compositing artifacts. ` +
-        `CRITICAL: Preserve the EXACT same camera angle and perspective from the original food photo. Do not change the viewpoint. ` +
-        `Match the environment's color temperature, light direction, and ambient tones on the food surface. ` +
-        `Add realistic contact shadows beneath the food on the surface. ` +
-        `Add subtle reflections and ambient occlusion where the food meets the surface. ` +
-        `The final image must be indistinguishable from a real photo taken in that location. ` +
+        `You are a world-class commercial food photographer. ` +
+        `Using the first image as reference for the EXACT dish (same ingredients, toppings, textures, and food identity), ` +
+        `create a brand-new professional commercial photograph of this dish as if shot in the environment shown in the second image. ` +
+        `You ARE allowed to change the camera angle, plating presentation, and composition to achieve the most appetizing result. ` +
+        `The food must look REAL, not AI-generated — realistic textures, natural imperfections, proper physics (gravity, weight, melting cheese, dripping sauce). ` +
         `${framingPrompt} ` +
+        `${anglePrompt} ` +
         `${lightingPrompt} ` +
         `${bgPrompt} ` +
-        `Remove all table items/props from the environment; keep a clean surface only. ` +
-        `No visible light fixtures (no lamps, no spotlights, no hanging lights in frame).`;
+        `The surface/table must match the environment naturally. ` +
+        `No visible light fixtures (no lamps, no spotlights, no hanging lights in frame). ` +
+        `The result must look like a photo from a professional food magazine or premium delivery app.`;
     } else {
       stylePrompt = STYLE_PROMPTS[style];
       // For pop style, allow custom background color
@@ -151,7 +150,10 @@ serve(async (req) => {
     const foodContext = food_name ? `This is "${food_name}". ` : "";
 
     // ✅ IMPORTANT: remove any instruction that allows "plating/presentation" changes
-    const fullPrompt = `${foodContext}${BASE_GUARDRAIL}${stylePrompt} Camera: 50mm look, f/1.4–f/2 shallow depth of field, subject razor sharp, background creamy blur.`;
+    // For customizavel, use only the style prompt (it has its own guardrails). For others, prepend BASE_GUARDRAIL.
+    const fullPrompt = style === "customizavel"
+      ? `${foodContext}${stylePrompt} Camera: 50mm look, f/1.4–f/2 shallow depth of field, subject razor sharp, background creamy blur.`
+      : `${foodContext}${BASE_GUARDRAIL}${stylePrompt} Camera: 50mm look, f/1.4–f/2 shallow depth of field, subject razor sharp, background creamy blur.`;
 
     const imageUrl = image.startsWith("data:") ? image : `data:image/jpeg;base64,${image}`;
 
