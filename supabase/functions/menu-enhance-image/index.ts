@@ -12,7 +12,7 @@ const BASE_GUARDRAIL =
   `Do not change ingredients, toppings, sauces, garnish, shape, size, proportions, texture, doneness, or arrangement. ` +
   `Do not slice, add/remove pieces, replate, or restyle the food. ` +
   `Do NOT add ANY new objects: no plates, no bowls, no cutlery, no napkins, no props whatsoever. If the food has no plate in the original, do not add one. ` +
-  `CRITICAL: Keep the EXACT same camera angle, perspective, and viewpoint as the original photo. Do not rotate, tilt, or reframe. ` +
+  `CRITICAL: Respect the requested camera angle and framing controls exactly (45° or top-down). Keep perspective physically realistic and coherent. ` +
   `No visible light fixtures (no lamps, no spotlights, no hanging lights in frame). ` +
   `Only improve lighting, exposure, white balance, sharpness and background style while preserving the food exactly as it appears. ` +
   `Make the food the hero: tight crop and shallow depth of field. ` +
@@ -104,7 +104,7 @@ serve(async (req) => {
     };
     const angleMap: Record<string, string> = {
       "45": "Camera angle at 45 degrees (three-quarter view), showing both the top and side of the dish.",
-      "top": "Camera directly overhead (top-down/flatlay view), looking straight down at the dish.",
+      "top": "MANDATORY: camera directly overhead at 90° (top-down/flatlay), looking straight down at the dish. No tilt, no horizon line, no side perspective.",
     };
     const lightingMap: Record<string, string> = {
       "ambient": "Use natural ambient lighting. Match existing light direction and color temperature.",
@@ -122,6 +122,9 @@ serve(async (req) => {
     const bgPrompt = bgEffectMap[background_effect || "blurred_darkened"] || bgEffectMap["blurred_darkened"];
 
     const photoControlsPrompt = `${framingPrompt} ${anglePrompt} ${lightingPrompt} ${bgPrompt}`;
+    const angleHardRule = angle === "top"
+      ? "ABSOLUTE REQUIREMENT: final image must be a strict 90° overhead top-down flatlay. If the angle is oblique, regenerate."
+      : "ABSOLUTE REQUIREMENT: final image must keep a clear 45° three-quarter view.";
 
     // Build style prompt
     let stylePrompt: string;
@@ -155,8 +158,8 @@ serve(async (req) => {
     // ✅ IMPORTANT: remove any instruction that allows "plating/presentation" changes
     // For customizavel, use only the style prompt (it has its own guardrails). For others, prepend BASE_GUARDRAIL.
     const fullPrompt = style === "customizavel"
-      ? `${foodContext}${stylePrompt} Camera: 50mm look, f/1.4–f/2 shallow depth of field, subject razor sharp, background creamy blur.`
-      : `${foodContext}${BASE_GUARDRAIL}${stylePrompt} Camera: 50mm look, f/1.4–f/2 shallow depth of field, subject razor sharp, background creamy blur.`;
+      ? `${foodContext}${stylePrompt} ${angleHardRule} Camera: 50mm look, f/1.4–f/2 shallow depth of field, subject razor sharp, background creamy blur.`
+      : `${foodContext}${BASE_GUARDRAIL}${stylePrompt} ${angleHardRule} Camera: 50mm look, f/1.4–f/2 shallow depth of field, subject razor sharp, background creamy blur.`;
 
     const imageUrl = image.startsWith("data:") ? image : `data:image/jpeg;base64,${image}`;
 
