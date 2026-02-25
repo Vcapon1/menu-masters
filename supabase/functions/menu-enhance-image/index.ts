@@ -14,7 +14,10 @@ const BASE_GUARDRAIL =
   `Do not add props or any new objects. ` +
   `No visible light fixtures (no lamps, no spotlights, no hanging lights in frame). ` +
   `Only improve lighting, exposure, white balance, sharpness and background style while preserving the food exactly. ` +
-  `Make the food the hero: tight crop and shallow depth of field. `;
+  `Make the food the hero: tight crop and shallow depth of field. ` +
+  `The result MUST look like a professional commercial food photograph that triggers instant craving and desire to eat. ` +
+  `Enhance textures to look irresistible: glistening sauces, crispy edges, juicy freshness, steam if appropriate. ` +
+  `Use appetizing warm tones and perfect highlights to make the dish look premium and mouth-watering. `;
 
 const STYLE_PROMPTS: Record<string, string> = {
   minimalist:
