@@ -42,12 +42,7 @@ const STYLE_PROMPTS: Record<string, string> = {
     `Solid clean background color, smooth and slightly blurred. Even soft light, true-to-life textures. ` +
     `No illustration/cartoon. No props. No visible light fixtures.`,
 
-  teste_vitor:
-    `Use the second image only as a blurred background context. ` +
-    `Food occupies 85–90% of the frame in the foreground (tight crop). ` +
-    `Remove all table items/props; keep a clean surface only. ` +
-    `Match perspective and lighting; add realistic contact shadow under the dish. ` +
-    `Background distant, heavily blurred and slightly darkened. No visible light fixtures.`,
+  customizavel: "DYNAMIC", // built dynamically from parameters
 };
 
 const STYLE_NAMES: Record<string, string> = {
@@ -56,7 +51,7 @@ const STYLE_NAMES: Record<string, string> = {
   solar: "Solar & Orgânico",
   traditional: "Tradicional & Aconchegante",
   pop: "Pop & Colorido",
-  teste_vitor: "Teste Vitor (Prato + Ambiente)",
+  customizavel: "Customizável (Prato + Ambiente)",
 };
 
 serve(async (req) => {
@@ -70,7 +65,7 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const { image, image_environment, style, food_name, bg_color } = await req.json();
+    const { image, image_environment, style, food_name, bg_color, framing, angle, lighting, background_effect } = await req.json();
 
     if (!image) {
       return new Response(JSON.stringify({ error: "Envie uma imagem em base64" }), {
@@ -86,10 +81,10 @@ serve(async (req) => {
       });
     }
 
-    // Validate teste_vitor requires second image
-    if (style === "teste_vitor" && !image_environment) {
+    // Validate customizavel requires second image
+    if (style === "customizavel" && !image_environment) {
       return new Response(
-        JSON.stringify({ error: "O estilo Teste Vitor requer uma segunda imagem do ambiente (image_environment)" }),
+        JSON.stringify({ error: "O estilo Customizável requer uma segunda imagem do ambiente (image_environment)" }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -98,11 +93,49 @@ serve(async (req) => {
     }
 
     // Build style prompt
-    let stylePrompt = STYLE_PROMPTS[style];
+    let stylePrompt: string;
 
-    // For pop style, allow custom background color (safe substitution)
-    if (style === "pop" && bg_color) {
-      stylePrompt = stylePrompt.replace("Solid simple colorful background.", `Solid simple ${bg_color} background.`);
+    if (style === "customizavel") {
+      // Build dynamic prompt from parameters
+      const framingMap: Record<string, string> = {
+        "70": "Food occupies 70% of the frame, showing some of the environment context around it.",
+        "90": "Food occupies 90% of the frame (tight close-up), minimal environment visible.",
+        "200": "Extreme macro close-up, food fills the entire frame showing textures and details at 200% zoom.",
+      };
+      const angleMap: Record<string, string> = {
+        "45": "Camera angle at 45 degrees (three-quarter view), showing both the top and side of the dish.",
+        "top": "Camera directly overhead (top-down/flatlay view), looking straight down at the dish.",
+      };
+      const lightingMap: Record<string, string> = {
+        "ambient": "Use the natural ambient lighting from the environment photo. Match the existing light direction and color temperature.",
+        "professional": "Apply professional studio-quality lighting: soft diffused key light from the side, subtle fill light, and gentle rim light for depth.",
+      };
+      const bgEffectMap: Record<string, string> = {
+        "darkened": "Background slightly darkened to make the food stand out as the hero.",
+        "blurred": "Background heavily blurred (strong bokeh effect) to isolate the food.",
+        "blurred_darkened": "Background heavily blurred AND darkened for maximum food focus and dramatic mood.",
+      };
+
+      const framingPrompt = framingMap[framing || "90"] || framingMap["90"];
+      const anglePrompt = angleMap[angle || "45"] || angleMap["45"];
+      const lightingPrompt = lightingMap[lighting || "professional"] || lightingMap["professional"];
+      const bgPrompt = bgEffectMap[background_effect || "blurred_darkened"] || bgEffectMap["blurred_darkened"];
+
+      stylePrompt =
+        `Use the second image as the background environment/scene. ` +
+        `Place the food from the first image naturally into this environment with realistic perspective and contact shadows. ` +
+        `${framingPrompt} ` +
+        `${anglePrompt} ` +
+        `${lightingPrompt} ` +
+        `${bgPrompt} ` +
+        `Remove all table items/props from the environment; keep a clean surface only. ` +
+        `No visible light fixtures (no lamps, no spotlights, no hanging lights in frame).`;
+    } else {
+      stylePrompt = STYLE_PROMPTS[style];
+      // For pop style, allow custom background color
+      if (style === "pop" && bg_color) {
+        stylePrompt = stylePrompt.replace("Solid clean background color", `Solid ${bg_color} background color`);
+      }
     }
 
     // Add food name context if provided (lightweight, doesn't trigger redesign)
@@ -119,8 +152,8 @@ serve(async (req) => {
       { type: "image_url", image_url: { url: imageUrl } },
     ];
 
-    // Add environment image for teste_vitor style
-    if (style === "teste_vitor" && image_environment) {
+    // Add environment image for customizavel style
+    if (style === "customizavel" && image_environment) {
       const envImageUrl = image_environment.startsWith("data:")
         ? image_environment
         : `data:image/jpeg;base64,${image_environment}`;
