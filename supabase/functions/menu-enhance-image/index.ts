@@ -126,18 +126,18 @@ serve(async (req) => {
       const bgPrompt = bgEffectMap[background_effect || "blurred_darkened"] || bgEffectMap["blurred_darkened"];
 
       stylePrompt =
-        `You are a world-class commercial food photographer. ` +
-        `Using the first image as reference for the EXACT dish (same ingredients, toppings, textures, and food identity), ` +
-        `create a brand-new professional commercial photograph of this dish as if shot in the environment shown in the second image. ` +
-        `You ARE allowed to change the camera angle, plating presentation, and composition to achieve the most appetizing result. ` +
-        `The food must look REAL, not AI-generated — realistic textures, natural imperfections, proper physics (gravity, weight, melting cheese, dripping sauce). ` +
+        `Imagine you are a top commercial food photographer hired to photograph this dish inside the restaurant/space shown in the second image. ` +
+        `Study the dish in the first image: memorize every ingredient, topping, sauce, texture, and detail. ` +
+        `Study the environment in the second image: memorize the surfaces, materials, colors, ambient light, and atmosphere. ` +
+        `Now produce ONE single photograph as if the dish is physically sitting on a table/counter inside that environment. ` +
+        `The dish must be rendered with photorealistic detail: natural textures, weight, shadows, reflections on the surface, ambient light bouncing off the food. ` +
+        `This is NOT a composite or collage — it must look like ONE real photo taken with a professional camera in that location. ` +
         `${framingPrompt} ` +
         `${anglePrompt} ` +
         `${lightingPrompt} ` +
         `${bgPrompt} ` +
-        `The surface/table must match the environment naturally. ` +
-        `No visible light fixtures (no lamps, no spotlights, no hanging lights in frame). ` +
-        `The result must look like a photo from a professional food magazine or premium delivery app.`;
+        `No visible light fixtures in frame. ` +
+        `The result must trigger instant hunger — make it look irresistible, premium, and worthy of a food magazine cover.`;
     } else {
       stylePrompt = STYLE_PROMPTS[style];
       // For pop style, allow custom background color
