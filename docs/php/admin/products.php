@@ -1313,10 +1313,10 @@ $availableBadges = [
                             <p class="text-xs text-gray-400 mt-1">Sorveterias / Docerias / Fast Food — Visual lúdico</p>
                         </div>
                         <div class="enhance-style-card border-2 border-gray-600 rounded-lg p-3 cursor-pointer hover:border-purple-500 transition-all" 
-                             data-style="teste_vitor" onclick="selectEnhanceStyle('teste_vitor')">
-                            <div class="text-xl mb-1">🧪</div>
-                            <h4 class="font-bold text-sm">Teste Vitor (Prato + Ambiente)</h4>
-                            <p class="text-xs text-gray-400 mt-1">Envie 2 fotos: prato + ambiente. A IA combina numa foto profissional</p>
+                             data-style="customizavel" onclick="selectEnhanceStyle('customizavel')">
+                            <div class="text-xl mb-1">🎨</div>
+                            <h4 class="font-bold text-sm">Customizável (Prato + Ambiente)</h4>
+                            <p class="text-xs text-gray-400 mt-1">Envie 2 fotos + ajuste enquadramento, ângulo, luz e fundo</p>
                         </div>
                     </div>
                 </div>
@@ -1340,7 +1340,7 @@ $availableBadges = [
                     </div>
                 </div>
                 
-                <!-- Upload de imagem do ambiente para estilo Teste Vitor -->
+                <!-- Upload de imagem do ambiente + parâmetros para estilo Customizável -->
                 <div id="enhance-environment-upload" class="mb-4 hidden">
                     <label class="block text-sm mb-2 font-medium">📍 Foto do Ambiente</label>
                     <div id="enhance-env-drop-zone" class="border-2 border-dashed border-gray-600 rounded-lg p-4 text-center cursor-pointer hover:border-purple-500 transition-colors"
@@ -1356,6 +1356,40 @@ $availableBadges = [
                         </div>
                     </div>
                     <input type="file" id="enhance-env-file-input" accept="image/*" class="hidden" onchange="onEnhanceEnvFileSelected(this)">
+                    
+                    <!-- Parâmetros do estilo Customizável -->
+                    <div class="grid grid-cols-2 gap-3 mt-4">
+                        <div>
+                            <label class="block text-xs mb-1 font-medium text-gray-300">📐 Enquadramento</label>
+                            <select id="enhance-framing" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm">
+                                <option value="90">90% — Close-up (padrão)</option>
+                                <option value="70">70% — Mostra ambiente</option>
+                                <option value="200">200% — Macro extremo</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs mb-1 font-medium text-gray-300">📷 Ângulo</label>
+                            <select id="enhance-angle" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm">
+                                <option value="45">45° — Três quartos (padrão)</option>
+                                <option value="top">De cima — Flatlay</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs mb-1 font-medium text-gray-300">💡 Iluminação</label>
+                            <select id="enhance-lighting" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm">
+                                <option value="professional">Profissional (padrão)</option>
+                                <option value="ambient">Ambiente natural</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs mb-1 font-medium text-gray-300">🖼️ Fundo</label>
+                            <select id="enhance-bg-effect" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm">
+                                <option value="blurred_darkened">Desfocado + Escurecido (padrão)</option>
+                                <option value="blurred">Desfocado</option>
+                                <option value="darkened">Escurecido</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
                 
                 <button type="button" onclick="startEnhance()" id="btn-start-enhance"
@@ -1571,8 +1605,8 @@ $availableBadges = [
             // Show/hide pop color picker
             document.getElementById('enhance-pop-color').classList.toggle('hidden', style !== 'pop');
             
-            // Show/hide environment upload for teste_vitor
-            document.getElementById('enhance-environment-upload').classList.toggle('hidden', style !== 'teste_vitor');
+            // Show/hide environment upload for customizavel
+            document.getElementById('enhance-environment-upload').classList.toggle('hidden', style !== 'customizavel');
             
             updateEnhanceButton();
         }
@@ -1589,7 +1623,7 @@ $availableBadges = [
         
         function updateEnhanceButton() {
             const btn = document.getElementById('btn-start-enhance');
-            const needsEnv = enhanceSelectedStyle === 'teste_vitor';
+            const needsEnv = enhanceSelectedStyle === 'customizavel';
             btn.disabled = !(enhanceImageBase64 && enhanceSelectedStyle && (!needsEnv || enhanceEnvImageBase64));
         }
         
@@ -1624,8 +1658,12 @@ $availableBadges = [
                     body.bg_color = enhancePopColor;
                 }
                 
-                if (enhanceSelectedStyle === 'teste_vitor' && enhanceEnvImageBase64) {
+                if (enhanceSelectedStyle === 'customizavel' && enhanceEnvImageBase64) {
                     body.image_environment = enhanceEnvImageBase64;
+                    body.framing = document.getElementById('enhance-framing').value;
+                    body.angle = document.getElementById('enhance-angle').value;
+                    body.lighting = document.getElementById('enhance-lighting').value;
+                    body.background_effect = document.getElementById('enhance-bg-effect').value;
                 }
                 
                 const res = await fetch(ENHANCE_EDGE_URL, {
