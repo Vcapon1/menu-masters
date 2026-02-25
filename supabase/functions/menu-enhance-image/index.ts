@@ -115,9 +115,9 @@ serve(async (req) => {
         "professional": "Apply professional studio-quality lighting: soft diffused key light from the side, subtle fill light, and gentle rim light for depth.",
       };
       const bgEffectMap: Record<string, string> = {
-        "darkened": "Background slightly darkened to make the food stand out as the hero.",
-        "blurred": "Background heavily blurred (strong bokeh effect) to isolate the food.",
-        "blurred_darkened": "Background heavily blurred AND darkened for maximum food focus and dramatic mood.",
+        "darkened": "Background slightly darkened with natural gradients, preserving real depth and scene texture (not a flat backdrop).",
+        "blurred": "Background with natural optical depth-of-field from the camera lens (no artificial cutout blur).",
+        "blurred_darkened": "Background with natural lens bokeh plus subtle darkening, while preserving realistic scene depth and texture.",
       };
 
       const framingPrompt = framingMap[framing || "90"] || framingMap["90"];
@@ -126,18 +126,20 @@ serve(async (req) => {
       const bgPrompt = bgEffectMap[background_effect || "blurred_darkened"] || bgEffectMap["blurred_darkened"];
 
       stylePrompt =
-        `Imagine you are a top commercial food photographer hired to photograph this dish inside the restaurant/space shown in the second image. ` +
-        `Study the dish in the first image: memorize every ingredient, topping, sauce, texture, and detail. ` +
-        `Study the environment in the second image: memorize the surfaces, materials, colors, ambient light, and atmosphere. ` +
-        `Now produce ONE single photograph as if the dish is physically sitting on a table/counter inside that environment. ` +
-        `The dish must be rendered with photorealistic detail: natural textures, weight, shadows, reflections on the surface, ambient light bouncing off the food. ` +
-        `This is NOT a composite or collage — it must look like ONE real photo taken with a professional camera in that location. ` +
+        `Generate a single authentic commercial photograph where the dish from the first image is naturally served inside the environment from the second image. ` +
+        `Do NOT create a collage/composite/cutout and do NOT treat the environment as a flat background image. ` +
+        `The dish must be physically integrated into the scene with correct scale and perspective. ` +
+        `Use realistic contact shadows, ambient occlusion, subtle surface reflections, and environment color bleeding on the food. ` +
+        `No sticker look: no halo edges, no hard masks, no floating food. ` +
+        `Preserve the exact dish identity from the first image (same ingredients, toppings, and textures), while refining presentation for premium commercial quality. ` +
+        `Scene must read as one real camera capture event with coherent optics and natural depth. ` +
+        `Do not add new tableware or props unless they are clearly implied by the environment and required for realism. ` +
         `${framingPrompt} ` +
         `${anglePrompt} ` +
         `${lightingPrompt} ` +
         `${bgPrompt} ` +
         `No visible light fixtures in frame. ` +
-        `The result must trigger instant hunger — make it look irresistible, premium, and worthy of a food magazine cover.`;
+        `Final result: premium delivery-app / food-magazine quality, highly appetizing and photorealistic.`;
     } else {
       stylePrompt = STYLE_PROMPTS[style];
       // For pop style, allow custom background color
@@ -178,7 +180,9 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
+        model: style === "customizavel"
+          ? "google/gemini-3-pro-image-preview"
+          : "google/gemini-2.5-flash-image",
         messages: [
           {
             role: "user",
