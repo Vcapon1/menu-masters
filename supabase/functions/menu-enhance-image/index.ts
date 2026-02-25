@@ -96,35 +96,37 @@ serve(async (req) => {
       );
     }
 
+    // Build photography control prompts (available for all styles)
+    const framingMap: Record<string, string> = {
+      "70": "Food occupies 70% of the frame, showing some of the environment context around it.",
+      "90": "Food occupies 90% of the frame (tight close-up), minimal environment visible.",
+      "200": "Extreme macro close-up, food fills the entire frame showing textures and details at 200% zoom.",
+    };
+    const angleMap: Record<string, string> = {
+      "45": "Camera angle at 45 degrees (three-quarter view), showing both the top and side of the dish.",
+      "top": "Camera directly overhead (top-down/flatlay view), looking straight down at the dish.",
+    };
+    const lightingMap: Record<string, string> = {
+      "ambient": "Use natural ambient lighting. Match existing light direction and color temperature.",
+      "professional": "Apply professional studio-quality lighting: soft diffused key light from the side, subtle fill light, and gentle rim light for depth.",
+    };
+    const bgEffectMap: Record<string, string> = {
+      "darkened": "Background slightly darkened with natural gradients, preserving real depth and scene texture (not a flat backdrop).",
+      "blurred": "Background with natural optical depth-of-field from the camera lens (no artificial cutout blur).",
+      "blurred_darkened": "Background with natural lens bokeh plus subtle darkening, while preserving realistic scene depth and texture.",
+    };
+
+    const framingPrompt = framingMap[framing || "90"] || framingMap["90"];
+    const anglePrompt = angleMap[angle || "45"] || angleMap["45"];
+    const lightingPrompt = lightingMap[lighting || "professional"] || lightingMap["professional"];
+    const bgPrompt = bgEffectMap[background_effect || "blurred_darkened"] || bgEffectMap["blurred_darkened"];
+
+    const photoControlsPrompt = `${framingPrompt} ${anglePrompt} ${lightingPrompt} ${bgPrompt}`;
+
     // Build style prompt
     let stylePrompt: string;
 
     if (style === "customizavel") {
-      // Build dynamic prompt from parameters
-      const framingMap: Record<string, string> = {
-        "70": "Food occupies 70% of the frame, showing some of the environment context around it.",
-        "90": "Food occupies 90% of the frame (tight close-up), minimal environment visible.",
-        "200": "Extreme macro close-up, food fills the entire frame showing textures and details at 200% zoom.",
-      };
-      const angleMap: Record<string, string> = {
-        "45": "Camera angle at 45 degrees (three-quarter view), showing both the top and side of the dish.",
-        "top": "Camera directly overhead (top-down/flatlay view), looking straight down at the dish.",
-      };
-      const lightingMap: Record<string, string> = {
-        "ambient": "Use the natural ambient lighting from the environment photo. Match the existing light direction and color temperature.",
-        "professional": "Apply professional studio-quality lighting: soft diffused key light from the side, subtle fill light, and gentle rim light for depth.",
-      };
-      const bgEffectMap: Record<string, string> = {
-        "darkened": "Background slightly darkened with natural gradients, preserving real depth and scene texture (not a flat backdrop).",
-        "blurred": "Background with natural optical depth-of-field from the camera lens (no artificial cutout blur).",
-        "blurred_darkened": "Background with natural lens bokeh plus subtle darkening, while preserving realistic scene depth and texture.",
-      };
-
-      const framingPrompt = framingMap[framing || "90"] || framingMap["90"];
-      const anglePrompt = angleMap[angle || "45"] || angleMap["45"];
-      const lightingPrompt = lightingMap[lighting || "professional"] || lightingMap["professional"];
-      const bgPrompt = bgEffectMap[background_effect || "blurred_darkened"] || bgEffectMap["blurred_darkened"];
-
       stylePrompt =
         `Generate a single authentic commercial photograph where the dish from the first image is naturally served inside the environment from the second image. ` +
         `Do NOT create a collage/composite/cutout and do NOT treat the environment as a flat background image. ` +
@@ -134,10 +136,7 @@ serve(async (req) => {
         `Preserve the exact dish identity from the first image (same ingredients, toppings, and textures), while refining presentation for premium commercial quality. ` +
         `Scene must read as one real camera capture event with coherent optics and natural depth. ` +
         `Do not add new tableware or props unless they are clearly implied by the environment and required for realism. ` +
-        `${framingPrompt} ` +
-        `${anglePrompt} ` +
-        `${lightingPrompt} ` +
-        `${bgPrompt} ` +
+        `${photoControlsPrompt} ` +
         `No visible light fixtures in frame. ` +
         `Final result: premium delivery-app / food-magazine quality, highly appetizing and photorealistic.`;
     } else {
@@ -146,6 +145,8 @@ serve(async (req) => {
       if (style === "pop" && bg_color) {
         stylePrompt = stylePrompt.replace("Solid clean background color", `Solid ${bg_color} background color`);
       }
+      // Append photo controls to all standard styles
+      stylePrompt += ` ${photoControlsPrompt}`;
     }
 
     // Add food name context if provided (lightweight, doesn't trigger redesign)
