@@ -1340,7 +1340,7 @@ $availableBadges = [
                     </div>
                 </div>
                 
-                <!-- Upload de imagem do ambiente + parâmetros para estilo Customizável -->
+                <!-- Upload de imagem do ambiente para estilo Customizável -->
                 <div id="enhance-environment-upload" class="mb-4 hidden">
                     <label class="block text-sm mb-2 font-medium">📍 Foto do Ambiente</label>
                     <div id="enhance-env-drop-zone" class="border-2 border-dashed border-gray-600 rounded-lg p-4 text-center cursor-pointer hover:border-purple-500 transition-colors"
@@ -1356,9 +1356,12 @@ $availableBadges = [
                         </div>
                     </div>
                     <input type="file" id="enhance-env-file-input" accept="image/*" class="hidden" onchange="onEnhanceEnvFileSelected(this)">
-                    
-                    <!-- Parâmetros do estilo Customizável -->
-                    <div class="grid grid-cols-2 gap-3 mt-4">
+                </div>
+                
+                <!-- Controles de fotografia (disponíveis para todos os estilos) -->
+                <div id="enhance-photo-controls" class="mb-4 hidden">
+                    <label class="block text-sm mb-2 font-medium">📸 Controles de Fotografia</label>
+                    <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-xs mb-1 font-medium text-gray-300">📐 Enquadramento</label>
                             <select id="enhance-framing" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm">
@@ -1608,6 +1611,9 @@ $availableBadges = [
             // Show/hide environment upload for customizavel
             document.getElementById('enhance-environment-upload').classList.toggle('hidden', style !== 'customizavel');
             
+            // Show photo controls for all styles when a style is selected
+            document.getElementById('enhance-photo-controls').classList.toggle('hidden', !style);
+            
             updateEnhanceButton();
         }
         
@@ -1658,12 +1664,14 @@ $availableBadges = [
                     body.bg_color = enhancePopColor;
                 }
                 
+                // Always send photo controls
+                body.framing = document.getElementById('enhance-framing').value;
+                body.angle = document.getElementById('enhance-angle').value;
+                body.lighting = document.getElementById('enhance-lighting').value;
+                body.background_effect = document.getElementById('enhance-bg-effect').value;
+                
                 if (enhanceSelectedStyle === 'customizavel' && enhanceEnvImageBase64) {
                     body.image_environment = enhanceEnvImageBase64;
-                    body.framing = document.getElementById('enhance-framing').value;
-                    body.angle = document.getElementById('enhance-angle').value;
-                    body.lighting = document.getElementById('enhance-lighting').value;
-                    body.background_effect = document.getElementById('enhance-bg-effect').value;
                 }
                 
                 const res = await fetch(ENHANCE_EDGE_URL, {
