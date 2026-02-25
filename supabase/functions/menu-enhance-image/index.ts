@@ -11,9 +11,10 @@ const BASE_GUARDRAIL =
   `Edit the provided photo only. Keep the exact same dish and composition. ` +
   `Do not change ingredients, toppings, sauces, garnish, shape, size, proportions, texture, doneness, or arrangement. ` +
   `Do not slice, add/remove pieces, replate, or restyle the food. ` +
-  `Do not add props or any new objects. ` +
+  `Do NOT add ANY new objects: no plates, no bowls, no cutlery, no napkins, no props whatsoever. If the food has no plate in the original, do not add one. ` +
+  `CRITICAL: Keep the EXACT same camera angle, perspective, and viewpoint as the original photo. Do not rotate, tilt, or reframe. ` +
   `No visible light fixtures (no lamps, no spotlights, no hanging lights in frame). ` +
-  `Only improve lighting, exposure, white balance, sharpness and background style while preserving the food exactly. ` +
+  `Only improve lighting, exposure, white balance, sharpness and background style while preserving the food exactly as it appears. ` +
   `Make the food the hero: tight crop and shallow depth of field. ` +
   `The result MUST look like a professional commercial food photograph that triggers instant craving and desire to eat. ` +
   `Enhance textures to look irresistible: glistening sauces, crispy edges, juicy freshness, steam if appropriate. ` +
@@ -128,12 +129,12 @@ serve(async (req) => {
         `Use the second image ONLY as inspiration for the background environment style, colors, and mood. ` +
         `Do NOT cut-and-paste the food onto the background. Instead, RE-RENDER the entire scene as one cohesive photograph. ` +
         `The food must look like it was ORIGINALLY photographed in that environment — seamless, natural, no visible edges or compositing artifacts. ` +
+        `CRITICAL: Preserve the EXACT same camera angle and perspective from the original food photo. Do not change the viewpoint. ` +
         `Match the environment's color temperature, light direction, and ambient tones on the food surface. ` +
         `Add realistic contact shadows beneath the food on the surface. ` +
         `Add subtle reflections and ambient occlusion where the food meets the surface. ` +
         `The final image must be indistinguishable from a real photo taken in that location. ` +
         `${framingPrompt} ` +
-        `${anglePrompt} ` +
         `${lightingPrompt} ` +
         `${bgPrompt} ` +
         `Remove all table items/props from the environment; keep a clean surface only. ` +
