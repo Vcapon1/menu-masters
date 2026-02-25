@@ -125,8 +125,13 @@ serve(async (req) => {
       const bgPrompt = bgEffectMap[background_effect || "blurred_darkened"] || bgEffectMap["blurred_darkened"];
 
       stylePrompt =
-        `Use the second image as the background environment/scene. ` +
-        `Place the food from the first image naturally into this environment with realistic perspective and contact shadows. ` +
+        `Use the second image ONLY as inspiration for the background environment style, colors, and mood. ` +
+        `Do NOT cut-and-paste the food onto the background. Instead, RE-RENDER the entire scene as one cohesive photograph. ` +
+        `The food must look like it was ORIGINALLY photographed in that environment — seamless, natural, no visible edges or compositing artifacts. ` +
+        `Match the environment's color temperature, light direction, and ambient tones on the food surface. ` +
+        `Add realistic contact shadows beneath the food on the surface. ` +
+        `Add subtle reflections and ambient occlusion where the food meets the surface. ` +
+        `The final image must be indistinguishable from a real photo taken in that location. ` +
         `${framingPrompt} ` +
         `${anglePrompt} ` +
         `${lightingPrompt} ` +
