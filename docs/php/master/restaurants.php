@@ -394,6 +394,93 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $message = 'Falha ao enviar email: ' . $errorMsg;
                 }
                 break;
+            
+            case 'create_onboarding':
+                // Criar restaurante para onboarding (gera token + link)
+                $onbName = sanitize($_POST['onb_name'] ?? '');
+                $onbPlanId = (int)($_POST['onb_plan_id'] ?? 0);
+                $onbPlanValue = floatval($_POST['onb_plan_value'] ?? 0);
+                $onbFeePercent = floatval($_POST['onb_fee_percent'] ?? 6.00);
+                $onbOnlinePayment = isset($_POST['onb_online_payment']) ? 1 : 0;
+
+                if (empty($onbName) || $onbPlanId === 0 || $onbPlanValue <= 0) {
+                    throw new Exception('Preencha todos os campos obrigatórios.');
+                }
+
+                // Gerar slug e token
+                $onbSlug = generateSlug($onbName);
+                $checkSlugStmt = db()->prepare("SELECT id FROM restaurants WHERE slug = :slug");
+                $checkSlugStmt->execute(['slug' => $onbSlug]);
+                if ($checkSlugStmt->fetch()) {
+                    $onbSlug .= '-' . substr(time(), -4);
+                }
+
+                $regToken = bin2hex(random_bytes(32));
+                $tokenExpires = date('Y-m-d H:i:s', strtotime('+7 days'));
+
+                // Pegar template padrão
+                $defaultTpl = db()->prepare("SELECT id FROM templates WHERE is_active = 1 AND min_plan_id <= :pid ORDER BY id ASC LIMIT 1");
+                $defaultTpl->execute(['pid' => $onbPlanId]);
+                $tplRow = $defaultTpl->fetch();
+                $tplId = $tplRow ? $tplRow['id'] : 1;
+
+                $onbSql = "INSERT INTO restaurants (name, slug, email, plan_id, template_id, status, 
+                           registration_token, token_expires_at, plan_value, platform_fee_percent, payment_model)
+                           VALUES (:name, :slug, '', :plan_id, :template_id, 'aguardando_cadastro',
+                           :token, :expires, :plan_value, :fee, :model)";
+                $onbStmt = db()->prepare($onbSql);
+                $onbStmt->execute([
+                    'name' => $onbName,
+                    'slug' => $onbSlug,
+                    'plan_id' => $onbPlanId,
+                    'template_id' => $tplId,
+                    'token' => $regToken,
+                    'expires' => $tokenExpires,
+                    'plan_value' => $onbPlanValue,
+                    'fee' => $onbFeePercent,
+                    'model' => $onbOnlinePayment ? 'commission' : 'full',
+                ]);
+
+                $baseUrl = (isset($_SERVER['HTTPS']) ? 'https://' : 'http://') . $_SERVER['HTTP_HOST'];
+                $cadastroLink = $baseUrl . '/cadastro/' . $regToken;
+                
+                $message = "✅ Restaurante criado! Link de cadastro (válido por 7 dias):<br>
+                    <div class='mt-2 p-3 bg-gray-900 rounded-lg border border-gray-700'>
+                        <input type='text' value='{$cadastroLink}' readonly class='w-full bg-transparent text-purple-400 text-sm' onclick='this.select()'>
+                        <button onclick=\"navigator.clipboard.writeText('{$cadastroLink}'); this.textContent='✅ Copiado!'\" class='mt-2 bg-purple-600 hover:bg-purple-700 px-4 py-1 rounded text-xs'>📋 Copiar Link</button>
+                    </div>";
+                break;
+            
+            case 'approve_lead':
+                // Aprovar lead e gerar link de cadastro
+                $leadId = (int)($_POST['lead_id'] ?? 0);
+                $leadRest = getRestaurantById($leadId);
+                if (!$leadRest || $leadRest['status'] !== 'lead') {
+                    throw new Exception('Restaurante não encontrado ou não é um lead.');
+                }
+
+                $leadToken = bin2hex(random_bytes(32));
+                $leadExpires = date('Y-m-d H:i:s', strtotime('+7 days'));
+
+                $approveSql = "UPDATE restaurants SET status = 'aguardando_cadastro', 
+                               registration_token = :token, token_expires_at = :expires 
+                               WHERE id = :id";
+                $approveStmt = db()->prepare($approveSql);
+                $approveStmt->execute([
+                    'token' => $leadToken,
+                    'expires' => $leadExpires,
+                    'id' => $leadId,
+                ]);
+
+                $baseUrl = (isset($_SERVER['HTTPS']) ? 'https://' : 'http://') . $_SERVER['HTTP_HOST'];
+                $cadastroLink = $baseUrl . '/cadastro/' . $leadToken;
+
+                $message = "✅ Lead aprovado! Link de cadastro gerado:<br>
+                    <div class='mt-2 p-3 bg-gray-900 rounded-lg border border-gray-700'>
+                        <input type='text' value='{$cadastroLink}' readonly class='w-full bg-transparent text-purple-400 text-sm' onclick='this.select()'>
+                        <button onclick=\"navigator.clipboard.writeText('{$cadastroLink}'); this.textContent='✅ Copiado!'\" class='mt-2 bg-purple-600 hover:bg-purple-700 px-4 py-1 rounded text-xs'>📋 Copiar Link</button>
+                    </div>";
+                break;
             case 'import_ai':
                 $restaurantIdImport = (int)($_POST['restaurant_id'] ?? 0);
                 $importDataRaw = $_POST['import_data'] ?? '{}';
@@ -551,16 +638,24 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
                 <a href="index.php" class="text-gray-300 hover:text-white">← Dashboard</a>
                 <h1 class="font-bold">Gerenciar Restaurantes</h1>
             </div>
-            <button onclick="openModal()" class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg text-sm">
-                + Novo Restaurante
-            </button>
+            <div class="flex gap-2">
+                <button onclick="openOnboardingModal()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg text-sm">
+                    🚀 Criar Novo Restaurante (Onboarding)
+                </button>
+                <button onclick="openModal()" class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg text-sm">
+                    + Novo Restaurante (Direto)
+                </button>
+            </div>
         </div>
     </nav>
     
     <main class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Note: message may contain HTML for the registration link -->
         <?php if ($message): ?>
             <div class="bg-green-900/50 border border-green-600 rounded-lg p-4 mb-6">
-                <?= htmlspecialchars($message) ?>
+                <?= $message ?>
+            </div>
+        <?php endif; ?>
             </div>
         <?php endif; ?>
         
@@ -580,6 +675,7 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
                         <th class="px-4 py-3 text-left text-sm">Plano</th>
                         <th class="px-4 py-3 text-left text-sm">Template</th>
                         <th class="px-4 py-3 text-left text-sm">Status</th>
+                        <th class="px-4 py-3 text-left text-sm">Onboarding</th>
                         <th class="px-4 py-3 text-left text-sm">Validade</th>
                         <th class="px-4 py-3 text-right text-sm">Ações</th>
                     </tr>
@@ -617,12 +713,28 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
                                 <span class="text-sm"><?= htmlspecialchars($r['template_name']) ?></span>
                             </td>
                             <td class="px-4 py-3">
-                                <?php if ($r['status'] === 'active'): ?>
-                                    <span class="px-2 py-1 text-xs rounded bg-green-600">Ativo</span>
-                                <?php elseif ($r['status'] === 'pending'): ?>
-                                    <span class="px-2 py-1 text-xs rounded bg-yellow-600">Pendente</span>
+                                <?php 
+                                    $statusLabels = [
+                                        'active' => ['Ativo', 'bg-green-600'],
+                                        'lead' => ['Lead', 'bg-blue-600'],
+                                        'aguardando_cadastro' => ['Aguard. Cadastro', 'bg-yellow-600'],
+                                        'aguardando_pagamento' => ['Aguard. Pagamento', 'bg-orange-600'],
+                                        'pending' => ['Pendente', 'bg-yellow-600'],
+                                        'inactive' => ['Inativo', 'bg-gray-600'],
+                                        'vencido' => ['Vencido', 'bg-red-600'],
+                                        'suspenso' => ['Suspenso', 'bg-red-800'],
+                                    ];
+                                    $sl = $statusLabels[$r['status']] ?? ['Outro', 'bg-gray-600'];
+                                ?>
+                                <span class="px-2 py-1 text-xs rounded <?= $sl[1] ?>"><?= $sl[0] ?></span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <?php 
+                                    $onb = $r['status_onboarding'] ?? 'pendente';
+                                    if ($onb === 'completo'): ?>
+                                    <span class="px-2 py-1 text-xs rounded bg-green-600">✅ Completo</span>
                                 <?php else: ?>
-                                    <span class="px-2 py-1 text-xs rounded bg-gray-600">Inativo</span>
+                                    <span class="px-2 py-1 text-xs rounded bg-gray-600">Pendente</span>
                                 <?php endif; ?>
                             </td>
                             <td class="px-4 py-3">
@@ -641,6 +753,13 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
                                    class="text-purple-400 hover:text-purple-300 mr-2" title="Ver cardápio">Ver</a>
                                 <button onclick="editRestaurant(<?= htmlspecialchars(json_encode($r)) ?>)" 
                                         class="text-blue-400 hover:text-blue-300 mr-2" title="Editar">Editar</button>
+                                <?php if ($r['status'] === 'lead'): ?>
+                                    <form method="post" class="inline">
+                                        <input type="hidden" name="action" value="approve_lead">
+                                        <input type="hidden" name="lead_id" value="<?= $r['id'] ?>">
+                                        <button type="submit" class="text-green-400 hover:text-green-300 mr-2" title="Aprovar lead e gerar link">✅ Aprovar</button>
+                                    </form>
+                                <?php endif; ?>
                                 <button onclick="sendContractData(<?= htmlspecialchars(json_encode($r)) ?>)" 
                                         class="text-green-400 hover:text-green-300 mr-2" title="Enviar dados do contrato por email">📧</button>
                                 <button onclick="openImportAI(<?= $r['id'] ?>, '<?= htmlspecialchars($r['name']) ?>')" 
@@ -652,6 +771,67 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
                     <?php endforeach; ?>
                 </tbody>
             </table>
+        </div>
+
+        <!-- Modal Onboarding: Criar Restaurante com Link -->
+        <div id="onboarding-modal" class="modal-overlay">
+            <div class="modal-container" style="max-width: 32rem;">
+                <div class="modal-header flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-green-400">🚀 Novo Restaurante (Onboarding)</h2>
+                    <button type="button" onclick="closeOnboardingModal()" class="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+                </div>
+                <form method="post">
+                    <input type="hidden" name="action" value="create_onboarding">
+                    <div class="modal-body space-y-4">
+                        <p class="text-sm text-gray-400">Cria o restaurante e gera um link exclusivo para o restaurante completar o cadastro e pagar o plano.</p>
+                        
+                        <div>
+                            <label class="block text-sm mb-1">Nome Fantasia *</label>
+                            <input type="text" name="onb_name" required
+                                   class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm mb-1">Plano *</label>
+                            <select name="onb_plan_id" required
+                                    class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                                <option value="">Selecione...</option>
+                                <?php foreach ($plans as $plan): ?>
+                                    <option value="<?= $plan['id'] ?>"><?= htmlspecialchars($plan['name']) ?> - R$ <?= number_format($plan['price'], 2, ',', '.') ?>/mês</option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm mb-1">Valor do Plano Anual (R$) *</label>
+                            <input type="number" name="onb_plan_value" step="0.01" min="1" required
+                                   class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2"
+                                   placeholder="Ex: 1198.80">
+                            <p class="text-xs text-gray-500 mt-1">Valor total cobrado na assinatura anual</p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm mb-1">Comissão da Plataforma (%)</label>
+                            <input type="number" name="onb_fee_percent" step="0.01" min="0" max="50" value="6.00"
+                                   class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                        </div>
+                        
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" name="onb_online_payment" id="onb-online" value="1"
+                                   class="rounded bg-gray-700 border-gray-600 text-green-500">
+                            <label for="onb-online" class="text-sm">Ativar pagamento online (pedidos)</label>
+                        </div>
+                    </div>
+                    <div class="modal-footer flex gap-2">
+                        <button type="submit" class="flex-1 bg-green-600 hover:bg-green-700 py-2 rounded font-medium">
+                            🚀 Criar e Gerar Link
+                        </button>
+                        <button type="button" onclick="closeOnboardingModal()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded">
+                            Cancelar
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </main>
     
@@ -1704,6 +1884,16 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
         document.getElementById('send-modal')?.addEventListener('click', function(e) {
             if (e.target === this) closeSendModal();
         });
+        document.getElementById('onboarding-modal')?.addEventListener('click', function(e) {
+            if (e.target === this) closeOnboardingModal();
+        });
+        
+        function openOnboardingModal() {
+            document.getElementById('onboarding-modal').classList.add('active');
+        }
+        function closeOnboardingModal() {
+            document.getElementById('onboarding-modal').classList.remove('active');
+        }
     </script>
 </body>
 </html>

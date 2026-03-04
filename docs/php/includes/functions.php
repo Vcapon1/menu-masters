@@ -481,8 +481,8 @@ function verifyRestaurantLogin(string $username, string $password): ?array {
         return null;
     }
     
-    // Verificar status (retornar null se não ativo para bloquear acesso)
-    if ($restaurant['status'] !== 'active') {
+    // Verificar status (aceitar active e ativo)
+    if (!in_array($restaurant['status'], ['active', 'ativo'])) {
         return null;
     }
     

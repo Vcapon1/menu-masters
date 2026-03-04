@@ -2,85 +2,52 @@
 
 # Arquitetura de Pagamentos: Asaas para Planos + Stripe para Pedidos
 
-## Análise da Sugestão
+## Status: ✅ Implementado
 
-Faz muito sentido separar os gateways por finalidade:
+## Componentes Criados
 
-| Finalidade | Gateway | Motivo |
-|---|---|---|
-| **Cobrança de planos** (assinatura anual dos restaurantes) | **Asaas** | Melhor para boleto, Pix e parcelamento no Brasil. API simples para cobranças recorrentes. Taxas mais competitivas para B2B. |
-| **Pagamento de pedidos** (clientes finais comprando comida) | **Stripe Connect** | Já implementado. Split automático entre plataforma e restaurante. Stripe Elements no checkout. |
+### Edge Functions
+1. **`asaas-checkout-plan`** — Criar cliente Asaas, gerar cobranças (Pix/Boleto/Cartão até 12x)
+2. **`asaas-webhook`** — Receber confirmação de pagamento e atualizar status do restaurante
 
-## O que muda no plano de onboarding
+### Páginas PHP
+1. **`docs/php/cadastro.php`** — Formulário de cadastro do restaurante via token exclusivo
+2. **`docs/php/onboarding.php`** — Formulário pós-pagamento (upload cardápio, logo, fotos, horários)
+3. **`docs/php/parceiro.php`** — Formulário público "Quero ser Parceiro" (cria lead)
+4. **`docs/php/pagamento-plano.php`** — Checkout com Pix/Boleto/Cartão via Asaas
 
-### Edge Function: `asaas-checkout-plan` (nova)
+### Schema MySQL Atualizado
+- `restaurants`: novos campos para onboarding (token, CNPJ, CPF, status expandido, datas assinatura, Asaas IDs)
+- `commissions`: tabela de comissões por pedido
+- `plan_payments`: tabela de pagamentos de planos via Asaas
 
-Substitui a `stripe-checkout-plan` que estava planejada. Responsabilidades:
+### Master Admin Atualizado
+- Botão "Criar Novo Restaurante (Onboarding)" com geração de link exclusivo
+- Botão "Aprovar" para leads vindos do formulário parceiro
+- Tabela expandida com coluna de status onboarding
+- Status expandidos: lead, aguardando_cadastro, aguardando_pagamento, active, vencido, suspenso
 
-- Criar cliente no Asaas (CNPJ do restaurante)
-- Gerar cobrança (boleto, Pix ou cartão parcelado)
-- Retornar link de pagamento ou QR Code Pix
-- Suportar parcelamento nativo (até 12x)
-
-### Edge Function: `asaas-webhook` (nova)
-
-- Receber confirmação de pagamento (`PAYMENT_CONFIRMED`, `PAYMENT_RECEIVED`)
-- Atualizar status do restaurante para `ativo`
-- Definir `subscription_start` e `subscription_end`
-
-### O que permanece igual
-
-- Stripe Connect para pedidos dos clientes (já funciona)
-- `stripe-onboarding`, `stripe-create-payment`, `stripe-webhook` — intocados
-- Toda a lógica de onboarding do restaurante (cadastro, formulário, termos)
-- Schema MySQL planejado
-
-## Configuração necessária
-
-1. **Chave API do Asaas** — precisa ser adicionada como secret (`ASAAS_API_KEY`)
-2. **Webhook do Asaas** — apontar para a Edge Function após deploy
-3. **Ambiente** — Asaas tem sandbox para testes (`sandbox.asaas.com`) e produção (`api.asaas.com`)
-
-## Vantagens do Asaas para cobrança de planos no Brasil
-
-- Boleto bancário nativo (muitos restaurantes preferem)
-- Pix com QR Code automático
-- Parcelamento no cartão sem complicação
-- Cobrança recorrente automática (para renovação)
-- Nota fiscal integrada (opcional)
-- Dashboard em português para acompanhar cobranças
-
-## Fluxo atualizado
-
-```text
-Master cria restaurante
+## Fluxo Completo
+```
+Master Admin → Cria restaurante → Gera link (7 dias)
        ↓
-Restaurante acessa link de cadastro
+Restaurante acessa link → Preenche dados + aceita termos
        ↓
-Preenche dados + aceita termos
+Redireciona para pagamento via ASAAS (Pix/Boleto/Cartão 12x)
        ↓
-Redireciona para pagamento via ASAAS
-  (Pix / Boleto / Cartão parcelado)
+Webhook Asaas confirma → status = ativo (+12 meses)
        ↓
-Webhook Asaas confirma pagamento
+Formulário onboarding (cardápio, logo, fotos, horários)
        ↓
-status = ativo (início +12 meses)
-       ↓
-Formulário de onboarding
-       ↓
-Cliente faz pedido no cardápio
-       ↓
-Pagamento do pedido via STRIPE Connect
-  (Pix / Cartão com split automático)
+Pedidos dos clientes → STRIPE Connect (split automático)
 ```
 
-## Ordem de implementação
+## Secrets Configurados
+- `ASAAS_API_KEY` ✅
+- `STRIPE_SECRET_KEY` ✅ (pedidos)
+- `STRIPE_WEBHOOK_SECRET` ✅ (pedidos)
 
-1. Configurar secret `ASAAS_API_KEY`
-2. Criar Edge Function `asaas-checkout-plan`
-3. Criar Edge Function `asaas-webhook`
-4. Atualizar schema MySQL + arquivos PHP de onboarding
-5. Integrar no fluxo de cadastro do restaurante
-
-Deseja aprovar este plano para iniciar a implementação?
-
+## Pendências
+- Configurar webhook no painel Asaas apontando para: `https://qmpikyymjcnmocjfmvxs.supabase.co/functions/v1/asaas-webhook`
+- Adicionar rotas no `index.php`: `/cadastro/{token}`, `/pagamento-plano/{id}`, `/onboarding`, `/parceiro`
+- Implementar regra automática de vencimento (cron/scheduled)
