@@ -1,165 +1,86 @@
 
 
-# Sistema de Pagamento com Stripe Connect
+# Arquitetura de Pagamentos: Asaas para Planos + Stripe para Pedidos
 
-## Resumo
+## Análise da Sugestão
 
-Implementar pagamento online no checkout do cardápio digital usando **Stripe Connect** com suporte a **cartão de crédito e Pix**. O sistema terá dois modelos de repasse configurados pelo Master Admin por restaurante.
+Faz muito sentido separar os gateways por finalidade:
 
----
+| Finalidade | Gateway | Motivo |
+|---|---|---|
+| **Cobrança de planos** (assinatura anual dos restaurantes) | **Asaas** | Melhor para boleto, Pix e parcelamento no Brasil. API simples para cobranças recorrentes. Taxas mais competitivas para B2B. |
+| **Pagamento de pedidos** (clientes finais comprando comida) | **Stripe Connect** | Já implementado. Split automático entre plataforma e restaurante. Stripe Elements no checkout. |
 
-## Modelos de Pagamento
+## O que muda no plano de onboarding
 
-### Modelo 1 — Comissionado (6%)
-- 6% do valor do pedido fica com a plataforma (liquido)
-- Taxa do Stripe e descontada do restaurante
-- Exemplo: pedido R$100 -> Plataforma recebe R$6,00 -> Restaurante recebe R$100 - R$6 - taxa Stripe
+### Edge Function: `asaas-checkout-plan` (nova)
 
-### Modelo 2 — Full (100% repasse)
-- 100% do valor vai para o restaurante
-- Taxa do Stripe e descontada do restaurante
-- Plataforma nao cobra nada (receita vem do plano mensal)
+Substitui a `stripe-checkout-plan` que estava planejada. Responsabilidades:
 
----
+- Criar cliente no Asaas (CNPJ do restaurante)
+- Gerar cobrança (boleto, Pix ou cartão parcelado)
+- Retornar link de pagamento ou QR Code Pix
+- Suportar parcelamento nativo (até 12x)
 
-## Arquitetura Tecnica
+### Edge Function: `asaas-webhook` (nova)
 
-### 1. Banco de Dados (MySQL - PHP)
+- Receber confirmação de pagamento (`PAYMENT_CONFIRMED`, `PAYMENT_RECEIVED`)
+- Atualizar status do restaurante para `ativo`
+- Definir `subscription_start` e `subscription_end`
 
-Novas colunas na tabela `restaurants`:
+### O que permanece igual
 
-```text
-restaurants
-  +-- stripe_account_id       VARCHAR(255)   -- ID da conta conectada (acct_xxx)
-  +-- stripe_account_status   ENUM('pending','active','restricted')
-  +-- payment_model           ENUM('commission','full') DEFAULT 'commission'
-  +-- platform_fee_percent    DECIMAL(5,2) DEFAULT 6.00
-```
+- Stripe Connect para pedidos dos clientes (já funciona)
+- `stripe-onboarding`, `stripe-create-payment`, `stripe-webhook` — intocados
+- Toda a lógica de onboarding do restaurante (cadastro, formulário, termos)
+- Schema MySQL planejado
 
-Nova tabela para registro de pagamentos:
+## Configuração necessária
 
-```text
-payments
-  +-- id                  INT AUTO_INCREMENT PK
-  +-- order_id            INT FK -> orders
-  +-- restaurant_id       INT FK -> restaurants
-  +-- stripe_payment_id   VARCHAR(255)
-  +-- amount              DECIMAL(10,2)
-  +-- platform_fee        DECIMAL(10,2)
-  +-- gateway_fee         DECIMAL(10,2)
-  +-- net_restaurant      DECIMAL(10,2)
-  +-- payment_method      ENUM('card','pix')
-  +-- status              ENUM('pending','processing','succeeded','failed','refunded')
-  +-- paid_at             DATETIME
-  +-- created_at          DATETIME DEFAULT CURRENT_TIMESTAMP
-```
+1. **Chave API do Asaas** — precisa ser adicionada como secret (`ASAAS_API_KEY`)
+2. **Webhook do Asaas** — apontar para a Edge Function após deploy
+3. **Ambiente** — Asaas tem sandbox para testes (`sandbox.asaas.com`) e produção (`api.asaas.com`)
 
-### 2. Stripe Connect - Fluxo de Onboarding
+## Vantagens do Asaas para cobrança de planos no Brasil
 
-Cada restaurante precisa ter uma **conta conectada** no Stripe. O fluxo:
+- Boleto bancário nativo (muitos restaurantes preferem)
+- Pix com QR Code automático
+- Parcelamento no cartão sem complicação
+- Cobrança recorrente automática (para renovação)
+- Nota fiscal integrada (opcional)
+- Dashboard em português para acompanhar cobranças
 
-1. Master Admin cadastra restaurante e define o modelo (commission/full)
-2. No painel Admin do restaurante, aparece botao "Configurar Recebimentos"
-3. Clica e e redirecionado ao Stripe Connect Onboarding (formulario do proprio Stripe)
-4. Stripe valida dados bancarios e ativa a conta
-5. Status atualiza para `active` e pagamentos ficam habilitados
-
-### 3. Edge Functions (Lovable Cloud)
-
-**a) `stripe-onboarding`** — Cria conta conectada e gera link de onboarding
+## Fluxo atualizado
 
 ```text
-POST /stripe-onboarding
-Body: { restaurant_id, return_url }
-Response: { account_id, onboarding_url }
+Master cria restaurante
+       ↓
+Restaurante acessa link de cadastro
+       ↓
+Preenche dados + aceita termos
+       ↓
+Redireciona para pagamento via ASAAS
+  (Pix / Boleto / Cartão parcelado)
+       ↓
+Webhook Asaas confirma pagamento
+       ↓
+status = ativo (início +12 meses)
+       ↓
+Formulário de onboarding
+       ↓
+Cliente faz pedido no cardápio
+       ↓
+Pagamento do pedido via STRIPE Connect
+  (Pix / Cartão com split automático)
 ```
 
-**b) `stripe-create-payment`** — Cria PaymentIntent com split
+## Ordem de implementação
 
-```text
-POST /stripe-create-payment
-Body: { order_id, restaurant_id, amount, payment_method_type }
-Response: { client_secret, payment_intent_id }
-```
+1. Configurar secret `ASAAS_API_KEY`
+2. Criar Edge Function `asaas-checkout-plan`
+3. Criar Edge Function `asaas-webhook`
+4. Atualizar schema MySQL + arquivos PHP de onboarding
+5. Integrar no fluxo de cadastro do restaurante
 
-Logica do split:
-- Busca `payment_model` e `platform_fee_percent` do restaurante
-- Se `commission`: cria PaymentIntent com `application_fee_amount`
-- Se `full`: cria PaymentIntent sem fee, `transfer_data` direto para a conta
+Deseja aprovar este plano para iniciar a implementação?
 
-**c) `stripe-webhook`** — Recebe eventos do Stripe
-
-```text
-POST /stripe-webhook
-Eventos: payment_intent.succeeded, payment_intent.payment_failed
-Atualiza status do pagamento e do pedido
-```
-
-### 4. Alteracoes no Checkout (PHP)
-
-O arquivo `checkout.php` sera atualizado:
-
-- Detectar se o modo e `full` (pagamento online) ou se o restaurante tem pagamento habilitado
-- Carregar Stripe.js no frontend
-- Mostrar opcoes: Cartao de Credito ou Pix
-- Para **Cartao**: exibir Stripe Elements (formulario do Stripe)
-- Para **Pix**: exibir QR Code gerado pelo Stripe
-- Apos pagamento confirmado, redirecionar para pagina de sucesso com rastreamento
-
-### 5. Painel Master Admin
-
-No formulario de restaurante (`master/restaurants.php`):
-
-- Novo campo: **Modelo de Pagamento** (select: Comissionado 6% / Full 100%)
-- Campo editavel para percentual de comissao (padrao 6%)
-- Exibir status da conta Stripe do restaurante (pendente/ativo/restrito)
-- Botao para resetar conta Stripe se necessario
-
-### 6. Painel Admin do Restaurante
-
-No dashboard (`admin/index.php`):
-
-- Card de "Recebimentos" mostrando status da conta Stripe
-- Se nao configurado: botao "Configurar Recebimentos" que inicia o onboarding
-- Se ativo: resumo de recebimentos (total recebido, pendente, ultimo repasse)
-- Na pagina de pedidos: exibir status do pagamento em cada pedido
-
----
-
-## Fluxo Completo do Cliente
-
-```text
-1. Cliente monta carrinho no cardapio
-2. Vai para checkout (modo 'full' ou com pagamento habilitado)
-3. Preenche dados pessoais e endereco
-4. Escolhe forma de pagamento: Cartao ou Pix
-5. Cartao: preenche dados no Stripe Elements -> confirma
-   Pix: recebe QR Code -> escaneia e paga -> confirmacao automatica
-6. Pedido criado com status 'paid'
-7. Restaurante recebe notificacao de novo pedido pago
-8. Cliente ve pagina de acompanhamento
-```
-
----
-
-## Ordem de Implementacao
-
-1. Habilitar integracao Stripe no Lovable (coletar chave)
-2. Criar schema do banco (colunas + tabela payments)
-3. Criar edge function `stripe-onboarding`
-4. Adicionar configuracao no Master Admin
-5. Adicionar onboarding no Admin do restaurante
-6. Criar edge function `stripe-create-payment`
-7. Atualizar checkout.php com Stripe Elements + Pix
-8. Criar edge function `stripe-webhook`
-9. Exibir status de pagamento nos paineis
-
----
-
-## Consideracoes
-
-- **Seguranca**: Todas as chaves do Stripe ficam nas secrets do Lovable Cloud, nunca expostas no frontend
-- **Pix via Stripe**: O Stripe suporta Pix nativamente no Brasil, gerando QR Code automaticamente
-- **Taxas reais do Stripe BR**: Cartao ~3,99% + R$0,39 | Pix ~1% (max R$5)
-- **O checkout.php ja tem a estrutura visual** preparada para o modo `full` com placeholder para pagamento
-- **A taxa do gateway e descontada do restaurante** em ambos os modelos, conforme definido
