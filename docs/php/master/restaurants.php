@@ -650,9 +650,12 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
     </nav>
     
     <main class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Note: message may contain HTML for the registration link -->
         <?php if ($message): ?>
             <div class="bg-green-900/50 border border-green-600 rounded-lg p-4 mb-6">
-                <?= htmlspecialchars($message) ?>
+                <?= $message ?>
+            </div>
+        <?php endif; ?>
             </div>
         <?php endif; ?>
         
