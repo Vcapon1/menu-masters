@@ -551,9 +551,14 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
                 <a href="index.php" class="text-gray-300 hover:text-white">← Dashboard</a>
                 <h1 class="font-bold">Gerenciar Restaurantes</h1>
             </div>
-            <button onclick="openModal()" class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg text-sm">
-                + Novo Restaurante
-            </button>
+            <div class="flex gap-2">
+                <button onclick="openOnboardingModal()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg text-sm">
+                    🚀 Criar Novo Restaurante (Onboarding)
+                </button>
+                <button onclick="openModal()" class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg text-sm">
+                    + Novo Restaurante (Direto)
+                </button>
+            </div>
         </div>
     </nav>
     
