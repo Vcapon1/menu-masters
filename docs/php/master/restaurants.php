@@ -585,6 +585,7 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
                         <th class="px-4 py-3 text-left text-sm">Plano</th>
                         <th class="px-4 py-3 text-left text-sm">Template</th>
                         <th class="px-4 py-3 text-left text-sm">Status</th>
+                        <th class="px-4 py-3 text-left text-sm">Onboarding</th>
                         <th class="px-4 py-3 text-left text-sm">Validade</th>
                         <th class="px-4 py-3 text-right text-sm">Ações</th>
                     </tr>
