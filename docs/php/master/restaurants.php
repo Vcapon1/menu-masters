@@ -394,6 +394,93 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $message = 'Falha ao enviar email: ' . $errorMsg;
                 }
                 break;
+            
+            case 'create_onboarding':
+                // Criar restaurante para onboarding (gera token + link)
+                $onbName = sanitize($_POST['onb_name'] ?? '');
+                $onbPlanId = (int)($_POST['onb_plan_id'] ?? 0);
+                $onbPlanValue = floatval($_POST['onb_plan_value'] ?? 0);
+                $onbFeePercent = floatval($_POST['onb_fee_percent'] ?? 6.00);
+                $onbOnlinePayment = isset($_POST['onb_online_payment']) ? 1 : 0;
+
+                if (empty($onbName) || $onbPlanId === 0 || $onbPlanValue <= 0) {
+                    throw new Exception('Preencha todos os campos obrigatórios.');
+                }
+
+                // Gerar slug e token
+                $onbSlug = generateSlug($onbName);
+                $checkSlugStmt = db()->prepare("SELECT id FROM restaurants WHERE slug = :slug");
+                $checkSlugStmt->execute(['slug' => $onbSlug]);
+                if ($checkSlugStmt->fetch()) {
+                    $onbSlug .= '-' . substr(time(), -4);
+                }
+
+                $regToken = bin2hex(random_bytes(32));
+                $tokenExpires = date('Y-m-d H:i:s', strtotime('+7 days'));
+
+                // Pegar template padrão
+                $defaultTpl = db()->prepare("SELECT id FROM templates WHERE is_active = 1 AND min_plan_id <= :pid ORDER BY id ASC LIMIT 1");
+                $defaultTpl->execute(['pid' => $onbPlanId]);
+                $tplRow = $defaultTpl->fetch();
+                $tplId = $tplRow ? $tplRow['id'] : 1;
+
+                $onbSql = "INSERT INTO restaurants (name, slug, email, plan_id, template_id, status, 
+                           registration_token, token_expires_at, plan_value, platform_fee_percent, payment_model)
+                           VALUES (:name, :slug, '', :plan_id, :template_id, 'aguardando_cadastro',
+                           :token, :expires, :plan_value, :fee, :model)";
+                $onbStmt = db()->prepare($onbSql);
+                $onbStmt->execute([
+                    'name' => $onbName,
+                    'slug' => $onbSlug,
+                    'plan_id' => $onbPlanId,
+                    'template_id' => $tplId,
+                    'token' => $regToken,
+                    'expires' => $tokenExpires,
+                    'plan_value' => $onbPlanValue,
+                    'fee' => $onbFeePercent,
+                    'model' => $onbOnlinePayment ? 'commission' : 'full',
+                ]);
+
+                $baseUrl = (isset($_SERVER['HTTPS']) ? 'https://' : 'http://') . $_SERVER['HTTP_HOST'];
+                $cadastroLink = $baseUrl . '/cadastro/' . $regToken;
+                
+                $message = "✅ Restaurante criado! Link de cadastro (válido por 7 dias):<br>
+                    <div class='mt-2 p-3 bg-gray-900 rounded-lg border border-gray-700'>
+                        <input type='text' value='{$cadastroLink}' readonly class='w-full bg-transparent text-purple-400 text-sm' onclick='this.select()'>
+                        <button onclick=\"navigator.clipboard.writeText('{$cadastroLink}'); this.textContent='✅ Copiado!'\" class='mt-2 bg-purple-600 hover:bg-purple-700 px-4 py-1 rounded text-xs'>📋 Copiar Link</button>
+                    </div>";
+                break;
+            
+            case 'approve_lead':
+                // Aprovar lead e gerar link de cadastro
+                $leadId = (int)($_POST['lead_id'] ?? 0);
+                $leadRest = getRestaurantById($leadId);
+                if (!$leadRest || $leadRest['status'] !== 'lead') {
+                    throw new Exception('Restaurante não encontrado ou não é um lead.');
+                }
+
+                $leadToken = bin2hex(random_bytes(32));
+                $leadExpires = date('Y-m-d H:i:s', strtotime('+7 days'));
+
+                $approveSql = "UPDATE restaurants SET status = 'aguardando_cadastro', 
+                               registration_token = :token, token_expires_at = :expires 
+                               WHERE id = :id";
+                $approveStmt = db()->prepare($approveSql);
+                $approveStmt->execute([
+                    'token' => $leadToken,
+                    'expires' => $leadExpires,
+                    'id' => $leadId,
+                ]);
+
+                $baseUrl = (isset($_SERVER['HTTPS']) ? 'https://' : 'http://') . $_SERVER['HTTP_HOST'];
+                $cadastroLink = $baseUrl . '/cadastro/' . $leadToken;
+
+                $message = "✅ Lead aprovado! Link de cadastro gerado:<br>
+                    <div class='mt-2 p-3 bg-gray-900 rounded-lg border border-gray-700'>
+                        <input type='text' value='{$cadastroLink}' readonly class='w-full bg-transparent text-purple-400 text-sm' onclick='this.select()'>
+                        <button onclick=\"navigator.clipboard.writeText('{$cadastroLink}'); this.textContent='✅ Copiado!'\" class='mt-2 bg-purple-600 hover:bg-purple-700 px-4 py-1 rounded text-xs'>📋 Copiar Link</button>
+                    </div>";
+                break;
             case 'import_ai':
                 $restaurantIdImport = (int)($_POST['restaurant_id'] ?? 0);
                 $importDataRaw = $_POST['import_data'] ?? '{}';
