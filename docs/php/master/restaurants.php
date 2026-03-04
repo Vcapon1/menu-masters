@@ -769,6 +769,67 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
                 </tbody>
             </table>
         </div>
+
+        <!-- Modal Onboarding: Criar Restaurante com Link -->
+        <div id="onboarding-modal" class="modal-overlay">
+            <div class="modal-container" style="max-width: 32rem;">
+                <div class="modal-header flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-green-400">🚀 Novo Restaurante (Onboarding)</h2>
+                    <button type="button" onclick="closeOnboardingModal()" class="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+                </div>
+                <form method="post">
+                    <input type="hidden" name="action" value="create_onboarding">
+                    <div class="modal-body space-y-4">
+                        <p class="text-sm text-gray-400">Cria o restaurante e gera um link exclusivo para o restaurante completar o cadastro e pagar o plano.</p>
+                        
+                        <div>
+                            <label class="block text-sm mb-1">Nome Fantasia *</label>
+                            <input type="text" name="onb_name" required
+                                   class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm mb-1">Plano *</label>
+                            <select name="onb_plan_id" required
+                                    class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                                <option value="">Selecione...</option>
+                                <?php foreach ($plans as $plan): ?>
+                                    <option value="<?= $plan['id'] ?>"><?= htmlspecialchars($plan['name']) ?> - R$ <?= number_format($plan['price'], 2, ',', '.') ?>/mês</option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm mb-1">Valor do Plano Anual (R$) *</label>
+                            <input type="number" name="onb_plan_value" step="0.01" min="1" required
+                                   class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2"
+                                   placeholder="Ex: 1198.80">
+                            <p class="text-xs text-gray-500 mt-1">Valor total cobrado na assinatura anual</p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm mb-1">Comissão da Plataforma (%)</label>
+                            <input type="number" name="onb_fee_percent" step="0.01" min="0" max="50" value="6.00"
+                                   class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2">
+                        </div>
+                        
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" name="onb_online_payment" id="onb-online" value="1"
+                                   class="rounded bg-gray-700 border-gray-600 text-green-500">
+                            <label for="onb-online" class="text-sm">Ativar pagamento online (pedidos)</label>
+                        </div>
+                    </div>
+                    <div class="modal-footer flex gap-2">
+                        <button type="submit" class="flex-1 bg-green-600 hover:bg-green-700 py-2 rounded font-medium">
+                            🚀 Criar e Gerar Link
+                        </button>
+                        <button type="button" onclick="closeOnboardingModal()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded">
+                            Cancelar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </main>
     
     <!-- Modal de Exclusão com Senha -->
