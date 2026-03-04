@@ -1881,6 +1881,16 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
         document.getElementById('send-modal')?.addEventListener('click', function(e) {
             if (e.target === this) closeSendModal();
         });
+        document.getElementById('onboarding-modal')?.addEventListener('click', function(e) {
+            if (e.target === this) closeOnboardingModal();
+        });
+        
+        function openOnboardingModal() {
+            document.getElementById('onboarding-modal').classList.add('active');
+        }
+        function closeOnboardingModal() {
+            document.getElementById('onboarding-modal').classList.remove('active');
+        }
     </script>
 </body>
 </html>
