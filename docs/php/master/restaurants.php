@@ -750,6 +750,13 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
                                    class="text-purple-400 hover:text-purple-300 mr-2" title="Ver cardápio">Ver</a>
                                 <button onclick="editRestaurant(<?= htmlspecialchars(json_encode($r)) ?>)" 
                                         class="text-blue-400 hover:text-blue-300 mr-2" title="Editar">Editar</button>
+                                <?php if ($r['status'] === 'lead'): ?>
+                                    <form method="post" class="inline">
+                                        <input type="hidden" name="action" value="approve_lead">
+                                        <input type="hidden" name="lead_id" value="<?= $r['id'] ?>">
+                                        <button type="submit" class="text-green-400 hover:text-green-300 mr-2" title="Aprovar lead e gerar link">✅ Aprovar</button>
+                                    </form>
+                                <?php endif; ?>
                                 <button onclick="sendContractData(<?= htmlspecialchars(json_encode($r)) ?>)" 
                                         class="text-green-400 hover:text-green-300 mr-2" title="Enviar dados do contrato por email">📧</button>
                                 <button onclick="openImportAI(<?= $r['id'] ?>, '<?= htmlspecialchars($r['name']) ?>')" 
