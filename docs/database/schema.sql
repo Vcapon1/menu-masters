@@ -355,6 +355,66 @@ ALTER TABLE `restaurants`
   ADD COLUMN `platform_fee_percent` DECIMAL(5,2) DEFAULT 6.00 COMMENT 'Percentual de comissão da plataforma';
 
 -- =====================================================
+-- ALTER: restaurants (campos de onboarding)
+-- =====================================================
+ALTER TABLE `restaurants`
+  MODIFY COLUMN `status` VARCHAR(50) NOT NULL DEFAULT 'pending' COMMENT 'lead, aguardando_cadastro, aguardando_pagamento, active, inactive, vencido, suspenso',
+  ADD COLUMN `registration_token` VARCHAR(64) DEFAULT NULL UNIQUE COMMENT 'Token único para link de cadastro',
+  ADD COLUMN `token_expires_at` DATETIME DEFAULT NULL COMMENT 'Expiração do token (7 dias)',
+  ADD COLUMN `razao_social` VARCHAR(255) DEFAULT NULL,
+  ADD COLUMN `cnpj` VARCHAR(20) DEFAULT NULL,
+  ADD COLUMN `responsavel_nome` VARCHAR(200) DEFAULT NULL,
+  ADD COLUMN `responsavel_cpf` VARCHAR(14) DEFAULT NULL,
+  ADD COLUMN `plan_value` DECIMAL(10,2) DEFAULT NULL COMMENT 'Valor do plano contratado',
+  ADD COLUMN `subscription_start` DATE DEFAULT NULL,
+  ADD COLUMN `subscription_end` DATE DEFAULT NULL,
+  ADD COLUMN `accepted_terms_at` DATETIME DEFAULT NULL,
+  ADD COLUMN `status_onboarding` ENUM('pendente','completo') DEFAULT 'pendente',
+  ADD COLUMN `onboarding_menu_file` VARCHAR(500) DEFAULT NULL,
+  ADD COLUMN `onboarding_photos` JSON DEFAULT NULL,
+  ADD COLUMN `delivery_neighborhoods` TEXT DEFAULT NULL,
+  ADD COLUMN `delivery_fee` DECIMAL(10,2) DEFAULT NULL,
+  ADD COLUMN `opening_hours_json` JSON DEFAULT NULL,
+  ADD COLUMN `asaas_customer_id` VARCHAR(255) DEFAULT NULL COMMENT 'ID do cliente no Asaas (cus_xxx)',
+  ADD COLUMN `asaas_payment_id` VARCHAR(255) DEFAULT NULL COMMENT 'ID do último pagamento no Asaas';
+
+-- =====================================================
+-- TABELA: commissions (Registro de comissões por pedido)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS `commissions` (
+  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `order_id` INT UNSIGNED NOT NULL,
+  `restaurant_id` INT UNSIGNED NOT NULL,
+  `valor_bruto` DECIMAL(10,2) NOT NULL COMMENT 'Valor total do pedido',
+  `taxa_stripe` DECIMAL(10,2) DEFAULT 0 COMMENT 'Taxa do gateway Stripe',
+  `comissao_plataforma` DECIMAL(10,2) DEFAULT 0 COMMENT 'Comissão da plataforma',
+  `valor_liquido_restaurante` DECIMAL(10,2) DEFAULT 0 COMMENT 'Valor líquido repassado',
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`order_id`) REFERENCES `orders`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants`(`id`) ON DELETE CASCADE,
+  INDEX `idx_restaurant` (`restaurant_id`),
+  INDEX `idx_created` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =====================================================
+-- TABELA: plan_payments (Pagamentos de planos via Asaas)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS `plan_payments` (
+  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `restaurant_id` INT UNSIGNED NOT NULL,
+  `asaas_payment_id` VARCHAR(255) DEFAULT NULL,
+  `amount` DECIMAL(10,2) NOT NULL,
+  `billing_type` VARCHAR(20) DEFAULT NULL COMMENT 'CREDIT_CARD, BOLETO, PIX',
+  `installments` INT DEFAULT 1,
+  `status` VARCHAR(30) DEFAULT 'pending' COMMENT 'pending, confirmed, overdue, refunded',
+  `paid_at` DATETIME DEFAULT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants`(`id`) ON DELETE CASCADE,
+  INDEX `idx_restaurant` (`restaurant_id`),
+  INDEX `idx_asaas` (`asaas_payment_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =====================================================
 -- TABELA: payments (Registro de pagamentos Stripe)
 -- =====================================================
 CREATE TABLE IF NOT EXISTS `payments` (

@@ -623,12 +623,28 @@ $defaultExpiresAt = date('Y-m-d', strtotime('+1 year'));
                                 <span class="text-sm"><?= htmlspecialchars($r['template_name']) ?></span>
                             </td>
                             <td class="px-4 py-3">
-                                <?php if ($r['status'] === 'active'): ?>
-                                    <span class="px-2 py-1 text-xs rounded bg-green-600">Ativo</span>
-                                <?php elseif ($r['status'] === 'pending'): ?>
-                                    <span class="px-2 py-1 text-xs rounded bg-yellow-600">Pendente</span>
+                                <?php 
+                                    $statusLabels = [
+                                        'active' => ['Ativo', 'bg-green-600'],
+                                        'lead' => ['Lead', 'bg-blue-600'],
+                                        'aguardando_cadastro' => ['Aguard. Cadastro', 'bg-yellow-600'],
+                                        'aguardando_pagamento' => ['Aguard. Pagamento', 'bg-orange-600'],
+                                        'pending' => ['Pendente', 'bg-yellow-600'],
+                                        'inactive' => ['Inativo', 'bg-gray-600'],
+                                        'vencido' => ['Vencido', 'bg-red-600'],
+                                        'suspenso' => ['Suspenso', 'bg-red-800'],
+                                    ];
+                                    $sl = $statusLabels[$r['status']] ?? ['Outro', 'bg-gray-600'];
+                                ?>
+                                <span class="px-2 py-1 text-xs rounded <?= $sl[1] ?>"><?= $sl[0] ?></span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <?php 
+                                    $onb = $r['status_onboarding'] ?? 'pendente';
+                                    if ($onb === 'completo'): ?>
+                                    <span class="px-2 py-1 text-xs rounded bg-green-600">✅ Completo</span>
                                 <?php else: ?>
-                                    <span class="px-2 py-1 text-xs rounded bg-gray-600">Inativo</span>
+                                    <span class="px-2 py-1 text-xs rounded bg-gray-600">Pendente</span>
                                 <?php endif; ?>
                             </td>
                             <td class="px-4 py-3">
