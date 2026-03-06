@@ -113,6 +113,12 @@ CREATE TABLE IF NOT EXISTS `restaurants` (
   `admin_username` VARCHAR(100),
   `admin_password_hash` VARCHAR(255) COMMENT 'Hash bcrypt da senha',
   
+  -- Modelo de pagamento e operação
+  `payment_model` VARCHAR(20) NOT NULL DEFAULT 'commission',
+  `platform_fee_percent` DECIMAL(5,2) NOT NULL DEFAULT 6.00,
+  `is_open` TINYINT(1) NOT NULL DEFAULT 1,
+  `order_time_limits` JSON DEFAULT NULL COMMENT 'Limites em minutos: {"pending":5,"preparing":20,"ready":10}',
+  
   -- Timestamps
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
