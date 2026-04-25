@@ -1,31 +1,45 @@
 # Menu Masters
 
-Digital menu and restaurant operations platform focused on ordering flow, onboarding, and business management.
+Digital menu and restaurant operations platform focused on onboarding, ordering flow, and business management.
 
 ## Overview
 
 Menu Masters is a product-oriented platform built to support restaurant operations through a digital menu experience and internal management workflows.
 
-The project was designed with a practical SaaS mindset, combining user experience, onboarding, configuration flows, and business operations in one product.
+The project was designed with a practical SaaS mindset, combining user experience, onboarding, configuration flows, business management, and visual optimization features in one product.
+
+## Screenshots
+
+### Dashboard
+![Dashboard](docs/screenshots/dashboard.png)
+
+### Pricing / Commercial Structure
+![Pricing](docs/screenshots/pricing.png)
+
+### AI Photo Enhancement
+![AI Photo Enhancement](docs/screenshots/ai-photo-enhancement.png)
 
 ## What this project includes
 
 - Digital menu structure
 - Restaurant onboarding flows
-- Operational settings and configuration
-- Internal management interface
-- Product-oriented frontend architecture
-- Integration-ready SaaS foundation
+- Operational dashboard
+- Product and category management
+- QR code menu experience
+- Online payment readiness
+- AI-assisted visual enhancement for food images
+- SaaS-oriented product architecture
 
 ## Why it matters
 
-This project reflects a practical approach to product engineering.
+This project reflects a practical product engineering approach focused on real business workflows.
 
-Instead of building generic demos, the focus here is on solving real business needs:
-- improve restaurant ordering experience
+Instead of building generic demos, the focus here is on solving concrete operational needs for restaurants:
+- improve ordering experience
 - simplify onboarding
-- organize operational workflows
-- support a scalable digital product structure
+- support internal management
+- strengthen commercial packaging
+- create a scalable product foundation
 
 ## Tech stack
 
@@ -38,16 +52,9 @@ Instead of building generic demos, the focus here is on solving real business ne
 
 ## Current status
 
-Public portfolio version in preparation.
+Public portfolio version of a real product.
 
-This repository is being reorganized to better represent the product, interface, and engineering decisions behind the project.
-
-## Next steps
-
-- Remove sensitive environment configuration
-- Add screenshots
-- Improve documentation
-- Refine public project structure
+This repository is being organized to better represent the product, interface, and engineering decisions behind the platform.
 
 ## Author
 
